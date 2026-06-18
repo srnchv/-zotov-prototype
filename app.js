@@ -348,6 +348,16 @@ window.exportCSV=()=>{
 window.copySaved=i=>{const s=getSaved()[i];if(s){const u=location.origin+location.pathname+s.hash;if(navigator.clipboard)navigator.clipboard.writeText(u);toast('Ссылка скопирована');}};
 window.delSaved=i=>{const a=getSaved();a.splice(i,1);setSaved(a);render();};
 
+// --- ЛК: сохранённые материалы, история, подборки (localStorage) ---
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return[]}};
+const lsSet=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+function histAdd(id){let h=lsGet('zotov_hist').filter(x=>x!==id);h.unshift(id);lsSet('zotov_hist',h.slice(0,12));}
+window.toggleSaveMat=id=>{let s=lsGet('zotov_savedmat');const on=s.includes(id);s=on?s.filter(x=>x!==id):[id,...s];lsSet('zotov_savedmat',s);toast(on?'Удалено из сохранённых':'Материал сохранён');render();};
+window.rmSaveMat=id=>{lsSet('zotov_savedmat',lsGet('zotov_savedmat').filter(x=>x!==id));render();};
+window.clearHist=()=>{lsSet('zotov_hist',[]);toast('История очищена');render();};
+window.newCollection=()=>{const n=prompt('Название подборки:');if(!n)return;const c=lsGet('zotov_coll');c.unshift({name:n,n:0});lsSet('zotov_coll',c);toast('Подборка создана');render();};
+window.delCollection=i=>{const c=lsGet('zotov_coll');c.splice(i,1);lsSet('zotov_coll',c);render();};
+
 function chrono(){
   const items=[...all('event'),...all('material').filter(m=>m.date)];
   const byYear={}; items.forEach(o=>{const y=(o.date||'').match(/\d{4}/);const k=y?y[0]:'—';(byYear[k]=byYear[k]||[]).push(o);});
@@ -380,12 +390,15 @@ function entity(o){
   const T=TYPES[o.type];
   const back={material:'#/archive',person:'#/cat/person',place:'#/map',event:'#/chrono',theme:'#/cat/theme',project:'#/cat/project',org:'#/cat/collection',collection:'#/cat/collection',source:'#/cat/source',media:'#/archive',tag:'#/archive'}[o.type];
   const crumbs=`<div class="crumbs"><a href="${back}">${T.pl}</a> / ${esc(o.title)}</div>`;
+  if(o.type==='material') histAdd(o.id);
   let hero='';
   if(o.type==='material'){
     const access=o.access==='request';
+    const saved=lsGet('zotov_savedmat').includes(o.id);
     hero=`${crumbs}<div class="two" style="margin-top:8px"><div><div class="media"></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
       <div><div class="kicker">${esc(o.subtype||'Материал')}</div><h1 style="font-size:30px">${esc(o.title)}</h1>
       <div class="metabox">${[['Тип и подтип',o.subtype],['Дата / период',o.date],['Авторы и участники',(o.authors||[]).map(id=>DB[id]&&DB[id].title).filter(Boolean).join(', ')||'—'],['Права и условия доступа',access?'По запросу · просмотр':'Открытый доступ']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1]||'—')}</span></div>`).join('')}</div>
+      <div style="margin-top:12px"><span class="btn" onclick="toggleSaveMat('${o.id}')">${saved?'✓ В сохранённых':'＋ Сохранить материал'}</span></div>
       ${access?`<div class="access"><b>Материал доступен по запросу</b><div class="muted" style="margin:6px 0 12px">Зарегистрированные исследователи могут запросить доступ.</div><a class="btn dark" href="#/request/${o.id}">Запросить доступ</a></div>`:''}
       <h3>Описание</h3><div class="muted">Происхождение, контекст создания, связанные обстоятельства — редакторское описание с научным аппаратом.</div>
       ${(o.links.filter(id=>DB[id]&&DB[id].type==='media')).map(id=>`<div style="margin-top:10px"><a href="#/e/${id}">▶ ${esc(DB[id].title)} →</a></div>`).join('')}
@@ -449,23 +462,65 @@ function entity(o){
   return page('',hero+matGrid+relBlock(o)+similar);
 }
 
-function cabinet(){
-  const mats=all('material');
+const CAB_TABS=[['profile','Профиль'],['saved','Сохранённые материалы'],['searches','Сохранённые поиски'],['collections','Личные подборки'],['requests','Заявки на доступ'],['history','История просмотров'],['notifications','Уведомления'],['settings','Настройки']];
+function cabinet(tab){
+  if(!CAB_TABS.some(([k])=>k===tab)) tab='profile';
+  const side=`<div class="side"><div style="display:flex;gap:12px;align-items:center;padding:8px 4px 16px"><div style="width:44px;height:44px;border-radius:50%;background:var(--img)"></div><div><b>Анна Исследователь</b><div class="kicker">Исследователь</div></div></div>
+    ${CAB_TABS.map(([k,l])=>`<a href="#/cabinet/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}</div>`;
+  const views={profile:cabProfile,saved:cabSaved,searches:cabSearches,collections:cabCollections,requests:cabRequests,history:cabHistory,notifications:cabNotifications,settings:cabSettings};
+  return page('#/cabinet',`<div class="cab">${side}<div>${views[tab]()}</div></div>`);
+}
+function cabProfile(){
+  const rows=[['Имя','Анна'],['Фамилия','Исследователь'],['Email','anna.r@example.ru'],['Организация / учебное заведение','НИУ ВШЭ, Школа дизайна'],['Должность / статус','исследователь'],['Сфера интересов','конструктивизм, авангард, фотомонтаж'],['Дата регистрации','12.01.2026'],['Статус аккаунта','Активен']];
+  return `<h1 style="font-size:30px">Профиль</h1>
+    <div class="metabox" style="max-width:640px">${rows.map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+    <div style="margin-top:16px"><span class="btn dark" onclick="toast('Демо: редактирование профиля')">Редактировать профиль</span></div>`;
+}
+function cabSaved(){
+  const ids=lsGet('zotov_savedmat').map(id=>DB[id]).filter(Boolean);
+  const body=ids.length
+    ? `<div class="grid g3">${ids.map(o=>`<div class="savedwrap">${resultCard(o)}<span class="lnk" style="font-size:13px" onclick="rmSaveMat('${o.id}')">Убрать из сохранённых</span></div>`).join('')}</div>`
+    : `<p class="muted">Пока нет сохранённых материалов. Откройте карточку материала и нажмите «Сохранить материал». <a href="#/archive">Перейти в архив →</a></p>`;
+  return `<h1 style="font-size:30px">Сохранённые материалы</h1><div class="muted">${ids.length} материалов</div><div style="margin-top:16px">${body}</div>`;
+}
+function cabSearches(){
   const saved=getSaved();
-  const savedHtml=saved.length
+  const html=saved.length
     ? `<div class="metabox">${saved.map((s,i)=>`<div class="r"><div><b>${esc(s.name)}</b><div class="muted" style="font-size:13px">${esc(s.hash.replace('#/archive','').replace(/^\?/,'')||'все материалы')} · ${s.count} рез. · ${esc(s.date)}</div></div><div class="tools"><a class="btn sm" href="${s.hash}">Открыть</a><span class="btn sm" onclick="copySaved(${i})">Ссылка</span><span class="btn sm" onclick="delSaved(${i})">Удалить</span></div></div>`).join('')}</div>`
     : `<p class="muted">Сохранённых поисков пока нет. Откройте <a href="#/archive">Архив</a>, настройте фильтры и нажмите «Сохранить поиск».</p>`;
-  return page('#/cabinet',`<div class="cab">
-    <div class="side"><div style="display:flex;gap:12px;align-items:center;padding:8px 4px 16px"><div style="width:44px;height:44px;border-radius:50%;background:var(--img)"></div><div><b>Анна Исследователь</b><div class="kicker">Исследователь</div></div></div>
-      ${['Профиль','Сохранённые материалы','Сохранённые поиски','Подборки','Заявки на доступ','История просмотров','Уведомления','Настройки'].map((s,i)=>`<a class="${i==1?'active':''}">${s}</a>`).join('')}</div>
-    <div><h1 style="font-size:30px">Сохранённые материалы</h1><div class="muted">48 материалов · 3 подборки · 2 активные заявки</div>
-      <div class="grid g4" style="margin-top:16px">${mats.map(tile).join('')}</div>
-      <h2>Сохранённые поиски</h2>
-      <div class="muted" style="font-size:13px;margin-bottom:10px">Сохраняются параметры поиска и фильтров (а не статичный список) — при открытии выдача пересчитывается по актуальным данным.</div>
-      ${savedHtml}
-      <h2>Заявки на доступ</h2>
-      <div class="metabox">${[['Фотография экспозиции, 1927','На рассмотрении'],['Документ фонда №14','Одобрена'],['Аудиозапись лекции','Требует уточнения']].map(r=>`<div class="r"><span>${r[0]}</span><span class="statbadge">${r[1]}</span></div>`).join('')}</div>
-    </div></div>`);
+  return `<h1 style="font-size:30px">Сохранённые поиски</h1><div class="muted" style="font-size:13px;margin-bottom:12px">Сохраняются параметры поиска и фильтров (а не статичный список) — при открытии выдача пересчитывается по актуальным данным.</div>${html}`;
+}
+function cabCollections(){
+  const c=lsGet('zotov_coll');
+  const list=c.length
+    ? `<div class="metabox">${c.map((x,i)=>`<div class="r"><div><b>${esc(x.name)}</b><div class="muted" style="font-size:13px">${x.n||0} материалов</div></div><div class="tools"><span class="btn sm" onclick="toast('Демо: открытие подборки')">Открыть</span><span class="btn sm" onclick="delCollection(${i})">Удалить</span></div></div>`).join('')}</div>`
+    : `<p class="muted">Личных подборок пока нет.</p>`;
+  return `<h1 style="font-size:30px">Личные подборки</h1><div class="muted" style="font-size:13px;margin-bottom:12px">Собственные списки материалов для исследования. Видны только вам.</div>
+    <div style="margin-bottom:16px"><span class="btn dark" onclick="newCollection()">＋ Создать подборку</span></div>${list}`;
+}
+function cabRequests(){
+  const rows=[['Фотография экспозиции, 1927','На рассмотрении'],['Документ фонда №14','Одобрена'],['Аудиозапись лекции','Требует уточнения'],['Протокол заседания ВХУТЕМАС','Новая']];
+  return `<h1 style="font-size:30px">Заявки на доступ</h1><div class="muted" style="font-size:13px;margin-bottom:12px">Статусы обновляются после рассмотрения модератором.</div>
+    <div class="metabox">${rows.map(r=>`<div class="r"><span>${r[0]}</span><span class="statbadge">${r[1]}</span></div>`).join('')}</div>`;
+}
+function cabHistory(){
+  const ids=lsGet('zotov_hist').map(id=>DB[id]).filter(Boolean);
+  const body=ids.length
+    ? `<div class="grid g4" style="margin-top:8px">${ids.map(tile).join('')}</div>`
+    : `<p class="muted">История пуста. Открытые вами материалы появятся здесь.</p>`;
+  return `<h1 style="font-size:30px">История просмотров</h1>${ids.length?`<div><span class="lnk" style="font-size:13px" onclick="clearHist()">Очистить историю</span></div>`:''}${body}`;
+}
+function cabNotifications(){
+  const items=[['Заявка одобрена','«Документ фонда №14» — доступ предоставлен на 30 дней','сегодня'],['Требуется уточнение','По заявке «Аудиозапись лекции» нужно указать цель запроса','вчера'],['Заявка принята в работу','«Фотография экспозиции, 1927» — на рассмотрении','2 дня назад'],['Материал обновлён','Обновлено описание сохранённого «Афиша выставки «1927»»','3 дня назад']];
+  return `<h1 style="font-size:30px">Уведомления</h1>
+    <div class="metabox">${items.map(n=>`<div class="r"><div><b>${esc(n[0])}</b><div class="muted" style="font-size:13px">${esc(n[1])}</div></div><span class="muted" style="font-size:13px;white-space:nowrap">${esc(n[2])}</span></div>`).join('')}</div>`;
+}
+function cabSettings(){
+  return `<h1 style="font-size:30px">Настройки аккаунта</h1>
+    <div class="metabox" style="max-width:640px">${[['Имя и фамилия','Анна Исследователь'],['Email','anna.r@example.ru'],['Пароль','••••••••']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])} · <span class="lnk" onclick="toast('Демо: изменение')">изменить</span></span></div>`).join('')}
+      <div class="r"><span class="k">Email-уведомления</span><span class="v"><span class="opt on" style="display:inline-flex;padding:0" onclick="this.classList.toggle('on')"><span class="bx"></span></span></span></div></div>
+    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap"><span class="btn" onclick="toast('Демо: политика обработки ПД')">Политика обработки ПД</span><span class="btn" onclick="toast('Демо: правила использования')">Правила использования</span></div>
+    <div style="margin-top:24px"><span class="lnk" style="color:#9a2e2e" onclick="toast('Демо: запрос на удаление аккаунта отправлен')">Удалить аккаунт</span></div>`;
 }
 
 // заявка на доступ — модалка-флоу
@@ -505,7 +560,7 @@ function render(hash){
   else if(seg[0]==='search'){location.hash='#/archive';return;}
   else if(seg[0]==='chrono') html=chrono();
   else if(seg[0]==='map') html=map();
-  else if(seg[0]==='cabinet') html=cabinet();
+  else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=catalog(seg[1]);
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
   else if(seg[0]==='request'){ html=null; }
