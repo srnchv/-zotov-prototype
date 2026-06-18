@@ -62,7 +62,7 @@ function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
     <nav class="main">${NAV.map(([t,h])=>`<a href="${h}" class="${active===h?'active':''}">${t}</a>`).join('')}
-    <a href="#/search">Поиск ⌕</a><a class="btn dark" href="#/cabinet">Войти</a></nav>
+    <a href="#/archive">Поиск ⌕</a><a class="btn dark" href="#/cabinet">Войти</a></nav>
   </div></header>`;
 }
 function footer(){return `<footer><div class="cols">
@@ -84,14 +84,16 @@ function relBlock(o,title){
 }
 
 // ---------- views ----------
+const goSearch="if(event.key==='Enter')location.hash='#/archive/'+encodeURIComponent(this.value)";
+function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="location.hash='#/archive/'+encodeURIComponent(this.previousElementSibling.value)">Найти</button></div>`;}
 function home(){
   const rec=all('material');
   return page('#/',`
   <section class="hero"><div class="kicker">Цифровой архив</div>
     <h1>Цифровой архив Центра «Зотов»</h1>
     <div class="lead">Связный архив о конструктивизме, медиа и городской истории: материалы, личности, события, места и проекты, объединённые в единую систему связей.</div>
-    <a class="searchbar" href="#/search"><span>Поиск по архиву — материалы, личности, темы, события…</span><span class="btn dark">Найти</span></a>
-    <div class="muted" style="margin-top:10px"><a href="#/search">→ Расширенный поиск по 14+ параметрам</a></div>
+    ${searchInput('')}
+    <div class="muted" style="margin-top:10px">Введите запрос — поиск идёт по всему архиву. <a href="#/archive">Открыть архив с фильтрами →</a></div>
   </section>
   <section class="pad divider"><h2>Разделы архива</h2><div class="grid g4">
     ${[['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Библиотека','#/cat/source'],['Весь архив','#/archive']].map(([t,h])=>`<a class="card" href="${h}"><div class="t" style="font-weight:600">${t}</div></a>`).join('')}
@@ -99,31 +101,58 @@ function home(){
   <section class="pad"><h2>Рекомендуемые материалы</h2><div class="grid g4">${rec.map(tile).join('')}</div></section>`);
 }
 
-function archive(){
-  const mats=all('material');
-  return page('#/archive',`<div class="crumbs">Архив</div><h1>Архив</h1>
-    <a class="searchbar" href="#/search"><span>Поиск по архиву — ключевые слова, личности, темы…</span><span class="btn dark">Найти</span></a>
-    <div class="toolbar"><b>Найдено ${mats.length} материалов</b><div class="tools"><span class="btn sm">Сначала новые ▾</span><span class="btn sm">Список / Сетка</span><span class="btn sm">Сохранить поиск</span><span class="btn sm">Экспорт в Excel</span></div></div>
-    <div class="archive">
-      <div class="filters">
-        <div class="grp"><div class="lbl">Тип материала</div>
-          ${['Фотография','Документ','Видео','Аудио','Печатное издание','Афиша'].map((s,i)=>`<div class="opt ${i<2?'on':''}"><span class="bx"></span>${s}</div>`).join('')}</div>
-        <div class="grp"><div class="lbl">Дата</div><div style="display:flex;gap:10px"><span class="inp" style="flex:1">от</span><span class="inp" style="flex:1">до</span></div><div class="muted" style="font-size:13px;margin-top:6px">точная · период · около</div></div>
-        ${['Личность','Место','Событие','Тема','Тег','Проект Центра','Организация','Источник'].map(s=>`<div class="grp"><div class="lbl">${s}</div><div class="inp">Выберите ${s.toLowerCase()} ▾</div></div>`).join('')}
-        <span class="btn dark" style="display:block;text-align:center">Применить фильтры</span>
-      </div>
-      <div><div class="grid g3">${mats.map(tile).join('')}</div></div>
-    </div>`);
+// ---- интерактивные фильтры выдачи (browse-режим) ----
+const FILT={types:new Set()};
+const matchType=m=>!FILT.types.size||[...FILT.types].some(t=>(m.subtype||'').includes(t));
+function browseResults(){
+  const mats=all('material').filter(matchType);
+  return `<div class="toolbar"><b>Найдено ${mats.length} материалов</b><div class="tools"><span class="btn sm">Сначала новые ▾</span><span class="btn sm">Список / Сетка</span><span class="btn sm">Сохранить поиск</span><span class="btn sm">Экспорт в Excel</span></div></div>${mats.length?`<div class="grid g3">${mats.map(tile).join('')}</div>`:'<p class="muted">Нет материалов выбранного типа. <span style="cursor:pointer;text-decoration:underline" onclick="resetFilters()">Сбросить фильтры</span></p>'}`;
 }
+window.toggleType=(el,s)=>{el.classList.toggle('on');FILT.types.has(s)?FILT.types.delete(s):FILT.types.add(s);applyFilters();};
+window.applyFilters=()=>{const c=document.getElementById('arch-results');if(c)c.innerHTML=browseResults();};
+window.resetFilters=()=>{FILT.types.clear();document.querySelectorAll('.filters .topt.on').forEach(e=>e.classList.remove('on'));applyFilters();};
 
-function search(){
-  return page('#/search',`<h1>Расширенный поиск</h1>
-    <div class="lead" style="font-size:17px">Поиск по 14+ параметрам. Можно комбинировать условия, сохранить запрос и поделиться ссылкой на набор фильтров.</div>
-    <div class="field" style="margin-top:24px"><label>Ключевые слова</label><div class="inp" style="display:block">Название, описание, фрагмент текста…</div></div>
-    <div class="grp"><div class="lbl" style="font-weight:500;margin:8px 0">Тип материала</div><div class="chips">${['Фотография','Документ','Видео','Аудио','Печатное издание','Афиша','Плакат','Рукопись'].map((s,i)=>`<span class="opt ${i<2?'on':''}" style="margin-right:14px"><span class="bx"></span>${s}</span>`).join('')}</div></div>
-    <div class="grid g2" style="margin-top:18px">${['Дата','Личность','Место','Событие','Тема','Тег','Проект Центра','Организация','Коллекция','Источник'].map(s=>`<div class="field"><label>${s}</label><div class="inp" style="display:block">Выберите ${s.toLowerCase()} ▾</div></div>`).join('')}</div>
-    <div class="opt on" style="margin:8px 0"><span class="bx"></span>Искать в транскрибациях видео и аудио</div>
-    <div style="display:flex;gap:12px;margin-top:10px"><a class="btn dark" href="#/archive">Найти</a><span class="btn">Сохранить поиск</span><span class="btn">Сбросить</span></div>`);
+function filtersPanel(){
+  const types=['Фотография','Документ','Видео','Аудио','Печатное издание','Афиша'];
+  return `<div class="filters">
+    <div class="grp" style="display:flex;align-items:baseline;justify-content:space-between">
+      <div class="lbl" style="font-size:17px;font-weight:600;margin:0">Фильтры</div>
+      <span class="muted" style="cursor:pointer;font-size:13px" onclick="resetFilters()">Сбросить</span></div>
+    <div class="grp"><div class="lbl">Тип материала</div>${types.map(s=>`<div class="opt topt${FILT.types.has(s)?' on':''}" onclick="toggleType(this,'${s}')"><span class="bx"></span>${s}</div>`).join('')}</div>
+    <div class="grp"><div class="lbl">Дата</div><div style="display:flex;gap:10px"><span class="inp" style="flex:1">от</span><span class="inp" style="flex:1">до</span></div><div class="muted" style="font-size:13px;margin-top:6px">точная · период · около</div></div>
+    <details class="adv"><summary>Расширенные фильтры</summary>
+      ${['Личность','Место','Событие','Тема','Тег','Проект Центра','Организация','Коллекция','Источник'].map(s=>`<div class="grp" style="margin-top:14px"><div class="lbl">${s}</div><div class="inp">Выберите ${s.toLowerCase()} ▾</div></div>`).join('')}
+      <div class="opt on" style="margin-top:14px" onclick="this.classList.toggle('on')"><span class="bx"></span>Искать в транскрибациях видео и аудио</div>
+    </details>
+    <span class="btn dark" style="display:block;text-align:center;cursor:pointer" onclick="applyFilters()">Применить фильтры</span></div>`;
+}
+function groupedResults(q){
+  const ql=q.toLowerCase();
+  const direct=RAW.filter(o=>o.title.toLowerCase().includes(ql)||(o.role&&o.role.toLowerCase().includes(ql)));
+  const ids=new Set(direct.map(o=>o.id));
+  direct.forEach(o=>o.links.forEach(id=>ids.add(id))); // + связанные данные (как в ТЗ)
+  const hits=[...ids].map(id=>DB[id]).filter(Boolean);
+  if(!hits.length) return `<p class="muted">Ничего не найдено по запросу «${esc(q)}». Попробуйте «Родченко», «Конструктивизм» или «1927».</p>`;
+  const by={}; hits.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
+  const order=['material','person','place','event','theme','project','org','collection','source','tag','media'];
+  const blocks=order.filter(t=>by[t]).map(t=>{
+    const items=by[t];
+    const body=t==='material'?`<div class="grid g3">${items.map(tile).join('')}</div>`:`<div class="chips">${items.map(link).join('')}</div>`;
+    return `<div class="grpres"><h3>${TYPES[t].pl}<span class="c">${items.length}</span></h3>${body}</div>`;
+  }).join('');
+  return `<div class="toolbar"><b>Найдено ${hits.length} объектов</b><div class="tools"><span class="btn sm">Релевантность ▾</span><span class="btn sm">Сохранить поиск</span><span class="btn sm">Экспорт в Excel</span></div></div>
+    <div class="muted" style="margin:-8px 0 18px;font-size:13px">Поиск идёт по названиям и по связанным данным — результаты сгруппированы по типам.</div>${blocks}`;
+}
+function archive(q){
+  const browse=!q;
+  const head=browse?`<div class="crumbs">Архив</div><h1>Архив</h1>`
+    :`<div class="crumbs"><a href="#/archive">Архив</a> / Результаты поиска</div><h1 style="font-size:32px">Результаты по запросу «${esc(q)}»</h1>`;
+  const main=browse
+    ?`<div id="arch-results">${browseResults()}</div>`
+    :groupedResults(q);
+  return page('#/archive',`${head}
+    ${searchInput(q)}
+    <div class="archive" style="margin-top:18px">${filtersPanel()}<div>${main}</div></div>`);
 }
 
 function chrono(){
@@ -267,8 +296,8 @@ function render(hash){
   const seg=h.split('/').filter(Boolean); // e.g. ['e','m1']
   let html;
   if(seg.length===0) html=home();
-  else if(seg[0]==='archive') html=archive();
-  else if(seg[0]==='search') html=search();
+  else if(seg[0]==='archive') html=archive(seg[1]?decodeURIComponent(seg[1]):'');
+  else if(seg[0]==='search'){location.hash='#/archive';return;}
   else if(seg[0]==='chrono') html=chrono();
   else if(seg[0]==='map') html=map();
   else if(seg[0]==='cabinet') html=cabinet();
