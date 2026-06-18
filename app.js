@@ -50,6 +50,32 @@ const RAW = [
   {id:'tg1',type:'tag',title:'лестница',links:[]},{id:'tg2',type:'tag',title:'чертёж',links:[]},{id:'tg3',type:'tag',title:'афиша',links:[]}
 ];
 
+// --- расширение данных для демонстрации фильтрации ---
+RAW.push(
+  {id:'p4',type:'person',title:'Дзига Вертов',life:'1896–1954',role:'кинорежиссёр, теоретик кино',links:['pr2','t1']},
+  {id:'pl3',type:'place',title:'Москва',placeType:'Город',address:'Россия',status:'Существует',coord:'55.75, 37.62',links:[]},
+  {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
+  {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]}
+);
+// тип материала / медиа / доступность для существующих материалов
+const MAT_META={
+  m1:{mtype:'Изображение',media:['image'],a11y:[],lang:'—'},
+  m2:{mtype:'Печатная продукция',media:['image'],a11y:[],lang:'рус'},
+  m3:{mtype:'Графика',media:['image','pdf'],a11y:[],lang:'—'},
+  m4:{mtype:'Аудио',media:['audio'],a11y:['расшифровка'],lang:'рус'}
+};
+RAW.forEach(o=>{ if(MAT_META[o.id]) Object.assign(o,MAT_META[o.id]); });
+RAW.push(
+  {id:'m5',type:'material',title:'Интервью с Александром Родченко',subtype:'Интервью',mtype:'Видео',date:'1930',access:'open',media:['video'],a11y:['субтитры','РЖЯ'],lang:'рус',authors:['p1'],links:['p1','t1','t2']},
+  {id:'m6',type:'material',title:'Кинохроника «Киноглаз»',subtype:'Фильм',mtype:'Видео',date:'1924',access:'open',media:['video'],a11y:['субтитры'],lang:'рус',authors:['p4'],links:['p4','pr2','t1']},
+  {id:'m7',type:'material',title:'Каталог выставки «Киноглаз»',subtype:'Каталог',mtype:'Печатная продукция',date:'1924',access:'open',media:['pdf'],a11y:[],lang:'рус',links:['p4','pr2','s2','c1']},
+  {id:'m8',type:'material',title:'Протокол заседания ВХУТЕМАС',subtype:'Протокол',mtype:'Документ',date:'1923',access:'restricted',media:['pdf'],a11y:[],lang:'рус',links:['o1','pl2']},
+  {id:'m9',type:'material',title:'Статья о фотомонтаже',subtype:'Статья',mtype:'Текст',date:'1926',access:'open',media:[],a11y:[],lang:'рус',links:['t2','p1','s1']},
+  {id:'m10',type:'material',title:'Макет агитустановки',subtype:'Эскиз-макет',mtype:'Макет',date:'1929',access:'request',media:['image','3d'],a11y:[],lang:'—',links:['p3','t1','pl3']},
+  {id:'m11',type:'material',title:'Плакат «Москва строится»',subtype:'Плакат',mtype:'Графика',date:'1931',access:'open',media:['image'],a11y:[],lang:'рус',links:['pl3','t1','o2']},
+  {id:'m12',type:'material',title:'Аудиогид по выставке',subtype:'Аудиогид',mtype:'Аудио',date:'2023',access:'open',media:['audio'],a11y:['аудиоописание','расшифровка'],lang:'рус',links:['pr1']}
+);
+
 // index + bidirectional links
 const DB = {}; RAW.forEach(o=>{o.links=o.links||[];DB[o.id]=o});
 RAW.forEach(o=>o.links.forEach(id=>{ if(DB[id] && !DB[id].links.includes(o.id)) DB[id].links.push(o.id); }));
@@ -84,8 +110,8 @@ function relBlock(o,title){
 }
 
 // ---------- views ----------
-const goSearch="if(event.key==='Enter')location.hash='#/archive/'+encodeURIComponent(this.value)";
-function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="location.hash='#/archive/'+encodeURIComponent(this.previousElementSibling.value)">Найти</button></div>`;}
+const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
+function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.previousElementSibling.value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;}
 function home(){
   const rec=all('material');
   return page('#/',`
@@ -101,59 +127,226 @@ function home(){
   <section class="pad"><h2>Рекомендуемые материалы</h2><div class="grid g4">${rec.map(tile).join('')}</div></section>`);
 }
 
-// ---- интерактивные фильтры выдачи (browse-режим) ----
-const FILT={types:new Set()};
-const matchType=m=>!FILT.types.size||[...FILT.types].some(t=>(m.subtype||'').includes(t));
-function browseResults(){
-  const mats=all('material').filter(matchType);
-  return `<div class="toolbar"><b>Найдено ${mats.length} материалов</b><div class="tools"><span class="btn sm">Сначала новые ▾</span><span class="btn sm">Список / Сетка</span><span class="btn sm">Сохранить поиск</span><span class="btn sm">Экспорт в Excel</span></div></div>${mats.length?`<div class="grid g3">${mats.map(tile).join('')}</div>`:'<p class="muted">Нет материалов выбранного типа. <span style="cursor:pointer;text-decoration:underline" onclick="resetFilters()">Сбросить фильтры</span></p>'}`;
-}
-window.toggleType=(el,s)=>{el.classList.toggle('on');FILT.types.has(s)?FILT.types.delete(s):FILT.types.add(s);applyFilters();};
-window.applyFilters=()=>{const c=document.getElementById('arch-results');if(c)c.innerHTML=browseResults();};
-window.resetFilters=()=>{FILT.types.clear();document.querySelectorAll('.filters .topt.on').forEach(e=>e.classList.remove('on'));applyFilters();};
+// ===== ПОИСК И ФИЛЬТРАЦИЯ (ТЗ: простой + расширенный, многомерные фильтры, URL-состояние) =====
+const TYPELIST=['Видео','Аудио','Изображение','Текст','Документ','Печатная продукция','Графика','Живопись','Макет','Предмет / ДПИ','Цифровой объект','Сенсорный материал'];
+const ACCESS={open:'Открытый',request:'По запросу',restricted:'Ограниченный'};
+const MEDIA={image:'Изображение',video:'Видео',audio:'Аудио',pdf:'PDF','3d':'3D-модель'};
+const A11Y=['РЖЯ','субтитры','расшифровка','аудиоописание'];
+const SORTS={rel:'По релевантности',new:'Сначала новые',old:'Сначала старые',az:'По алфавиту',type:'По типу материала'};
+const ENT=[['person','Личность'],['place','Место'],['event','Событие'],['theme','Тема'],['tag','Тег'],['project','Выставка / проект'],['org','Организация'],['collection','Коллекция / фонд'],['source','Источник']];
+const ENTKEYS=ENT.map(e=>e[0]);
+const DIMS=['type','subtype','decade','access','media','a11y','lang',...ENTKEYS];
 
+let advOpen=false;
+let FILT=blankFilt();
+function blankFilt(){const f={q:'',sort:'rel'};DIMS.forEach(d=>f[d]=new Set());return f;}
+const decadeOf=d=>{const m=(d||'').match(/\d{4}/);return m?Math.floor(+m[0]/10)*10+'-е':'';};
+const yearOf=d=>{const m=(d||'').match(/\d{4}/);return m?+m[0]:0;};
+const subtypesAll=()=>[...new Set(all('material').map(m=>(m.subtype||'').split('·')[0].trim()).filter(Boolean))];
+const langsAll=()=>[...new Set(all('material').map(m=>m.lang).filter(l=>l&&l!=='—'))];
+const decadesAll=()=>[...new Set(all('material').map(m=>decadeOf(m.date)).filter(Boolean))].sort();
+
+// --- URL <-> состояние фильтров ---
+function parseFilt(qs){
+  const f=blankFilt();
+  new URLSearchParams(qs||'').forEach((v,k)=>{
+    if(k==='q') f.q=v;
+    else if(k==='sort') f.sort=v;
+    else if(f[k]instanceof Set) v.split(',').filter(Boolean).forEach(x=>f[k].add(x));
+  });
+  return f;
+}
+function buildHash(){
+  const p=new URLSearchParams();
+  if(FILT.q) p.set('q',FILT.q);
+  DIMS.forEach(d=>{ if(FILT[d].size) p.set(d,[...FILT[d]].join(',')); });
+  if(FILT.sort&&FILT.sort!=='rel') p.set('sort',FILT.sort);
+  const s=p.toString();
+  return '#/archive'+(s?'?'+s:'');
+}
+const hasFilters=()=>DIMS.some(d=>FILT[d].size);
+const navFilt=()=>{location.hash=buildHash();};
+
+// --- движок ---
+function textMatch(o,ql){
+  return ['title','alt','desc','role','def','author','subtype','mtype','date','placeType','orgType','srcType','prType','life']
+    .some(k=>typeof o[k]==='string'&&o[k].toLowerCase().includes(ql));
+}
+const matAttrActive=()=>['type','subtype','decade','access','media','a11y','lang'].some(d=>FILT[d].size);
+function passes(o){
+  if(matAttrActive()&&o.type!=='material') return false;
+  if(FILT.type.size&&!FILT.type.has(o.mtype)) return false;
+  if(FILT.subtype.size&&![...FILT.subtype].some(s=>(o.subtype||'').includes(s))) return false;
+  if(FILT.decade.size&&!FILT.decade.has(decadeOf(o.date))) return false;
+  if(FILT.access.size&&!FILT.access.has(o.access)) return false;
+  if(FILT.media.size&&!(o.media||[]).some(m=>FILT.media.has(m))) return false;
+  if(FILT.a11y.size&&!(o.a11y||[]).some(a=>FILT.a11y.has(a))) return false;
+  if(FILT.lang.size&&!FILT.lang.has(o.lang)) return false;
+  for(const k of ENTKEYS){ if(FILT[k].size){ const ok=FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)); if(!ok) return false; } }
+  return true;
+}
+function runSearch(){
+  let pool, direct=new Set();
+  if(FILT.q){
+    const ql=FILT.q.toLowerCase();
+    const hits=RAW.filter(o=>textMatch(o,ql));
+    hits.forEach(o=>direct.add(o.id));
+    const ids=new Set(direct);
+    hits.forEach(o=>(o.links||[]).forEach(id=>ids.add(id))); // + связанные данные (ТЗ)
+    pool=[...ids].map(id=>DB[id]).filter(Boolean);
+  } else if(hasFilters()){
+    pool=RAW.slice();
+  } else {
+    pool=all('material'); // browse-каталог
+  }
+  return {res:pool.filter(passes),direct};
+}
+function sortItems(arr,direct){
+  const cmp={
+    new:(a,b)=>yearOf(b.date)-yearOf(a.date),
+    old:(a,b)=>yearOf(a.date)-yearOf(b.date),
+    az:(a,b)=>a.title.localeCompare(b.title,'ru'),
+    type:(a,b)=>(a.mtype||TYPES[a.type].l).localeCompare(b.mtype||TYPES[b.type].l,'ru'),
+    rel:(a,b)=>((direct.has(b.id)?1:0)-(direct.has(a.id)?1:0))||(yearOf(b.date)-yearOf(a.date))
+  }[FILT.sort]||(()=>0);
+  return arr.slice().sort(cmp);
+}
+
+// --- карточка результата ---
+const accessBadge=a=>a?`<span class="tag-a ${a}">${ACCESS[a]||a}</span>`:'';
+const mediaIcons=o=>{const ic={image:'IMG',video:'VIDEO',audio:'AUDIO',pdf:'PDF','3d':'3D'};return (o.media||[]).map(m=>`<span class="mico" title="${MEDIA[m]||m}">${ic[m]||'•'}</span>`).join('');};
+function resultCard(o){
+  const ln=(o.links||[]).map(id=>DB[id]).filter(Boolean);
+  const person=ln.find(x=>x.type==='person'), coll=ln.find(x=>x.type==='collection'), proj=ln.find(x=>x.type==='project');
+  const tags=ln.filter(x=>x.type==='tag');
+  return `<a class="card tile rcard" href="#/e/${o.id}">
+    <div class="img"></div>
+    <div class="kicker">${esc(o.mtype||TYPES[o.type].l)}${o.subtype?' · '+esc(o.subtype):''}</div>
+    <div class="t">${esc(o.title)}</div>
+    <div class="muted" style="font-size:13px">${esc(o.date||'')}</div>
+    <div class="rmeta">${accessBadge(o.access)}${mediaIcons(o)}</div>
+    ${(person||coll||proj)?`<div class="rlinks">${person?`<span>Личность: ${esc(person.title)}</span>`:''}${proj?`<span>Выставка: ${esc(proj.title)}</span>`:''}${coll?`<span>Коллекция: ${esc(coll.title)}</span>`:''}</div>`:''}
+    ${tags.length?`<div class="rtags">${tags.map(t=>'#'+esc(t.title)).join(' ')}</div>`:''}
+  </a>`;
+}
+
+// --- активные фильтры (чипы со снятием) ---
+function activeChips(){
+  const c=[];
+  if(FILT.q) c.push(['Запрос: «'+FILT.q+'»','q','']);
+  FILT.type.forEach(v=>c.push(['Тип: '+v,'type',v]));
+  FILT.subtype.forEach(v=>c.push(['Подтип: '+v,'subtype',v]));
+  FILT.decade.forEach(v=>c.push(['Период: '+v,'decade',v]));
+  FILT.access.forEach(v=>c.push(['Доступ: '+ACCESS[v],'access',v]));
+  FILT.media.forEach(v=>c.push(['Медиа: '+MEDIA[v],'media',v]));
+  FILT.a11y.forEach(v=>c.push(['Доступность: '+v,'a11y',v]));
+  FILT.lang.forEach(v=>c.push(['Язык: '+v,'lang',v]));
+  ENT.forEach(([k,lbl])=>FILT[k].forEach(id=>c.push([lbl+': '+(DB[id]?DB[id].title:id),k,id])));
+  if(!c.length) return '';
+  return `<div class="achips">${c.map(([t,d,v])=>`<span class="achip" onclick="rmFilter('${d}','${esc(v)}')">${esc(t)} ✕</span>`).join('')}<span class="achip clear" onclick="resetAll()">Сбросить всё</span></div>`;
+}
+function toolbar(count){
+  const opts=Object.entries(SORTS).map(([k,l])=>`<option value="${k}"${FILT.sort===k?' selected':''}>${l}</option>`).join('');
+  return `<div class="toolbar"><b>Найдено: ${count}</b>
+    <div class="tools">
+      <select class="sel" onchange="setSort(this.value)" title="Сортировка">${opts}</select>
+      <span class="btn sm" onclick="saveSearch()">Сохранить поиск</span>
+      <span class="btn sm" onclick="copyLink()">Скопировать ссылку</span>
+      <span class="btn sm" onclick="exportCSV()">Скачать (CSV)</span>
+    </div></div>`;
+}
+
+// --- фильтр-панель (чипы, множественный выбор) ---
+function chipGroup(dim,label,opts){
+  if(!opts.length) return '';
+  return `<div class="grp"><div class="lbl">${label}</div><div class="chips">${opts.map(([v,l])=>`<span class="fchip${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('')}</div></div>`;
+}
 function filtersPanel(){
-  const types=['Фотография','Документ','Видео','Аудио','Печатное издание','Афиша'];
   return `<div class="filters">
     <div class="grp" style="display:flex;align-items:baseline;justify-content:space-between">
       <div class="lbl" style="font-size:17px;font-weight:600;margin:0">Фильтры</div>
-      <span class="muted" style="cursor:pointer;font-size:13px" onclick="resetFilters()">Сбросить</span></div>
-    <div class="grp"><div class="lbl">Тип материала</div>${types.map(s=>`<div class="opt topt${FILT.types.has(s)?' on':''}" onclick="toggleType(this,'${s}')"><span class="bx"></span>${s}</div>`).join('')}</div>
-    <div class="grp"><div class="lbl">Дата</div><div style="display:flex;gap:10px"><span class="inp" style="flex:1">от</span><span class="inp" style="flex:1">до</span></div><div class="muted" style="font-size:13px;margin-top:6px">точная · период · около</div></div>
-    <details class="adv"><summary>Расширенные фильтры</summary>
-      ${['Личность','Место','Событие','Тема','Тег','Проект Центра','Организация','Коллекция','Источник'].map(s=>`<div class="grp" style="margin-top:14px"><div class="lbl">${s}</div><div class="inp">Выберите ${s.toLowerCase()} ▾</div></div>`).join('')}
-      <div class="opt on" style="margin-top:14px" onclick="this.classList.toggle('on')"><span class="bx"></span>Искать в транскрибациях видео и аудио</div>
+      <span class="muted lnk" style="font-size:13px" onclick="resetFilters()">Сбросить</span></div>
+    ${chipGroup('type','Тип материала',TYPELIST.map(t=>[t,t]))}
+    ${chipGroup('decade','Дата / период',decadesAll().map(d=>[d,d]))}
+    <div class="muted" style="font-size:13px;margin:-6px 0 16px">Точная дата, диапазон и «около» — в полной версии.</div>
+    <details class="adv"${advOpen?' open':''} ontoggle="advOpen=this.open">
+      <summary>Расширенные фильтры</summary>
+      <div style="margin-top:12px">
+      ${chipGroup('subtype','Подтип материала',subtypesAll().map(s=>[s,s]))}
+      ${ENT.map(([k,lbl])=>chipGroup(k,lbl,all(k).map(o=>[o.id,o.title]))).join('')}
+      ${chipGroup('access','Уровень доступа',Object.entries(ACCESS))}
+      ${chipGroup('media','Наличие медиафайла',Object.entries(MEDIA))}
+      ${chipGroup('a11y','Доступность',A11Y.map(a=>[a,a]))}
+      ${chipGroup('lang','Язык',langsAll().map(l=>[l,l]))}
+      </div>
     </details>
-    <span class="btn dark" style="display:block;text-align:center;cursor:pointer" onclick="applyFilters()">Применить фильтры</span></div>`;
+  </div>`;
 }
-function groupedResults(q){
-  const ql=q.toLowerCase();
-  const direct=RAW.filter(o=>o.title.toLowerCase().includes(ql)||(o.role&&o.role.toLowerCase().includes(ql)));
-  const ids=new Set(direct.map(o=>o.id));
-  direct.forEach(o=>o.links.forEach(id=>ids.add(id))); // + связанные данные (как в ТЗ)
-  const hits=[...ids].map(id=>DB[id]).filter(Boolean);
-  if(!hits.length) return `<p class="muted">Ничего не найдено по запросу «${esc(q)}». Попробуйте «Родченко», «Конструктивизм» или «1927».</p>`;
-  const by={}; hits.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
+
+// --- страница архива / результатов ---
+function archive(qs){
+  FILT=parseFilt(qs);
+  const {res,direct}=runSearch();
+  const browse=!FILT.q&&!hasFilters();
   const order=['material','person','place','event','theme','project','org','collection','source','tag','media'];
-  const blocks=order.filter(t=>by[t]).map(t=>{
-    const items=by[t];
-    const body=t==='material'?`<div class="grid g3">${items.map(tile).join('')}</div>`:`<div class="chips">${items.map(link).join('')}</div>`;
-    return `<div class="grpres"><h3>${TYPES[t].pl}<span class="c">${items.length}</span></h3>${body}</div>`;
-  }).join('');
-  return `<div class="toolbar"><b>Найдено ${hits.length} объектов</b><div class="tools"><span class="btn sm">Релевантность ▾</span><span class="btn sm">Сохранить поиск</span><span class="btn sm">Экспорт в Excel</span></div></div>
-    <div class="muted" style="margin:-8px 0 18px;font-size:13px">Поиск идёт по названиям и по связанным данным — результаты сгруппированы по типам.</div>${blocks}`;
-}
-function archive(q){
-  const browse=!q;
-  const head=browse?`<div class="crumbs">Архив</div><h1>Архив</h1>`
-    :`<div class="crumbs"><a href="#/archive">Архив</a> / Результаты поиска</div><h1 style="font-size:32px">Результаты по запросу «${esc(q)}»</h1>`;
-  const main=browse
-    ?`<div id="arch-results">${browseResults()}</div>`
-    :groupedResults(q);
+  const by={}; res.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
+  let body;
+  if(!res.length){
+    body=`<p class="muted">Ничего не найдено. Измените запрос или фильтры. <span class="lnk" onclick="resetAll()">Сбросить всё</span><br><span style="font-size:13px">Подсказка: «Родченко», «Вертов», «Конструктивизм», «1927».</span></p>`;
+  } else if(browse){
+    body=`<div class="grid g3">${sortItems(by.material||[],direct).map(resultCard).join('')}</div>`;
+  } else {
+    body=order.filter(t=>by[t]).map(t=>{
+      const items=sortItems(by[t],direct);
+      const inner=t==='material'?`<div class="grid g3">${items.map(resultCard).join('')}</div>`:`<div class="chips">${items.map(link).join('')}</div>`;
+      return `<div class="grpres"><h3>${TYPES[t].pl}<span class="c">${items.length}</span></h3>${inner}</div>`;
+    }).join('');
+  }
+  const head=browse
+    ?`<div class="crumbs">Архив</div><h1>Архив</h1><div class="muted">Каталог материалов. Введите запрос или выберите фильтры слева — результаты обновятся.</div>`
+    :`<div class="crumbs"><a href="#/archive">Архив</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
   return page('#/archive',`${head}
-    ${searchInput(q)}
-    <div class="archive" style="margin-top:18px">${filtersPanel()}<div>${main}</div></div>`);
+    ${searchInput(FILT.q)}
+    <div class="archive" style="margin-top:18px">${filtersPanel()}<div>${activeChips()}${toolbar(res.length)}${body}</div></div>`);
 }
+
+// --- обработчики фильтров / действий ---
+window.tf=(dim,v)=>{const S=FILT[dim];S.has(v)?S.delete(v):S.add(v);navFilt();};
+window.rmFilter=(dim,v)=>{if(dim==='q')FILT.q='';else FILT[dim].delete(v);navFilt();};
+window.setSort=v=>{FILT.sort=v;navFilt();};
+window.resetFilters=()=>{const q=FILT.q,s=FILT.sort;FILT=blankFilt();FILT.q=q;FILT.sort=s;navFilt();};
+window.resetAll=()=>{FILT=blankFilt();navFilt();};
+
+const SKEY='zotov_saved';
+const getSaved=()=>{try{return JSON.parse(localStorage.getItem(SKEY)||'[]')}catch(e){return[]}};
+const setSaved=a=>localStorage.setItem(SKEY,JSON.stringify(a));
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1900);}
+window.copyLink=()=>{const u=location.href;if(navigator.clipboard)navigator.clipboard.writeText(u);toast('Ссылка на выдачу скопирована');};
+window.saveSearch=()=>{
+  const {res}=runSearch();
+  const def=FILT.q||[...FILT.type][0]||(ENTKEYS.map(k=>[...FILT[k]][0]).filter(Boolean).map(id=>DB[id]&&DB[id].title)[0])||'Мой поиск';
+  const name=prompt('Название сохранённого поиска:',def);
+  if(!name) return;
+  const a=getSaved();
+  a.unshift({name,hash:buildHash(),count:res.length,date:new Date().toLocaleDateString('ru-RU')});
+  setSaved(a); toast('Поиск сохранён в личном кабинете');
+};
+window.exportCSV=()=>{
+  const {res,direct}=runSearch();
+  const rows=[['Название','Тип','Подтип','Дата','Уровень доступа','Темы','Личности']];
+  sortItems(res,direct).forEach(o=>{
+    const ln=(o.links||[]).map(id=>DB[id]).filter(Boolean);
+    const th=ln.filter(x=>x.type==='theme').map(x=>x.title).join('; ');
+    const pr=ln.filter(x=>x.type==='person').map(x=>x.title).join('; ');
+    rows.push([o.title,o.mtype||TYPES[o.type].l,o.subtype||'',o.date||'',ACCESS[o.access]||'',th,pr]);
+  });
+  const csv='﻿'+rows.map(r=>r.map(c=>'"'+(''+c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='zotov-search.csv';a.click();URL.revokeObjectURL(url);
+  toast('Результаты выгружены (CSV)');
+};
+window.copySaved=i=>{const s=getSaved()[i];if(s){const u=location.origin+location.pathname+s.hash;if(navigator.clipboard)navigator.clipboard.writeText(u);toast('Ссылка скопирована');}};
+window.delSaved=i=>{const a=getSaved();a.splice(i,1);setSaved(a);render();};
 
 function chrono(){
   const items=[...all('event'),...all('material').filter(m=>m.date)];
@@ -177,6 +370,7 @@ function map(){
 function catalog(type){
   const items=all(type); const T=TYPES[type];
   return page('#/cat/'+type,`<div class="crumbs">${T.pl}</div><h1>${T.pl}</h1>
+    ${searchInput('','Поиск по архиву — '+T.pl.toLowerCase()+', материалы, темы…')}
     <div class="grid ${type==='person'?'g4':'g3'}" style="margin-top:24px">${items.map(o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="t" style="font-weight:600">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.life||o.colType||o.srcType||o.def||'')}</div></a>`).join('')}</div>`);
 }
 
@@ -257,11 +451,18 @@ function entity(o){
 
 function cabinet(){
   const mats=all('material');
+  const saved=getSaved();
+  const savedHtml=saved.length
+    ? `<div class="metabox">${saved.map((s,i)=>`<div class="r"><div><b>${esc(s.name)}</b><div class="muted" style="font-size:13px">${esc(s.hash.replace('#/archive','').replace(/^\?/,'')||'все материалы')} · ${s.count} рез. · ${esc(s.date)}</div></div><div class="tools"><a class="btn sm" href="${s.hash}">Открыть</a><span class="btn sm" onclick="copySaved(${i})">Ссылка</span><span class="btn sm" onclick="delSaved(${i})">Удалить</span></div></div>`).join('')}</div>`
+    : `<p class="muted">Сохранённых поисков пока нет. Откройте <a href="#/archive">Архив</a>, настройте фильтры и нажмите «Сохранить поиск».</p>`;
   return page('#/cabinet',`<div class="cab">
     <div class="side"><div style="display:flex;gap:12px;align-items:center;padding:8px 4px 16px"><div style="width:44px;height:44px;border-radius:50%;background:var(--img)"></div><div><b>Анна Исследователь</b><div class="kicker">Исследователь</div></div></div>
-      ${['Профиль','Сохранённые материалы','Подборки','Заявки на доступ','История просмотров','Уведомления','Настройки'].map((s,i)=>`<a class="${i==1?'active':''}">${s}</a>`).join('')}</div>
+      ${['Профиль','Сохранённые материалы','Сохранённые поиски','Подборки','Заявки на доступ','История просмотров','Уведомления','Настройки'].map((s,i)=>`<a class="${i==1?'active':''}">${s}</a>`).join('')}</div>
     <div><h1 style="font-size:30px">Сохранённые материалы</h1><div class="muted">48 материалов · 3 подборки · 2 активные заявки</div>
       <div class="grid g4" style="margin-top:16px">${mats.map(tile).join('')}</div>
+      <h2>Сохранённые поиски</h2>
+      <div class="muted" style="font-size:13px;margin-bottom:10px">Сохраняются параметры поиска и фильтров (а не статичный список) — при открытии выдача пересчитывается по актуальным данным.</div>
+      ${savedHtml}
       <h2>Заявки на доступ</h2>
       <div class="metabox">${[['Фотография экспозиции, 1927','На рассмотрении'],['Документ фонда №14','Одобрена'],['Аудиозапись лекции','Требует уточнения']].map(r=>`<div class="r"><span>${r[0]}</span><span class="statbadge">${r[1]}</span></div>`).join('')}</div>
     </div></div>`);
@@ -290,13 +491,17 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
   </div></div>`;};
 
 // ---------- router ----------
+let lastPath='';
 function render(hash){
   document.getElementById('modal-root').innerHTML='';
-  const h=(hash||location.hash||'#/').replace(/^#/,'');
-  const seg=h.split('/').filter(Boolean); // e.g. ['e','m1']
+  const raw=(hash||location.hash||'#/').replace(/^#/,'');
+  const qi=raw.indexOf('?');
+  const path=qi<0?raw:raw.slice(0,qi);
+  const qs=qi<0?'':raw.slice(qi+1);
+  const seg=path.split('/').filter(Boolean); // e.g. ['e','m1']
   let html;
   if(seg.length===0) html=home();
-  else if(seg[0]==='archive') html=archive(seg[1]?decodeURIComponent(seg[1]):'');
+  else if(seg[0]==='archive') html=archive(seg[1]?'q='+seg[1]:qs); // legacy #/archive/<text> → ?q=
   else if(seg[0]==='search'){location.hash='#/archive';return;}
   else if(seg[0]==='chrono') html=chrono();
   else if(seg[0]==='map') html=map();
@@ -305,7 +510,7 @@ function render(hash){
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
   else if(seg[0]==='request'){ html=null; }
   else html=home();
-  if(html!==null){document.getElementById('app').innerHTML=html;window.scrollTo(0,0);}
+  if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
   if(seg[0]==='request') request(seg[1]);
 }
 window.addEventListener('hashchange',()=>render());
