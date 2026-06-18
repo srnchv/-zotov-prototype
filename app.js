@@ -83,7 +83,7 @@ const all = t => RAW.filter(o=>o.type===t);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
-const NAV=[['Архив','#/archive'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/cat/source']];
+const NAV=[['Архив','#/archive'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
 function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
@@ -93,21 +93,39 @@ function header(active){
 }
 function footer(){return `<footer><div class="cols">
   <div><h4>Архив</h4><a href="#/chrono">Хронограф</a><a href="#/map">Карта</a><a href="#/cat/person">Личности</a><a href="#/cat/theme">Темы</a></div>
-  <div><h4>Коллекции</h4><a href="#/cat/collection">Проекты Центра</a><a href="#/cat/source">Библиотека</a><a href="#/archive">Весь архив</a></div>
+  <div><h4>Коллекции</h4><a href="#/cat/collection">Проекты Центра</a><a href="#/library">Библиотека</a><a href="#/archive">Весь архив</a></div>
   <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a></div>
   <div><h4>Центр «Зотов»</h4><a href="#/">О центре</a><a href="#/">Контакты</a><a href="#/">hello@zotov.ru</a></div>
 </div></footer>`;}
 const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+footer();
 const link=o=>`<a class="chip" href="#/e/${o.id}">${esc(o.title)}</a>`;
-const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.date||o.subtype||o.role||'')}</div></a>`;
+const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.colType||o.prType||o.orgType||'';
+const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
 
-// related links grouped by type (демонстрирует двусторонние связи)
-function relBlock(o,title){
-  const by={}; o.links.forEach(id=>{const x=DB[id];if(!x)return;(by[x.type]=by[x.type]||[]).push(x);});
-  const order=['person','material','place','event','theme','project','org','collection','source','tag','media'];
-  const grps=order.filter(t=>by[t]&&t!=='media').map(t=>`<div class="grp"><div class="lbl">${TYPES[t].pl}</div><div class="chips">${by[t].map(link).join('')}</div></div>`).join('');
-  return grps?`<h2>${title||'Связи'}</h2><div class="rel">${grps}</div>`:'';
+// связанные сущности: часть — карточками (как материалы), часть — ссылками-чипами (как темы)
+const CARD_TYPES=['material','person','place','event','project','collection'];
+const REL_ORDER=['material','person','place','event','project','collection','theme','org','source','tag'];
+const REL_HEAD={material:'Материалы',person:'Связанные личности',place:'Связанные места',event:'Связанные события',project:'Связанные выставки и проекты',collection:'Коллекции и фонды',theme:'Темы',org:'Организации',source:'Источники',tag:'Теги'};
+function relatedSections(o){
+  const by={}; (o.links||[]).forEach(id=>{const x=DB[id];if(x&&x.id!==o.id&&x.type!=='media')(by[x.type]=by[x.type]||[]).push(x);});
+  return REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>{
+    const items=by[t];
+    const inner=CARD_TYPES.includes(t)
+      ?`<div class="grid ${t==='person'?'g4':'g3'}">${items.map(tile).join('')}</div>`
+      :`<div class="chips" style="margin-top:4px">${items.map(link).join('')}</div>`;
+    return `<h2>${REL_HEAD[t]}</h2>${inner}`;
+  }).join('');
 }
+// похожие материалы — по общим связям (темы/теги/личности), без дублей с прямыми связями
+function similarBlock(o){
+  if(o.type!=='material') return '';
+  const direct=new Set(o.links||[]);
+  const sim=all('material').filter(m=>m.id!==o.id&&!direct.has(m.id)&&(m.links||[]).some(id=>direct.has(id)));
+  return sim.length?`<h2>Похожие материалы</h2><div class="muted" style="font-size:13px;margin:-6px 0 10px">По общим темам, тегам и связям.</div><div class="grid g3">${sim.map(resultCard).join('')}</div>`:'';
+}
+// компактный поиск внутри раздела (фильтрует видимый список по названию)
+function sectionSearch(ph){return `<input class="secsearch" placeholder="${ph||'Поиск в разделе'}" oninput="filterCat(this.value)">`;}
+window.filterCat=q=>{const ql=q.trim().toLowerCase();document.querySelectorAll('#catgrid > a').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(ql)?'':'none';});};
 
 // ---------- views ----------
 const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
@@ -122,7 +140,7 @@ function home(){
     <div class="muted" style="margin-top:10px">Введите запрос — поиск идёт по всему архиву. <a href="#/archive">Открыть архив с фильтрами →</a></div>
   </section>
   <section class="pad divider"><h2>Разделы архива</h2><div class="grid g4">
-    ${[['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Библиотека','#/cat/source'],['Весь архив','#/archive']].map(([t,h])=>`<a class="card" href="${h}"><div class="t" style="font-weight:600">${t}</div></a>`).join('')}
+    ${[['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Библиотека','#/library'],['Весь архив','#/archive']].map(([t,h])=>`<a class="card" href="${h}"><div class="t" style="font-weight:600">${t}</div></a>`).join('')}
   </div></section>
   <section class="pad"><h2>Рекомендуемые материалы</h2><div class="grid g4">${rec.map(tile).join('')}</div></section>`);
 }
@@ -362,26 +380,37 @@ function chrono(){
   const items=[...all('event'),...all('material').filter(m=>m.date)];
   const byYear={}; items.forEach(o=>{const y=(o.date||'').match(/\d{4}/);const k=y?y[0]:'—';(byYear[k]=byYear[k]||[]).push(o);});
   const years=Object.keys(byYear).sort();
+  const decs=['Все периоды','1910-е','1920-е','1930-е','2020-е'];
   return page('#/chrono',`<h1>Хронограф</h1><div class="lead" style="font-size:17px">События и материалы на единой временной шкале.</div>
-    <div class="chips" style="margin:18px 0">${['Все периоды','1910-е','1920-е','1930-е'].map((s,i)=>`<span class="chip" ${i==2?'style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
-    <div class="tl">${years.map(y=>`<div class="row"><div class="yr">${y}</div><div class="cont">${byYear[y].map(o=>`<a class="evt" href="#/e/${o.id}"><div class="th"></div><div><div class="kicker">${TYPES[o.type].l}</div><div class="t" style="font-weight:600;font-size:17px">${esc(o.title)}</div><div class="muted">${esc(o.date)}</div></div></a>`).join('')}</div></div>`).join('')}</div>`);
+    <div class="chips" style="margin:18px 0">${decs.map((s,i)=>`<span class="chip" onclick="filterChrono(this,'${i==0?'all':s}')"${i==0?' style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
+    <div class="tl" id="tl">${years.map(y=>{const d=/^\d/.test(y)?Math.floor(+y/10)*10+'-е':'—';return `<div class="row" data-d="${d}"><div class="yr">${y}</div><div class="cont">${byYear[y].map(o=>`<a class="evt" href="#/e/${o.id}"><div class="th"></div><div><div class="kicker">${TYPES[o.type].l}</div><div class="t" style="font-weight:600;font-size:17px">${esc(o.title)}</div><div class="muted">${esc(o.date)}</div></div></a>`).join('')}</div></div>`}).join('')}</div>`);
 }
+window.filterChrono=(el,d)=>{[...el.parentElement.children].forEach(c=>c.removeAttribute('style'));el.style.background='#1f1f1f';el.style.color='#fff';document.querySelectorAll('#tl .row').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});};
 
 function map(){
   const places=all('place');
   const pts=[[28,26],[55,42],[40,62]];
-  return page('#/map',`<h1>Карта</h1><div class="chips" style="margin:8px 0 18px">${['Места','События','Персоны','Организации','Выставки'].map((s,i)=>`<span class="chip" ${i<2?'style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
-    <div class="maprow"><div>
-      <div class="inp" style="display:block;margin-bottom:12px">Поиск по объектам на карте</div>
-      ${places.map(p=>`<a class="card" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></div><div><div class="t" style="font-weight:600">${esc(p.title)}</div><div class="muted" style="font-size:13px">Место · ${DB[p.id].links.length} связей</div></div></a>`).join('')}
+  return page('#/map',`<h1>Карта</h1>
+    <div class="muted" style="font-size:15px">Места архива на карте: здания, организации, места событий и съёмок.</div>
+    <div class="chips" style="margin:14px 0 4px">${['Все места','Здания','Организации','Места событий','Утраченные'].map((s,i)=>`<span class="chip"${i==0?' style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
+    ${sectionSearch('Поиск по местам')}
+    <div class="maprow" style="margin-top:14px"><div id="catgrid">
+      ${places.map(p=>`<a class="card" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></div><div><div class="t" style="font-weight:600">${esc(p.title)}</div><div class="muted" style="font-size:13px">${esc(p.placeType||'Место')} · ${esc(p.status||'')} · ${DB[p.id].links.length} связей</div></div></a>`).join('')}
     </div><div class="mapbox">${places.map((p,i)=>`<a class="pin ${i==0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div></div>`);
 }
 
 function catalog(type){
   const items=all(type); const T=TYPES[type];
   return page('#/cat/'+type,`<div class="crumbs">${T.pl}</div><h1>${T.pl}</h1>
-    ${searchInput('','Поиск по архиву — '+T.pl.toLowerCase()+', материалы, темы…')}
-    <div class="grid ${type==='person'?'g4':'g3'}" style="margin-top:24px">${items.map(o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="t" style="font-weight:600">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.life||o.colType||o.srcType||o.def||'')}</div></a>`).join('')}</div>`);
+    ${sectionSearch('Поиск среди: '+T.pl.toLowerCase())}
+    <div class="grid ${type==='person'?'g4':'g3'}" id="catgrid" style="margin-top:18px">${items.map(tile).join('')}</div>`);
+}
+function library(){
+  const items=all('material').filter(m=>['Печатная продукция','Текст'].includes(m.mtype));
+  return page('#/library',`<div class="crumbs">Библиотека</div><h1>Библиотека</h1>
+    <div class="muted">Издания, тексты и публикации: каталоги, книги, статьи, печатная продукция.</div>
+    ${sectionSearch('Поиск по библиотеке')}
+    <div class="grid g3" id="catgrid" style="margin-top:18px">${items.length?items.map(resultCard).join(''):'<p class="muted">В библиотеке пока нет материалов нужных типов.</p>'}</div>`);
 }
 
 // entity detail (generic + per-type hero)
@@ -434,7 +463,7 @@ function entity(o){
   } else if(o.type==='source'){
     hero=`${crumbs}<div class="kicker">Источник / библиография</div><h1 style="font-size:32px">${esc(o.title)}</h1>
       <div class="metabox" style="max-width:560px">${[['Автор / составитель',o.author],['Год',o.year],['Тип источника',o.srcType],['Издательство',o.publisher],['Место издания',o.pubplace]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>`;
-    return page('',hero+relBlock(o,'Подтверждает информацию в'));
+    return page('',hero+relatedSections(o));
   } else if(o.type==='org'){
     hero=`${crumbs}<div class="kicker">Организация</div><h1>${esc(o.title)}</h1>
       <div class="metabox" style="max-width:560px">${[['Тип',o.orgType],['Период деятельности',o.period]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>`;
@@ -452,14 +481,7 @@ function entity(o){
       <div class="lead" style="font-size:17px">Лёгкая метка для навигации. Материалы с этим тегом:</div>
       <div class="grid g4" style="margin-top:18px">${mats.map(tile).join('')}</div>`);
   }
-  // materials linked (для не-материальных сущностей показываем "Материалы" отдельной сеткой)
-  let matGrid='';
-  if(o.type!=='material'&&o.type!=='media'){
-    const mats=o.links.map(id=>DB[id]).filter(x=>x&&x.type==='material');
-    if(mats.length) matGrid=`<h2>Материалы</h2><div class="grid g4">${mats.map(tile).join('')}</div>`;
-  }
-  const similar = o.type==='material'?`<h2>Похожие и связанные материалы</h2><div class="grid g4">${all('material').filter(m=>m.id!==o.id).map(tile).join('')}</div>`:'';
-  return page('',hero+matGrid+relBlock(o)+similar);
+  return page('',hero+relatedSections(o)+similarBlock(o));
 }
 
 const CAB_TABS=[['profile','Профиль'],['saved','Сохранённые материалы'],['searches','Сохранённые поиски'],['collections','Личные подборки'],['requests','Заявки на доступ'],['history','История просмотров'],['notifications','Уведомления'],['settings','Настройки']];
@@ -560,6 +582,7 @@ function render(hash){
   else if(seg[0]==='search'){location.hash='#/archive';return;}
   else if(seg[0]==='chrono') html=chrono();
   else if(seg[0]==='map') html=map();
+  else if(seg[0]==='library') html=library();
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=catalog(seg[1]);
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
