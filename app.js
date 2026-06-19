@@ -130,19 +130,33 @@ window.filterCat=q=>{const ql=q.trim().toLowerCase();document.querySelectorAll('
 // ---------- views ----------
 const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
 function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.previousElementSibling.value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;}
+const homeSec=(dot,kick,href,label,body)=>`<section class="hsec"><div class="hsec-h"><div class="hkick"><span class="hdot" style="background:${dot}"></span>${kick}</div><a class="btn sm" href="${href}">→ ${label} →</a></div>${body}</section>`;
 function home(){
-  const rec=all('material');
+  const POP=[['Конструктивизм','#/archive?theme=t1'],['1920-е','#/archive?decade='+encodeURIComponent('1920-е')],['ВХУТЕМАС','#/archive?org=o1'],['Советский авангард','#/archive?q='+encodeURIComponent('авангард')],['Архитектура','#/archive?q='+encodeURIComponent('Архитектура')],['Плакат','#/archive?subtype='+encodeURIComponent('Плакат')],['Родченко','#/archive?person=p1'],['+ ещё','#/archive']];
+  const events=all('event').slice(0,2), persons=all('person').slice(0,5), colls=all('collection'), mats=all('material'), projs=all('project');
+  const places=all('place'), pts=[[28,30],[58,46],[42,66]];
+  const evCard=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/9"></div><div class="kicker">Событие${o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.date||'')}</div></a>`;
+  const portrait=o=>`<a class="pcard" href="#/e/${o.id}"><div class="pava"></div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:12px">${esc(o.role||o.life||'')}</div></a>`;
+  const big=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/7"></div><div class="kicker">${TYPES[o.type].l}${o.subtype?' · '+esc(o.subtype):''}</div><div class="t" style="font-size:17px">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
   return page('#/',`
-  <section class="hero"><div class="kicker">Цифровой архив</div>
+  <section class="hero" style="padding:64px 0 32px"><div class="kicker">Цифровой архив</div>
     <h1>Цифровой архив Центра «Зотов»</h1>
     <div class="lead">Связный архив о конструктивизме, медиа и городской истории: материалы, личности, события, места и проекты, объединённые в единую систему связей.</div>
-    ${searchInput('')}
-    <div class="muted" style="margin-top:10px">Введите запрос — поиск идёт по всему архиву. <a href="#/archive">Открыть архив с фильтрами →</a></div>
   </section>
-  <section class="pad divider"><h2>Разделы архива</h2><div class="grid g4">
-    ${[['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Библиотека','#/library'],['Весь архив','#/archive']].map(([t,h])=>`<a class="card" href="${h}"><div class="t" style="font-weight:600">${t}</div></a>`).join('')}
-  </div></section>
-  <section class="pad"><h2>Рекомендуемые материалы</h2><div class="grid g4">${rec.map(tile).join('')}</div></section>`);
+  <section class="hsec" style="border-top:none;padding-top:0">
+    ${searchInput('')}
+    <div class="chips" style="margin-top:16px">${POP.map(([t,h])=>`<a class="chip" href="${h}">${t}</a>`).join('')}</div>
+  </section>
+  ${homeSec('#c2410c','Хронограф','#/chrono','Хронограф',`<div class="minitl">${'<span class="d"></span>'.repeat(6)}</div><div class="grid g2" style="margin-top:20px">${events.map(evCard).join('')}</div>`)}
+  ${homeSec('#7c3aed','Личности','#/cat/person','Личности',`<div class="prow">${persons.map(portrait).join('')}</div>`)}
+  ${homeSec('#0d9488','Карта · Коллекции','#/map','Карта',`<div class="asym">
+      <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div>
+      <div><div class="hkick" style="margin-bottom:14px"><span class="hdot" style="background:#d97706"></span>Коллекции<a class="lnk" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;font-size:13px" href="#/cat/collection">все →</a></div>
+        ${colls.map(c=>`<a class="card" href="#/e/${c.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div class="cthumb"></div><div><div class="t" style="font-weight:600">${esc(c.title)}</div><div class="muted" style="font-size:13px">${esc(c.colType||'')}</div></div></a>`).join('')}</div>
+    </div>`)}
+  ${homeSec('#16a34a','Темы','#/cat/theme','Темы',`<div class="bigsmall">${big(mats[0])}${tile(mats[1])}</div>`)}
+  ${homeSec('#db2777','Проекты / Выставки','#/cat/project','Проекты',`<div class="bigsmall">${big(projs[0])}${projs[1]?tile(projs[1]):''}</div>`)}
+  `);
 }
 
 // ===== ПОИСК И ФИЛЬТРАЦИЯ (ТЗ: простой + расширенный, многомерные фильтры, URL-состояние) =====
