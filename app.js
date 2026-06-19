@@ -40,7 +40,7 @@ const RAW = [
   {id:'o1',type:'org',title:'ВХУТЕМАС',orgType:'Учебно-производственные мастерские',period:'1920 — 1930',links:['pl2','s1']},
   {id:'o2',type:'org',title:'Госиздат',orgType:'Издательство',period:'1919 — 1930',links:[]},
 
-  {id:'c1',type:'collection',title:'Архив выставок',colType:'Выставочный фонд',period:'1920-е — 1930-е',sub:['Каталоги','Фотохроника','Афиши','Документы'],links:['o1','t1','s1']},
+  {id:'c1',type:'collection',title:'Коллекция 1',colType:'Выставочный фонд',period:'1920-е — 1930-е',sub:['Каталоги','Фотохроника','Афиши','Документы'],links:['o1','t1','s1']},
 
   {id:'s1',type:'source',title:'Каталог выставки «1927»',author:'И. Иванов',year:'1927',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]},
 
@@ -55,7 +55,8 @@ RAW.push(
   {id:'p4',type:'person',title:'Дзига Вертов',life:'1896–1954',role:'кинорежиссёр, теоретик кино',links:['pr2','t1']},
   {id:'pl3',type:'place',title:'Москва',placeType:'Город',address:'Россия',status:'Существует',coord:'55.75, 37.62',links:[]},
   {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
-  {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]}
+  {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]},
+  {id:'c2',type:'collection',title:'Коллекция 2',colType:'Личный фонд',period:'1920-е',sub:['Фотографии','Письма'],links:['p3','t2','m3']}
 );
 // тип материала / медиа / доступность для существующих материалов
 const MAT_META={
@@ -149,11 +150,16 @@ function home(){
   </section>
   ${homeSec('#c2410c','Хронограф','#/chrono','Хронограф',`<div class="minitl">${'<span class="d"></span>'.repeat(6)}</div><div class="grid g2" style="margin-top:20px">${events.map(evCard).join('')}</div>`)}
   ${homeSec('#7c3aed','Личности','#/cat/person','Личности',`<div class="prow">${persons.map(portrait).join('')}</div>`)}
-  ${homeSec('#0d9488','Карта · Коллекции','#/map','Карта',`<div class="asym">
-      <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div>
-      <div><div class="hkick" style="margin-bottom:14px"><span class="hdot" style="background:#d97706"></span>Коллекции<a class="lnk" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;font-size:13px" href="#/cat/collection">все →</a></div>
-        ${colls.map(c=>`<a class="card" href="#/e/${c.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div class="cthumb"></div><div><div class="t" style="font-weight:600">${esc(c.title)}</div><div class="muted" style="font-size:13px">${esc(c.colType||'')}</div></div></a>`).join('')}</div>
-    </div>`)}
+  <section class="hsec"><div class="asym">
+      <div>
+        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта →</a></div>
+        <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div>
+      </div>
+      <div>
+        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#d97706"></span>Коллекции</div><a class="btn sm" href="#/cat/collection">→ Коллекции →</a></div>
+        ${colls.map(c=>`<a class="card" href="#/e/${c.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div class="cthumb"></div><div><div class="t" style="font-weight:600">${esc(c.title)}</div><div class="muted" style="font-size:13px">${esc(c.colType||'')}</div></div></a>`).join('')}
+      </div>
+    </div></section>
   ${homeSec('#16a34a','Темы','#/cat/theme','Темы',`<div class="bigsmall">${big(mats[0])}${tile(mats[1])}</div>`)}
   ${homeSec('#db2777','Проекты / Выставки','#/cat/project','Проекты',`<div class="bigsmall">${big(projs[0])}${projs[1]?tile(projs[1]):''}</div>`)}
   `);
