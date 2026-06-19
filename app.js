@@ -84,12 +84,12 @@ const all = t => RAW.filter(o=>o.type===t);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
-const NAV=[['Архив','#/archive'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
+const NAV=[['Архив / поиск','#/archive'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
 function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
     <nav class="main">${NAV.map(([t,h])=>`<a href="${h}" class="${active===h?'active':''}">${t}</a>`).join('')}
-    <a href="#/archive">Поиск ⌕</a><a class="btn dark" href="#/cabinet">Войти</a></nav>
+    <a class="btn dark" href="#/cabinet">Войти</a></nav>
   </div></header>`;
 }
 function footer(){return `<footer><div class="cols">
