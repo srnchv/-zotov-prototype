@@ -150,6 +150,36 @@ footer .cols{display:flex;justify-content:space-between;gap:24px;padding:48px 24
 footer h4{color:#fff;font-size:15px;margin:0 0 10px;font-weight:500}
 footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 
+/* home v2.1 — «Стэк» по вайрфрейму 30.07.2026 */
+.themesgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start}
+.darkblock{background:#1c1c1c;border-radius:14px;padding:26px 28px;color:#ececec}
+.darkblock .card{background:#2a2a2a;border-color:rgba(255,255,255,.08)}
+.darkblock .card:hover{border-color:rgba(255,255,255,.28)}
+.darkblock .tile .img{background:#3a3a3a}
+.darkblock .muted,.darkblock .kicker{color:#9a9a9a}
+.btn.ghost{background:transparent;border-color:rgba(255,255,255,.22);color:#cfcfcf}
+.btn.light{background:#fff;color:var(--ink);border-color:#fff;display:inline-block;width:fit-content;font-size:13px;padding:8px 16px;margin-top:10px}
+.projgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;align-items:start}
+.chrblock{padding-bottom:32px;border-bottom:1px solid var(--line);margin-bottom:32px}
+.chrscale{display:block;position:relative;height:64px;background:#efefed;border:1px solid var(--line);border-radius:10px;margin-bottom:20px;overflow:hidden}
+.chrline{position:absolute;left:24px;right:24px;top:50%;height:2px;background:#c9c9c7}
+.chrdens{position:absolute;left:24px;right:24px;top:10px;height:14px;display:flex;gap:3px;align-items:flex-end}
+.chrdens i{width:8px;background:#c2c2c0;border-radius:1px;display:block}
+.chrdecs{position:absolute;left:24px;right:24px;top:50%;display:flex;justify-content:space-between}
+.chrdecs .dd{display:flex;flex-direction:column;align-items:center}
+.chrdecs .dot{width:10px;height:10px;border-radius:50%;background:#b3b3b1;margin-top:-5px}
+.chrdecs .lb{font-size:10px;color:#9a9a98;margin-top:8px;white-space:nowrap}
+.chrcards{display:grid;grid-template-columns:1.5fr 1fr .75fr;gap:16px;align-items:start}
+.maplayer{display:grid;grid-template-columns:2fr 1fr;gap:40px;align-items:start}
+.mappop{position:absolute;top:18%;left:46%;width:170px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.1);font-size:13px}
+.mappop:after{content:'';position:absolute;bottom:-7px;left:18px;width:12px;height:7px;background:#fff;clip-path:polygon(0 0,100% 0,50% 100%)}
+.prs2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.prscard{border:1px solid var(--line);border-radius:10px;padding:14px 10px;text-align:center;display:block;background:#fff}
+.prscard:hover{border-color:#cfcfcf}
+.prscard .pava{display:block}
+.colgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.colcard{display:flex;gap:14px;align-items:flex-start}
+
 /* modal */
 #modal-root .ov{position:fixed;inset:0;background:rgba(20,20,20,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:50}
 .modal{background:#fff;border-radius:14px;padding:32px;width:520px;max-width:92vw}

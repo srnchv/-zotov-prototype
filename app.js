@@ -56,7 +56,10 @@ RAW.push(
   {id:'pl3',type:'place',title:'Москва',placeType:'Город',address:'Россия',status:'Существует',coord:'55.75, 37.62',links:[]},
   {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
   {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]},
-  {id:'c2',type:'collection',title:'Коллекция 2',colType:'Личный фонд',period:'1920-е',sub:['Фотографии','Письма'],links:['p3','t2','m3']}
+  {id:'c2',type:'collection',title:'Коллекция 2',colType:'Личный фонд',period:'1920-е',sub:['Фотографии','Письма'],links:['p3','t2','m3']},
+  // темы для главной v2 (сетка тем — 4 карточки)
+  {id:'t3',type:'theme',title:'Типографика',def:'Шрифт и печатная графика авангарда.',sub:[],links:['p3','o2','m2']},
+  {id:'t4',type:'theme',title:'Городская история',def:'Москва 1920-х — 1930-х: строительство, быт, медиа.',sub:[],links:['pl3','pl1','m11']}
 );
 // тип материала / медиа / доступность для существующих материалов
 const MAT_META={
@@ -84,7 +87,8 @@ const all = t => RAW.filter(o=>o.type===t);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
-const NAV=[['Архив / поиск','#/archive'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Темы','#/cat/theme'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
+// порядок по вайрфрейму «Главная v2 · Стэк» (30.07.2026); Библиотека сохранена — публичный раздел по ТЗ (разд. 19)
+const NAV=[['Архив / поиск','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
 function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
@@ -131,14 +135,31 @@ window.filterCat=q=>{const ql=q.trim().toLowerCase();document.querySelectorAll('
 // ---------- views ----------
 const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
 function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.previousElementSibling.value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;}
-const homeSec=(dot,kick,href,label,body)=>`<section class="hsec"><div class="hsec-h"><div class="hkick"><span class="hdot" style="background:${dot}"></span>${kick}</div><a class="btn sm" href="${href}">→ ${label} →</a></div>${body}</section>`;
+const homeSec=(dot,kick,href,label,body)=>`<section class="hsec"><div class="hsec-h"><div class="hkick"><span class="hdot" style="background:${dot}"></span>${kick}</div><a class="btn sm" href="${href}">→ ${label}</a></div>${body}</section>`;
+// ===== Главная v2.1 — «Стэк» (вайрфрейм 30.07.2026) =====
+// Порядок: hero → поиск (+расш. поиск) → Темы → Проекты (тёмная секция) →
+// «Когда · Где · Кто»: Хронограф (вся ширина) + Карта 2/3 + Личности 1/3 → Коллекции.
 function home(){
-  const POP=[['Конструктивизм','#/archive?theme=t1'],['1920-е','#/archive?decade='+encodeURIComponent('1920-е')],['ВХУТЕМАС','#/archive?org=o1'],['Советский авангард','#/archive?q='+encodeURIComponent('авангард')],['Архитектура','#/archive?q='+encodeURIComponent('Архитектура')],['Плакат','#/archive?subtype='+encodeURIComponent('Плакат')],['Родченко','#/archive?person=p1'],['+ ещё','#/archive']];
-  const events=all('event').slice(0,2), persons=all('person').slice(0,5), colls=all('collection'), mats=all('material'), projs=all('project');
-  const places=all('place'), pts=[[28,30],[58,46],[42,66]];
-  const evCard=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/9"></div><div class="kicker">Событие${o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.date||'')}</div></a>`;
-  const portrait=o=>`<a class="pcard" href="#/e/${o.id}"><div class="pava"></div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:12px">${esc(o.role||o.life||'')}</div></a>`;
-  const big=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/7"></div><div class="kicker">${TYPES[o.type].l}${o.subtype?' · '+esc(o.subtype):''}</div><div class="t" style="font-size:17px">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
+  const themes=all('theme').slice(0,4), projs=all('project').slice(0,2), persons=all('person').slice(0,6);
+  const colls=all('collection'), places=all('place'), pts=[[26,40],[48,56],[64,28]];
+  const evs=[...all('event'),...all('material').filter(m=>m.date&&/19/.test(m.date))].slice(0,3);
+
+  const themeCard=(o,i)=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${i===0?' style="aspect-ratio:16/8"':''}></div><div class="kicker">Тема</div><div class="t"${i===0?' style="font-size:17px"':''}>${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.def||'')}</div></a>`;
+  const projCard=(o,i)=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/${i===0?8:9}"></div><div class="kicker">Проект · ${esc(o.prType||'')}</div><div class="t" style="font-size:${i===0?18:15}px">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.dates||'')}</div>${i===0?'<span class="btn light">Смотреть →</span>':''}</a>`;
+  const evCard=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:auto;height:140px"></div><div class="kicker">${TYPES[o.type].l}${o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.date||'')}</div></a>`;
+  const portrait=o=>`<a class="prscard" href="#/e/${o.id}"><span class="pava" style="width:48px;height:48px;margin:0 auto 8px"></span><span class="t" style="display:block;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="muted" style="font-size:11px">${esc(o.role||o.life||'')}</span></a>`;
+  const colCard=c=>{const n=(c.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='material').length;
+    return `<a class="card colcard" href="#/e/${c.id}"><span class="cthumb"></span><span><span class="t" style="font-weight:600;display:block">${esc(c.title)}</span><span class="muted" style="font-size:13px">${esc(c.colType||'')}</span><span class="chip" style="display:inline-block;margin-top:8px;font-size:12px;padding:4px 10px">${n} материалов</span></span></a>`;};
+
+  // шкала хронографа: десятилетия + плотность материалов/событий (статичная, MVP-вид)
+  const dated=[...all('event'),...all('material')].filter(o=>o.date);
+  const decCount={}; dated.forEach(o=>{const d=decadeOf(o.date); if(d) decCount[d]=(decCount[d]||0)+1;});
+  const decs=Object.keys(decCount).sort(); const mx=Math.max(...Object.values(decCount));
+  const scale=`<a class="chrscale" href="#/chrono" title="Открыть хронограф">
+    <span class="chrline"></span>
+    <span class="chrdens">${decs.map(d=>`<i style="height:${4+Math.round(10*decCount[d]/mx)}px" title="${d}: ${decCount[d]}"></i>`).join('')}</span>
+    <span class="chrdecs">${decs.map(d=>`<span class="dd"><span class="dot"></span><span class="lb">${d}</span></span>`).join('')}</span></a>`;
+
   return page('#/',`
   <section class="hero" style="padding:64px 0 32px"><div class="kicker">Цифровой архив</div>
     <h1>Цифровой архив Центра «Зотов»</h1>
@@ -146,22 +167,35 @@ function home(){
   </section>
   <section class="hsec" style="border-top:none;padding-top:0">
     ${searchInput('')}
-    <div class="chips" style="margin-top:16px">${POP.map(([t,h])=>`<a class="chip" href="${h}">${t}</a>`).join('')}</div>
+    <div style="margin-top:12px"><a class="lnk muted" style="font-size:14px" href="#/archive" onclick="advOpen=true">Расширенный поиск →</a></div>
   </section>
-  ${homeSec('#c2410c','Хронограф','#/chrono','Хронограф',`<div class="minitl">${'<span class="d"></span>'.repeat(6)}</div><div class="grid g2" style="margin-top:20px">${events.map(evCard).join('')}</div>`)}
-  ${homeSec('#7c3aed','Личности','#/cat/person','Личности',`<div class="prow">${persons.map(portrait).join('')}</div>`)}
-  <section class="hsec"><div class="asym">
+  ${homeSec('#16a34a','Темы','#/cat/theme','Все темы',`<div class="themesgrid">${themes.map(themeCard).join('')}</div>`)}
+  <section class="hsec"><div class="darkblock">
+    <div class="hsec-h"><div class="hkick" style="color:#d0a8c4"><span class="hdot" style="background:#c8a0c0"></span>Проекты Центра</div><a class="btn sm ghost" href="#/cat/project">→ Все проекты</a></div>
+    <div class="projgrid">${projs.map(projCard).join('')}</div>
+  </div></section>
+  <section class="hsec">
+    <div class="kicker" style="margin-bottom:2px">Войти через</div>
+    <h2 style="margin:0 0 26px">Когда · Где · Кто</h2>
+    <div class="chrblock">
+      <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#c05020"></span>Хронограф</div><a class="btn sm" href="#/chrono">→ Хронограф</a></div>
+      ${scale}
+      <div class="chrcards">${evs.map(evCard).join('')}</div>
+    </div>
+    <div class="maplayer">
       <div>
-        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта →</a></div>
-        <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div>
+        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта</a></div>
+        <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}
+          <a class="mappop" href="#/e/${places[0].id}"><span class="kicker" style="font-size:10px">Место</span><b style="display:block;margin:2px 0">${esc(places[0].title)}</b><span class="muted" style="font-size:12px">${(DB[places[0].id].links||[]).length} связей</span></a>
+        </div>
       </div>
       <div>
-        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#d97706"></span>Коллекции</div><a class="btn sm" href="#/cat/collection">→ Коллекции →</a></div>
-        ${colls.map(c=>`<a class="card" href="#/e/${c.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div class="cthumb"></div><div><div class="t" style="font-weight:600">${esc(c.title)}</div><div class="muted" style="font-size:13px">${esc(c.colType||'')}</div></div></a>`).join('')}
+        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#7c3aed"></span>Личности</div><a class="btn sm" href="#/cat/person">→ Личности</a></div>
+        <div class="prs2">${persons.map(portrait).join('')}</div>
       </div>
-    </div></section>
-  ${homeSec('#16a34a','Темы','#/cat/theme','Темы',`<div class="bigsmall">${big(mats[0])}${tile(mats[1])}</div>`)}
-  ${homeSec('#db2777','Проекты / Выставки','#/cat/project','Проекты',`<div class="bigsmall">${big(projs[0])}${projs[1]?tile(projs[1]):''}</div>`)}
+    </div>
+  </section>
+  ${homeSec('#d97706','Коллекции','#/cat/collection','Все коллекции',`<div class="colgrid">${colls.map(colCard).join('')}</div>`)}
   `);
 }
 
