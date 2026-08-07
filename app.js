@@ -113,7 +113,8 @@ const REL_ORDER=['material','person','place','event','project','collection','the
 const REL_HEAD={material:'Материалы',person:'Связанные личности',place:'Связанные места',event:'Связанные события',project:'Связанные выставки и проекты',collection:'Коллекции и фонды',theme:'Темы',org:'Организации',source:'Источники',tag:'Теги'};
 function relatedSections(o){
   const by={}; (o.links||[]).forEach(id=>{const x=DB[id];if(x&&x.id!==o.id&&x.type!=='media')(by[x.type]=by[x.type]||[]).push(x);});
-  return REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>{
+  const skip={person:['source']}[o.type]||[]; // у Личности источники не показываем (правка 07.08.2026)
+  return REL_ORDER.filter(t=>by[t]&&by[t].length&&!skip.includes(t)).map(t=>{
     const items=by[t];
     const inner=CARD_TYPES.includes(t)
       ?`<div class="grid ${t==='person'?'g4':'g3'}">${items.map(tile).join('')}</div>`
