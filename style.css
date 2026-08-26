@@ -166,6 +166,9 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .fopt:hover{color:var(--ink)}
 .fopt.on{color:var(--ink);font-weight:600}
 .fopt.on:before{content:'✓ '}
+.fitem{break-inside:avoid}
+.fsubs{margin:2px 0 8px 10px;border-left:1px solid var(--line);padding-left:12px}
+.fopt.sub{font-size:13px;padding:4px 0}
 
 /* home v2.1 — «Стэк» по вайрфрейму 30.07.2026 */
 .themesgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start}

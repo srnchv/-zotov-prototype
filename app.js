@@ -330,9 +330,9 @@ function toolbar(count){
 }
 
 // --- фильтр-бар (паттерн RAAN: категории раскрываются «плюсом», выбор из любого раздела) ---
+const subtypesOf=t=>[...new Set(all('material').filter(m=>m.mtype===t).map(m=>(m.subtype||'').split('·')[0].trim()).filter(Boolean))];
 const FCATS=()=>[
-  ['type','Тип материала',TYPELIST.map(t=>[t,t])],
-  ['subtype','Подтип',subtypesAll().map(s=>[s,s])],
+  ['type','Тип материала',TYPELIST.map(t=>[t,t])], // подтипы — внутри выбранного типа
   ['decade','Период',decadesAll().map(d=>[d,d])],
   ...ENT.map(([k])=>[k,TYPES[k].pl,all(k).map(o=>[o.id,o.title])]),
   ['access','Доступ',Object.entries(ACCESS)],
@@ -343,7 +343,7 @@ const FCATS=()=>[
 function filterBar(){
   const cats=FCATS().filter(c=>c[2].length);
   const bar=cats.map(([dim,label])=>{
-    const n=FILT[dim].size, open=openDim===dim;
+    const n=dim==='type'?FILT.type.size+FILT.subtype.size:FILT[dim].size, open=openDim===dim;
     return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
   }).join('');
   return `<div class="fbar">${bar}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
@@ -356,13 +356,21 @@ window.fmFilter=q=>{const ql=(q||'').trim().toLowerCase();document.querySelector
 function drawFmodal(){
   const cur=FCATS().find(c=>c[0]===openDim); if(!cur) return;
   const [dim,label,opts]=cur;
-  const list=opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('');
+  // тип материала: подтипы раскрываются внутри выбранного типа
+  const list=dim==='type'
+    ?opts.map(([v,l])=>{
+      const on=FILT.type.has(''+v), subs=on?subtypesOf(''+v):[];
+      return `<div class="fitem"><span class="fopt${on?' on':''}" onclick="tf('type','${esc(''+v)}')">${esc(l)}</span>${subs.length?`<div class="fsubs">${subs.map(s=>`<span class="fopt sub${FILT.subtype.has(s)?' on':''}" onclick="tf('subtype','${esc(s)}')">${esc(s)}</span>`).join('')}</div>`:''}</div>`;
+    }).join('')
+    :opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('');
+  const selCnt=dim==='type'?FILT.type.size+FILT.subtype.size:FILT[dim].size;
+  const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`;
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)closeFmodal()"><div class="modal fmodal">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><h2 style="margin:0">${label}</h2><span style="font-size:22px;cursor:pointer;line-height:1" onclick="closeFmodal()">✕</span></div>
     <div class="fmodal-top">
       <input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск: ${label.toLowerCase()}" value="${esc(fq)}" oninput="fq=this.value;fmFilter(this.value)" autofocus>
       <span class="opt${fOnly?' on':''}" onclick="fOnly=!fOnly;this.classList.toggle('on');fmFilter(fq)"><span class="bx"></span>Показать только выбранные</span>
-      ${FILT[dim].size?`<span class="muted lnk" style="font-size:13px" onclick="FILT['${dim}'].clear();navFilt()">Сбросить (${FILT[dim].size})</span>`:''}
+      ${selCnt?`<span class="muted lnk" style="font-size:13px" onclick="${resetJs}">Сбросить (${selCnt})</span>`:''}
     </div>
     ${dim==='decade'?'<div class="muted" style="font-size:13px;margin-top:12px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
     <div class="fmodal-list">${list||'<span class="muted">Пусто</span>'}</div>
@@ -400,7 +408,7 @@ function archive(qs){
 }
 
 // --- обработчики фильтров / действий ---
-window.tf=(dim,v)=>{const S=FILT[dim];S.has(v)?S.delete(v):S.add(v);navFilt();};
+window.tf=(dim,v)=>{const S=FILT[dim];if(S.has(v)){S.delete(v);if(dim==='type')subtypesOf(v).forEach(s=>FILT.subtype.delete(s));}else S.add(v);navFilt();};
 window.rmFilter=(dim,v)=>{if(dim==='q')FILT.q='';else FILT[dim].delete(v);navFilt();};
 window.setSort=v=>{FILT.sort=v;navFilt();};
 window.resetFilters=()=>{const q=FILT.q,s=FILT.sort;FILT=blankFilt();FILT.q=q;FILT.sort=s;navFilt();};
