@@ -152,6 +152,8 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 
 /* расширенный поиск — фильтр-бар по паттерну RAAN */
 .fbar{display:flex;flex-wrap:wrap;gap:2px 28px;padding:14px 2px 12px;border-bottom:1px solid var(--line)}
+.fbar.r1{border-bottom:none;padding-bottom:0}
+.fbar.r2{padding-top:4px}
 .fcat{display:inline-flex;align-items:center;gap:7px;padding:6px 0;font-size:15px;cursor:pointer;color:var(--ink);white-space:nowrap}
 .fcat i{font-style:normal;font-size:17px;color:var(--muted);line-height:1}
 .fcat:hover i{color:var(--ink)}

@@ -332,21 +332,31 @@ function toolbar(count){
 // --- фильтр-бар (паттерн RAAN: категории раскрываются «плюсом», выбор из любого раздела) ---
 const subtypesOf=t=>[...new Set(all('material').filter(m=>m.mtype===t).map(m=>(m.subtype||'').split('·')[0].trim()).filter(Boolean))];
 const FCATS=()=>[
-  ['type','Тип материала',TYPELIST.map(t=>[t,t])], // подтипы — внутри выбранного типа
   ['decade','Период',decadesAll().map(d=>[d,d])],
-  ...ENT.map(([k])=>[k,TYPES[k].pl,all(k).map(o=>[o.id,o.title])]),
+  ['person','Личности',all('person').map(o=>[o.id,o.title])],
+  ['place','Места',all('place').map(o=>[o.id,o.title])],
+  ['theme','Темы',all('theme').map(o=>[o.id,o.title])],
+  ['event','События',all('event').map(o=>[o.id,o.title])],
+  ['project','Проекты Центра',all('project').map(o=>[o.id,o.title])],
+  ['collection','Коллекции',all('collection').map(o=>[o.id,o.title])],
+  ['type','Тип материала',TYPELIST.map(t=>[t,t])], // подтипы и медиа — внутри
+  ['org','Организации',all('org').map(o=>[o.id,o.title])],
+  ['source','Источники',all('source').map(o=>[o.id,o.title])],
   ['access','Доступ',Object.entries(ACCESS)],
-  ['media','Медиа',Object.entries(MEDIA)],
-  ['a11y','Доступность',A11Y.map(a=>[a,a])],
   ['lang','Язык',langsAll().map(l=>[l,l])]
 ];
+// две строки фильтров (раскладка 26.08.2026)
+const FROWS=[['decade','person','place','theme','event','project','collection'],['type','org','source','access','lang']];
+const typeCnt=()=>FILT.type.size+FILT.subtype.size+FILT.media.size;
 function filterBar(){
-  const cats=FCATS().filter(c=>c[2].length);
-  const bar=cats.map(([dim,label])=>{
-    const n=dim==='type'?FILT.type.size+FILT.subtype.size:FILT[dim].size, open=openDim===dim;
+  const byDim={}; FCATS().forEach(c=>byDim[c[0]]=c);
+  const row=dims=>dims.map(d=>{
+    const c=byDim[d]; if(!c||!c[2].length) return '';
+    const [dim,label]=c;
+    const n=dim==='type'?typeCnt():FILT[dim].size, open=openDim===dim;
     return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
   }).join('');
-  return `<div class="fbar">${bar}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
+  return `<div class="fbar r1">${row(FROWS[0])}</div><div class="fbar r2">${row(FROWS[1])}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
 }
 // модальное окно категории (паттерн RAAN): полный список значений + поиск + «только выбранные»
 let fq='', fOnly=false;
@@ -363,8 +373,9 @@ function drawFmodal(){
       return `<div class="fitem"><span class="fopt${on?' on':''}" onclick="tf('type','${esc(''+v)}')">${esc(l)}</span>${subs.length?`<div class="fsubs">${subs.map(s=>`<span class="fopt sub${FILT.subtype.has(s)?' on':''}" onclick="tf('subtype','${esc(s)}')">${esc(s)}</span>`).join('')}</div>`:''}</div>`;
     }).join('')
     :opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('');
-  const selCnt=dim==='type'?FILT.type.size+FILT.subtype.size:FILT[dim].size;
-  const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`;
+  const selCnt=dim==='type'?typeCnt():FILT[dim].size;
+  const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();FILT['media'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`;
+  const mediaBlock=dim==='type'?`<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">Наличие медиафайла</div>${Object.entries(MEDIA).map(([v,l])=>`<span class="fopt${FILT.media.has(v)?' on':''}" style="display:inline-block;margin-right:18px" onclick="tf('media','${v}')">${l}</span>`).join('')}</div>`:'';
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)closeFmodal()"><div class="modal fmodal">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><h2 style="margin:0">${label}</h2><span style="font-size:22px;cursor:pointer;line-height:1" onclick="closeFmodal()">✕</span></div>
     <div class="fmodal-top">
@@ -374,6 +385,7 @@ function drawFmodal(){
     </div>
     ${dim==='decade'?'<div class="muted" style="font-size:13px;margin-top:12px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
     <div class="fmodal-list">${list||'<span class="muted">Пусто</span>'}</div>
+    ${mediaBlock}
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="closeFmodal()">Готово</span></div>
   </div></div>`;
   if(fq||fOnly) fmFilter(fq);
