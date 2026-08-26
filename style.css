@@ -160,7 +160,13 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .fcat .cnt{font-size:11px;font-weight:600;background:var(--ink);color:#fff;border-radius:9px;padding:1px 7px}
 .fcat.reset{color:var(--muted);font-size:13px;margin-left:auto}
 .fcat.reset:hover{color:var(--ink)}
-.fpanel{padding:16px 2px;border-bottom:1px solid var(--line);background:#fafaf9}
+.fmodal{width:min(960px,94vw)}
+.fmodal-top{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:18px}
+.fmodal-list{columns:4 190px;column-gap:32px;margin-top:20px;max-height:56vh;overflow-y:auto}
+.fopt{display:block;padding:6px 0;font-size:14px;color:var(--muted);cursor:pointer;break-inside:avoid}
+.fopt:hover{color:var(--ink)}
+.fopt.on{color:var(--ink);font-weight:600}
+.fopt.on:before{content:'✓ '}
 
 /* home v2.1 — «Стэк» по вайрфрейму 30.07.2026 */
 .themesgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start}

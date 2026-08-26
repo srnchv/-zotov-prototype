@@ -355,15 +355,30 @@ function filterBar(){
     const n=FILT[dim].size, open=openDim===dim;
     return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
   }).join('');
-  const cur=cats.find(c=>c[0]===openDim);
-  const panel=cur?`<div class="fpanel">
-    <div class="chips">${cur[2].map(([v,l])=>`<span class="fchip${FILT[cur[0]].has(''+v)?' on':''}" onclick="tf('${cur[0]}','${esc(''+v)}')">${esc(l)}</span>`).join('')}</div>
-    ${cur[0]==='decade'?'<div class="muted" style="font-size:13px;margin-top:10px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
-    ${FILT[cur[0]].size?`<div style="margin-top:10px"><span class="muted lnk" style="font-size:13px" onclick="FILT['${cur[0]}'].clear();navFilt()">Сбросить категорию</span></div>`:''}
-  </div>`:'';
-  return `<div class="fbar">${bar}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>${panel}`;
+  return `<div class="fbar">${bar}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
 }
-window.toggleDim=d=>{openDim=openDim===d?null:d;render();};
+// модальное окно категории (паттерн RAAN): полный список значений + поиск + «только выбранные»
+let fq='', fOnly=false;
+window.toggleDim=d=>{if(openDim===d){closeFmodal();return;}openDim=d;fq='';fOnly=false;render();};
+window.closeFmodal=()=>{openDim=null;render();};
+window.fmFilter=q=>{const ql=(q||'').trim().toLowerCase();document.querySelectorAll('.fmodal-list .fopt').forEach(el=>{const okQ=!ql||el.textContent.toLowerCase().includes(ql);const okS=!fOnly||el.classList.contains('on');el.style.display=okQ&&okS?'':'none';});};
+function drawFmodal(){
+  const cur=FCATS().find(c=>c[0]===openDim); if(!cur) return;
+  const [dim,label,opts]=cur;
+  const list=opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('');
+  document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)closeFmodal()"><div class="modal fmodal">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><h2 style="margin:0">${label}</h2><span style="font-size:22px;cursor:pointer;line-height:1" onclick="closeFmodal()">✕</span></div>
+    <div class="fmodal-top">
+      <input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск: ${label.toLowerCase()}" value="${esc(fq)}" oninput="fq=this.value;fmFilter(this.value)" autofocus>
+      <span class="opt${fOnly?' on':''}" onclick="fOnly=!fOnly;this.classList.toggle('on');fmFilter(fq)"><span class="bx"></span>Показать только выбранные</span>
+      ${FILT[dim].size?`<span class="muted lnk" style="font-size:13px" onclick="FILT['${dim}'].clear();navFilt()">Сбросить (${FILT[dim].size})</span>`:''}
+    </div>
+    ${dim==='decade'?'<div class="muted" style="font-size:13px;margin-top:12px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
+    <div class="fmodal-list">${list||'<span class="muted">Пусто</span>'}</div>
+    <div class="right" style="margin-top:18px"><span class="btn dark" onclick="closeFmodal()">Готово</span></div>
+  </div></div>`;
+  if(fq||fOnly) fmFilter(fq);
+}
 
 // --- страница архива / результатов ---
 function archive(qs){
@@ -654,7 +669,9 @@ function render(hash){
   else if(seg[0]==='request'){ html=null; }
   else html=home();
   if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
+  if(seg[0]!=='archive') openDim=null;
   if(seg[0]==='request') request(seg[1]);
+  else if(seg[0]==='archive'&&openDim) drawFmodal();
 }
 window.addEventListener('hashchange',()=>render());
 render();
