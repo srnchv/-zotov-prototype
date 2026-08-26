@@ -248,14 +248,19 @@ function textMatch(o,ql){
 const matAttrActive=()=>['type','subtype','decade','access','media','a11y','lang'].some(d=>FILT[d].size);
 function passes(o){
   if(matAttrActive()&&o.type!=='material') return false;
-  if(FILT.type.size&&!FILT.type.has(o.mtype)) return false;
+  // значение '__all' = «по всем»: важно наличие атрибута/связи этого типа, а не конкретное значение
+  if(FILT.type.size&&!FILT.type.has('__all')&&!FILT.type.has(o.mtype)) return false;
   if(FILT.subtype.size&&![...FILT.subtype].some(s=>(o.subtype||'').includes(s))) return false;
-  if(FILT.decade.size&&!FILT.decade.has(decadeOf(o.date))) return false;
-  if(FILT.access.size&&!FILT.access.has(o.access)) return false;
+  if(FILT.decade.size&&!(FILT.decade.has('__all')?!!decadeOf(o.date):FILT.decade.has(decadeOf(o.date)))) return false;
+  if(FILT.access.size&&!(FILT.access.has('__all')?!!o.access:FILT.access.has(o.access))) return false;
   if(FILT.media.size&&!(o.media||[]).some(m=>FILT.media.has(m))) return false;
   if(FILT.a11y.size&&!(o.a11y||[]).some(a=>FILT.a11y.has(a))) return false;
-  if(FILT.lang.size&&!FILT.lang.has(o.lang)) return false;
-  for(const k of ENTKEYS){ if(FILT[k].size){ const ok=FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)); if(!ok) return false; } }
+  if(FILT.lang.size&&!(FILT.lang.has('__all')?(o.lang&&o.lang!=='—'):FILT.lang.has(o.lang))) return false;
+  for(const k of ENTKEYS){ if(FILT[k].size){
+    const ok=FILT[k].has('__all')
+      ?(o.type===k||(o.links||[]).some(id=>DB[id]&&DB[id].type===k))
+      :(FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)));
+    if(!ok) return false; } }
   return true;
 }
 function runSearch(){
@@ -307,14 +312,15 @@ function resultCard(o){
 function activeChips(){
   const c=[];
   if(FILT.q) c.push(['Запрос: «'+FILT.q+'»','q','']);
-  FILT.type.forEach(v=>c.push(['Тип: '+v,'type',v]));
+  const A=v=>v==='__all'?'все':null;
+  FILT.type.forEach(v=>c.push(['Тип: '+(A(v)||v),'type',v]));
   FILT.subtype.forEach(v=>c.push(['Подтип: '+v,'subtype',v]));
-  FILT.decade.forEach(v=>c.push(['Период: '+v,'decade',v]));
-  FILT.access.forEach(v=>c.push(['Доступ: '+ACCESS[v],'access',v]));
+  FILT.decade.forEach(v=>c.push(['Период: '+(A(v)||v),'decade',v]));
+  FILT.access.forEach(v=>c.push(['Доступ: '+(A(v)||ACCESS[v]),'access',v]));
   FILT.media.forEach(v=>c.push(['Медиа: '+MEDIA[v],'media',v]));
   FILT.a11y.forEach(v=>c.push(['Доступность: '+v,'a11y',v]));
-  FILT.lang.forEach(v=>c.push(['Язык: '+v,'lang',v]));
-  ENT.forEach(([k,lbl])=>FILT[k].forEach(id=>c.push([lbl+': '+(DB[id]?DB[id].title:id),k,id])));
+  FILT.lang.forEach(v=>c.push(['Язык: '+(A(v)||v),'lang',v]));
+  ENT.forEach(([k,lbl])=>FILT[k].forEach(id=>c.push([lbl+': '+(A(id)||(DB[id]?DB[id].title:id)),k,id])));
   if(!c.length) return '';
   return `<div class="achips">${c.map(([t,d,v])=>`<span class="achip" onclick="rmFilter('${d}','${esc(v)}')">${esc(t)} ✕</span>`).join('')}<span class="achip clear" onclick="resetAll()">Сбросить всё</span></div>`;
 }
@@ -366,13 +372,15 @@ window.fmFilter=q=>{const ql=(q||'').trim().toLowerCase();document.querySelector
 function drawFmodal(){
   const cur=FCATS().find(c=>c[0]===openDim); if(!cur) return;
   const [dim,label,opts]=cur;
+  const ALLBL={decade:'Все периоды',person:'Все личности',place:'Все места',theme:'Все темы',event:'Все события',project:'Все проекты',collection:'Все коллекции',type:'Все типы',org:'Все организации',source:'Все источники',access:'Все уровни',lang:'Все языки'};
+  const allOpt=`<span class="fopt all${FILT[dim].has('__all')?' on':''}" onclick="tf('${dim}','__all')">${ALLBL[dim]||'Все'}</span>`;
   // тип материала: подтипы раскрываются внутри выбранного типа
-  const list=dim==='type'
+  const list=allOpt+(dim==='type'
     ?opts.map(([v,l])=>{
       const on=FILT.type.has(''+v), subs=on?subtypesOf(''+v):[];
       return `<div class="fitem"><span class="fopt${on?' on':''}" onclick="tf('type','${esc(''+v)}')">${esc(l)}</span>${subs.length?`<div class="fsubs">${subs.map(s=>`<span class="fopt sub${FILT.subtype.has(s)?' on':''}" onclick="tf('subtype','${esc(s)}')">${esc(s)}</span>`).join('')}</div>`:''}</div>`;
     }).join('')
-    :opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('');
+    :opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join(''));
   const selCnt=dim==='type'?typeCnt():FILT[dim].size;
   const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();FILT['media'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`;
   const mediaBlock=dim==='type'?`<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">Наличие медиафайла</div>${Object.entries(MEDIA).map(([v,l])=>`<span class="fopt${FILT.media.has(v)?' on':''}" style="display:inline-block;margin-right:18px" onclick="tf('media','${v}')">${l}</span>`).join('')}</div>`:'';
@@ -420,7 +428,10 @@ function archive(qs){
 }
 
 // --- обработчики фильтров / действий ---
-window.tf=(dim,v)=>{const S=FILT[dim];if(S.has(v)){S.delete(v);if(dim==='type')subtypesOf(v).forEach(s=>FILT.subtype.delete(s));}else S.add(v);navFilt();};
+window.tf=(dim,v)=>{const S=FILT[dim];
+  if(S.has(v)){S.delete(v);if(dim==='type')subtypesOf(v).forEach(s=>FILT.subtype.delete(s));}
+  else{ if(v==='__all'){S.clear();if(dim==='type')FILT.subtype.clear();} else S.delete('__all'); S.add(v); } // «по всем» исключает конкретные значения и наоборот
+  navFilt();};
 window.rmFilter=(dim,v)=>{if(dim==='q')FILT.q='';else FILT[dim].delete(v);navFilt();};
 window.setSort=v=>{FILT.sort=v;navFilt();};
 window.resetFilters=()=>{const q=FILT.q,s=FILT.sort;FILT=blankFilt();FILT.q=q;FILT.sort=s;navFilt();};
