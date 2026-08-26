@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЗОТОВ — Архив</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#262626;
+    --red:#F43C3A;
+    --grey3:#bfbfbf;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#fff}
+  body{font-family:'Golos Text',system-ui,sans-serif;color:var(--ink);overflow-x:hidden}
+  img,svg{display:block}
+  a{color:inherit;text-decoration:none}
+
+  /* ============ fixed scaled stage: sidebar + hero ============ */
+  #stage{position:fixed;top:0;left:0;width:1920px;height:1080px;transform-origin:0 0;z-index:5}
+
+  /* ---------- sidebar ---------- */
+  #sidebar{position:absolute;left:0;top:0;width:184px;height:1080px;background:#fff;z-index:30}
+  #sidebar .logo{position:absolute;left:8px;top:8px;width:136px}
+  #sidebar .logo img{width:136px;height:auto}
+  #mini-arhiv{position:absolute;left:8px;top:100px;width:136px;height:16px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .45s ease}
+  #mini-arhiv.on{opacity:1}
+  #mini-arhiv img{height:16px;width:auto}
+  #menu{position:absolute;left:8px;top:128px;width:136px}
+  #menu .rule{height:4px;background:var(--ink)}
+  #menu a{display:block;padding:4px 0;font-size:14.2px;line-height:16px;font-weight:700;letter-spacing:.01em;text-transform:uppercase}
+  #menu a:hover{color:var(--red)}
+  #soc{position:absolute;left:8px;bottom:8px;width:136px;display:flex;gap:4px}
+  #soc span{flex:1;background:var(--ink);color:#fff;border-radius:24px;padding:6px 0;text-align:center;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;cursor:pointer}
+  #soc span:hover{background:var(--red)}
+
+  /* ---------- hero ---------- */
+  #hero{position:absolute;left:184px;top:0;width:1736px;height:1080px;background:#fff;overflow:hidden}
+  #word{position:absolute;left:8px;top:8px;height:320px;width:1720px;display:flex;align-items:flex-start;justify-content:space-between}
+  #word img{height:320px;width:auto;flex:0 0 auto}
+  #barcode{position:absolute;right:8px;top:8px;height:320px;width:0;overflow:hidden}
+  #barcode img{position:absolute;right:0;top:0;width:856px;height:320px;max-width:none}
+  #lede{position:absolute;left:8px;top:336px;width:1720px;font-size:40px;line-height:38px;letter-spacing:-1.2px;font-weight:500;color:rgba(0,0,0,.85)}
+  #search{position:absolute;left:315px;top:618px;width:1106px;height:80px}
+  #search .box{position:absolute;inset:0;border:4px solid var(--ink);border-radius:56px}
+  #search .ph{position:absolute;left:32px;top:50%;transform:translateY(-50%);font-size:20px;line-height:20px;letter-spacing:-0.2px;font-weight:500;color:var(--grey3);white-space:nowrap}
+  #search .ic{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:24px;height:24px}
+
+  /* actual themes block */
+  #themes{position:absolute;left:8px;top:944px;width:1728px}
+  #themes .t-title{width:856px;height:24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  #themes .t-title span{font-family:Oswald,sans-serif;font-weight:500;font-size:24px;line-height:24px;text-transform:uppercase;color:var(--ink)}
+  .circle{border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .circle svg{display:block}
+  #themes .row{display:flex;gap:8px}
+  .theme{width:320px;height:88px;flex:0 0 auto;background:#fff;border-left:2px solid var(--ink);border-top:2px solid var(--ink);padding:8px 0 0 8px;display:flex;gap:8px;cursor:pointer}
+  .theme .tx{flex:1 1 auto;min-width:1px;display:flex;flex-direction:column;gap:8px;padding-right:8px}
+  .theme h4{font-size:14px;line-height:16px;font-weight:700;text-transform:uppercase}
+  .theme .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .theme .im{width:80px;height:78px;background:var(--ink);overflow:hidden}
+  .theme .im img{width:100%;height:100%;object-fit:cover}
+  .theme:hover h4{color:var(--red)}
+  .theme:hover{border-color:var(--red)}
+
+  /* ============ scrolled content (rest) ============ */
+  #scrollspace{width:1px}
+  #restWrap{position:relative;z-index:10}
+  #rest{width:1736px;background:#fff;transform-origin:0 0;padding:80px 8px 120px 8px}
+
+  .sec-title{display:flex;align-items:center;justify-content:space-between;height:144px;margin-bottom:64px}
+  .sec-title .ch{font-family:Oswald,sans-serif;font-weight:600;font-size:120px;line-height:120px;text-transform:uppercase;color:var(--ink)}
+  .sec-title .circle{width:80px;height:80px;margin-left:40px;cursor:pointer}
+  .sec-title .circle:hover{background:var(--red)}
+
+  /* projects */
+  #projects .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0 8px;grid-auto-rows:866px}
+  .project{display:flex;flex-direction:column;cursor:pointer}
+  .project .topline{height:16px;border-top:8px solid var(--ink)}
+  .project .type{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding-bottom:4px}
+  .project h3{font-size:20px;line-height:20px;font-weight:600;letter-spacing:-0.2px;text-transform:uppercase}
+  .project .dates{font-size:20px;line-height:20px;font-weight:600;letter-spacing:-0.2px;text-transform:uppercase}
+  .project .desc{font-size:16px;line-height:16px;font-weight:500;padding-top:4px}
+  .project .text{padding:0 32px 8px 0;display:flex;flex-direction:column}
+  .project .vline{border-left:8px solid var(--ink);flex:1 1 auto;min-height:80px}
+  .project .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:8px 0}
+  .project .im{overflow:hidden}
+  .project .im img{width:100%;height:100%;object-fit:cover}
+  .project:hover .topline{border-color:var(--red)}
+  .project:hover .vline{border-color:var(--red)}
+  .project:hover .type,.project:hover h3,.project:hover .dates,.project:hover .desc{color:var(--red)}
+  .p-big{grid-column:1/span 2}
+  .p-big .im{height:636px}
+  .p-mid .im{height:320px}
+  .p-tall .im{height:498px}
+
+  /* chronograph */
+  #chrono{margin-top:160px}
+  #chrono .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0 8px}
+  .ch-item{cursor:pointer}
+  .ch-item .rule{height:4px;background:var(--ink);margin-bottom:8px}
+  .ch-item .year{font-family:Oswald,sans-serif;font-weight:600;font-size:34px;line-height:36px}
+  .ch-item .d{font-size:13px;line-height:15px;font-weight:500;margin-top:6px;max-width:230px}
+  .ch-item .bar{width:8px;background:var(--ink);margin-top:16px}
+  .ch-item:hover .rule,.ch-item:hover .bar{background:var(--red)}
+  .ch-item:hover .year,.ch-item:hover .d{color:var(--red)}
+
+  /* footer strip */
+  #foot{margin-top:160px;display:flex;justify-content:flex-end}
+  #foot img{height:120px;width:auto;opacity:.9}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <aside id="sidebar">
+    <div class="logo"><img src="assets/logo-zotov.svg" alt="Зотов"></div>
+    <div id="mini-arhiv">
+      <img src="assets/letter-a.svg" alt="А"><img src="assets/letter-r.svg" alt="Р"><img src="assets/letter-h.svg" alt="Х"><img src="assets/letter-i.svg" alt="И"><img src="assets/letter-v.svg" alt="В">
+    </div>
+    <nav id="menu">
+      <div class="rule"></div><a href="#">каталог</a>
+      <div class="rule"></div><a href="#">проекты</a>
+      <div class="rule"></div><a href="#">хронограф</a>
+      <div class="rule"></div><a href="#">карта</a>
+      <div class="rule"></div><a href="#">личности</a>
+      <div class="rule"></div><a href="#">коллекции</a>
+      <div class="rule"></div><a href="#">библиотека</a>
+      <div class="rule"></div>
+    </nav>
+    <div id="soc"><span>VK</span><span>TG</span></div>
+  </aside>
+
+  <section id="hero">
+    <div id="word">
+      <img src="assets/letter-a.svg" alt="А"><img src="assets/letter-r.svg" alt="Р"><img src="assets/letter-h.svg" alt="Х"><img src="assets/letter-i.svg" alt="И"><img src="assets/letter-v.svg" alt="В">
+    </div>
+    <div id="barcode"><img src="assets/union.svg" alt=""></div>
+    <p id="lede">Уникальный архив о&nbsp;конструктивизме, медиа и&nbsp;городской истории: материалы, личности, события, места и&nbsp;проекты, объединённые в&nbsp;единую систему связей</p>
+    <div id="search">
+      <div class="box"></div>
+      <div class="ph">Поиск в архиве: события, люди, места и т.д.</div>
+      <svg class="ic" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2a9 9 0 1 1-5.6 16.05l-3.28 3.27-1.44-1.44 3.27-3.28A9 9 0 0 1 11 2Zm0 2.3a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="#262626"/></svg>
+    </div>
+    <div id="themes">
+      <div class="t-title" id="themesTitle"></div>
+      <div class="row">
+        <div class="theme"><div class="tx"><h4>расцвет конструктивизма</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th1.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>дзига вертов</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th2.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>вхутемас и вхутеин</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th3.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>эксперименты с формой</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th4.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>золотой век авангарда</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th5.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>дзига вертов</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="assets/th2.jpg" alt=""></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="scrollspace"></div>
+
+<div id="restWrap">
+  <div id="rest">
+    <section id="projects">
+      <div class="sec-title" data-title="проекты центра"></div>
+      <div class="grid">
+        <div class="project p-big">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставка</div>
+            <h3>Любовь в авангарде</h3>
+            <div class="dates">29.08–20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="assets/proj-interior.jpg" alt=""></div>
+        </div>
+        <div class="project p-mid">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставка</div>
+            <h3>Владимир Маяковский идет в гости</h3>
+            <div class="dates">29.08–20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="assets/proj-mayak.jpg" alt=""></div>
+        </div>
+        <div class="project p-tall">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">конференция</div>
+            <h3>Человек с киноаппаратом</h3>
+            <div class="dates">20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="assets/proj-kino.jpg" alt=""></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="chrono">
+      <div class="sec-title" data-title="хронограф"></div>
+      <div class="grid">
+        <div class="ch-item"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:180px"></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1912</div><div class="d">Презентация новых форм и материалов в изобразительном искусстве, вызов традициям.</div><div class="bar" style="height:130px"></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1933</div><div class="d">Первая выставка с акцентом на социальный реализм и тематические поиски в живописи.</div><div class="bar" style="height:220px"></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1947</div><div class="d">Ретроспектива ранних работ художников, подчеркивающая развитие индивидуальных стилей.</div><div class="bar" style="height:150px"></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1960</div><div class="d">Умер Владимир Маяковский</div><div class="bar" style="height:200px"></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:110px"></div></div>
+      </div>
+    </section>
+
+    <div id="foot"><img src="assets/union.svg" alt=""></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DESIGN_W = 1920;
+  const HERO_H = 1080;
+
+  // scroll choreography distances (design px)
+  const D1 = 800;   // phase A: АРХИВ compresses, barcode arrives
+  const D2 = 500;   // phase B: search + themes ride up to compact layout
+  const D  = D1 + D2;
+
+  // hero element keyframes (design px)
+  const WORD_W0 = 1720, WORD_W1 = 856;   // АРХИВ width
+  const BAR_W1  = 856;                    // barcode width
+  const SEARCH_Y0 = 618, SEARCH_Y1 = 460;
+  const THEMES_Y0 = 944, THEMES_Y1 = 548;
+  const COMPACT_H = 676;                  // hero content height in compact state
+  const WORD_BOTTOM = 328;                // hero word bottom (for sidebar fade)
+
+  const stage   = document.getElementById('stage');
+  const hero    = document.getElementById('hero');
+  const word    = document.getElementById('word');
+  const barcode = document.getElementById('barcode');
+  const search  = document.getElementById('search');
+  const themes  = document.getElementById('themes');
+  const mini    = document.getElementById('mini-arhiv');
+  const space   = document.getElementById('scrollspace');
+  const restWrap= document.getElementById('restWrap');
+  const rest    = document.getElementById('rest');
+
+  // justified display titles
+  function buildTitle(el, big){
+    const t = el.dataset ? el.dataset.title : null;
+    const txt = t !== undefined && t !== null ? t : el.textContent;
+    el.innerHTML = '';
+    for (const ch of txt){
+      const s = document.createElement('span');
+      s.className = 'ch';
+      s.textContent = ch === ' ' ? ' ' : ch;
+      if (ch === ' ') s.style.width = '40px';
+      el.appendChild(s);
+    }
+    const c = document.createElement('div');
+    c.className = 'circle';
+    const size = big ? 24 : 16;
+    c.innerHTML = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 16 16" fill="none"><path d="M2 7.2002H11.25L7.53906 3.5H9.5L14 8L9.5 12.5H7.53906L11.25 8.7998H2V7.2002Z" fill="white"/></svg>';
+    el.appendChild(c);
+  }
+  document.querySelectorAll('.sec-title').forEach(el => buildTitle(el, true));
+  const tt = document.getElementById('themesTitle');
+  tt.dataset.title = 'актуальные темы';
+  buildTitle(tt, false);
+  tt.querySelectorAll('.ch').forEach(s => {
+    s.style.fontFamily = 'Oswald,sans-serif';
+    s.style.fontWeight = '500';
+    s.style.fontSize = '24px';
+    s.style.lineHeight = '24px';
+    s.style.textTransform = 'uppercase';
+  });
+  tt.querySelector('.circle').style.width = '24px';
+  tt.querySelector('.circle').style.height = '24px';
+
+  let k = 1;
+
+  function layout(){
+    k = window.innerWidth / DESIGN_W;
+    stage.style.transform = 'scale(' + k + ')';
+    // scroll space above rest: compact hero height + choreography distance
+    space.style.height = ((COMPACT_H + D) * k) + 'px';
+    rest.style.transform = 'translateX(' + (184 * k) + 'px) scale(' + k + ')';
+    restWrap.style.height = (rest.offsetHeight * k) + 'px';
+    update();
+  }
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const lerp  = (a,b,t) => a + (b-a)*t;
+
+  function update(){
+    const S = window.scrollY / k;      // scroll in design px
+    const p1 = clamp(S / D1, 0, 1);
+    const p2 = clamp((S - D1) / D2, 0, 1);
+
+    word.style.width = lerp(WORD_W0, WORD_W1, p1) + 'px';
+    barcode.style.width = (BAR_W1 * p1) + 'px';
+    search.style.top = lerp(SEARCH_Y0, SEARCH_Y1, p2) + 'px';
+    themes.style.top = lerp(THEMES_Y0, THEMES_Y1, p2) + 'px';
+
+    // after choreography — hero (and stage word zone) scrolls away
+    const off = Math.max(0, S - D);
+    hero.style.transform = 'translateY(' + (-off) + 'px)';
+
+    // sidebar АРХИВ fades in when the big АРХИВ has left the screen
+    mini.classList.toggle('on', off > WORD_BOTTOM);
+  }
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking){
+      ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    }
+  }, {passive:true});
+  window.addEventListener('resize', layout);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  window.addEventListener('load', layout);
+  layout();
+})();
+</script>
+</body>
+</html>
