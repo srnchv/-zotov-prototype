@@ -223,20 +223,21 @@
 <script>
 (function(){
   const DESIGN_W = 1920;
-  const HERO_H = 1080;
 
   // scroll choreography distances (design px)
-  const D1 = 800;   // phase A: АРХИВ compresses, barcode arrives
-  const D2 = 500;   // phase B: search + themes ride up to compact layout
-  const D  = D1 + D2;
+  const D1 = 800;      // phase A: АРХИВ compresses, barcode arrives
+  let D2 = 500;        // phase B: search + themes ride up to compact layout
+  let D  = D1 + D2;    // recomputed in layout() from the viewport height
 
   // hero element keyframes (design px)
   const WORD_W0 = 1720, WORD_W1 = 856;   // АРХИВ width
   const BAR_W1  = 856;                    // barcode width
-  const SEARCH_Y0 = 618, SEARCH_Y1 = 460;
-  const THEMES_Y0 = 944, THEMES_Y1 = 548;
+  const SEARCH_Y1 = 460;
+  const THEMES_Y1 = 548;
   const COMPACT_H = 676;                  // hero content height in compact state
   const WORD_BOTTOM = 328;                // hero word bottom (for sidebar fade)
+  // initial positions depend on the real viewport height (design 1080: themes 944, search 618)
+  let HERO_H = 1080, THEMES_Y0 = 944, SEARCH_Y0 = 618;
 
   const stage   = document.getElementById('stage');
   const hero    = document.getElementById('hero');
@@ -285,6 +286,16 @@
 
   function layout(){
     k = window.innerWidth / DESIGN_W;
+    // hero fills the real viewport: themes block hugs the bottom edge
+    HERO_H = Math.max(900, window.innerHeight / k);
+    THEMES_Y0 = HERO_H - 136;             // 128px block + 8px bottom margin
+    SEARCH_Y0 = THEMES_Y0 - 326;          // same offset from themes as in the mockup
+    // phase B distance grows with viewport height so incoming content never overlaps the themes
+    D2 = Math.max(500, HERO_H - 684 + 60);
+    D  = D1 + D2;
+    stage.style.height = HERO_H + 'px';
+    document.getElementById('sidebar').style.height = HERO_H + 'px';
+    hero.style.height = HERO_H + 'px';
     stage.style.transform = 'scale(' + k + ')';
     // scroll space above rest: compact hero height + choreography distance
     space.style.height = ((COMPACT_H + D) * k) + 'px';
