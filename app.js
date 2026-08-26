@@ -257,8 +257,10 @@ function passes(o){
   if(FILT.a11y.size&&!(o.a11y||[]).some(a=>FILT.a11y.has(a))) return false;
   if(FILT.lang.size&&!(FILT.lang.has('__all')?(o.lang&&o.lang!=='—'):FILT.lang.has(o.lang))) return false;
   for(const k of ENTKEYS){ if(FILT[k].size){
+    // «Все Х» = скоуп: показываем сами объекты типа (каталог / релевантные запросу);
+    // конкретное значение = поиск по связям с ним
     const ok=FILT[k].has('__all')
-      ?(o.type===k||(o.links||[]).some(id=>DB[id]&&DB[id].type===k))
+      ?o.type===k
       :(FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)));
     if(!ok) return false; } }
   return true;
@@ -414,7 +416,9 @@ function archive(qs){
   } else {
     body=order.filter(t=>by[t]).map(t=>{
       const items=sortItems(by[t],direct);
-      const inner=t==='material'?`<div class="grid g3">${items.map(resultCard).join('')}</div>`:`<div class="chips">${items.map(link).join('')}</div>`;
+      const inner=t==='material'?`<div class="grid g3">${items.map(resultCard).join('')}</div>`
+        :CARD_TYPES.includes(t)?`<div class="grid ${t==='person'?'g4':'g3'}">${items.map(tile).join('')}</div>`
+        :`<div class="chips">${items.map(link).join('')}</div>`;
       return `<div class="grpres"><h3>${TYPES[t].pl}<span class="c">${items.length}</span></h3>${inner}</div>`;
     }).join('');
   }
