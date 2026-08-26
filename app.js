@@ -107,8 +107,8 @@ const link=o=>`<a class="chip" href="#/e/${o.id}">${esc(o.title)}</a>`;
 const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.colType||o.prType||o.orgType||'';
 const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
 
-// связанные сущности: часть — карточками (как материалы), часть — ссылками-чипами (как темы)
-const CARD_TYPES=['material','person','place','event','project','collection'];
+// основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
+const CARD_TYPES=['material','person','place','event','theme','project','collection'];
 const REL_ORDER=['material','person','place','event','project','collection','theme','org','source','tag'];
 const REL_HEAD={material:'Материалы',person:'Связанные личности',place:'Связанные места',event:'Связанные события',project:'Связанные выставки и проекты',collection:'Коллекции и фонды',theme:'Темы',org:'Организации',source:'Источники',tag:'Теги'};
 function relatedSections(o){
@@ -404,15 +404,10 @@ function drawFmodal(){
 // --- страница архива / результатов ---
 function archive(qs){
   FILT=parseFilt(qs);
-  const {res:res0,direct}=runSearch();
-  // выбранные в фильтрах сущности — контекст: поднимаем карточками над выдачей, из результатов убираем
-  const ctx=[]; ENTKEYS.forEach(k=>FILT[k].forEach(v=>{if(v!=='__all'&&DB[v])ctx.push(DB[v]);}));
-  const ctxIds=new Set(ctx.map(o=>o.id));
-  const res=res0.filter(o=>!ctxIds.has(o.id));
-  const ctxCard=o=>`<a class="card ctxcard" href="#/e/${o.id}"><span class="cthumb"${o.type==='person'?' style="border-radius:50%"':''}></span><span><span class="kicker">${TYPES[o.type].l}</span><span class="t" style="display:block;font-weight:600">${esc(o.title)}</span><span class="muted" style="font-size:13px">${esc(tileMeta(o))}</span><span class="muted" style="display:block;font-size:13px;margin-top:6px;text-decoration:underline">Открыть карточку →</span></span></a>`;
-  const ctxBlock=ctx.length?`<div class="fctx"><div class="kicker" style="margin-bottom:10px">Выбрано в фильтрах — ниже всё, что с ${ctx.length===1?'этим':'ними'} связано</div><div class="grid g3">${ctx.map(ctxCard).join('')}</div></div>`:'';
+  const {res,direct}=runSearch();
   const browse=!FILT.q&&!hasFilters();
-  const order=['material','person','place','event','theme','project','org','collection','source','tag','media'];
+  // основные сущности (с изображением) — карточками, служебные — названиями ниже
+  const order=['material','person','place','event','theme','project','collection','org','source','tag','media'];
   const by={}; res.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
   let body;
   if(!res.length){
@@ -434,7 +429,7 @@ function archive(qs){
   return page('#/archive',`${head}
     ${searchInput(FILT.q)}
     ${filterBar()}
-    <div style="margin-top:18px">${activeChips()}${ctxBlock}${toolbar(res.length)}${body}</div>`);
+    <div style="margin-top:18px">${activeChips()}${toolbar(res.length)}${body}</div>`);
 }
 
 // --- обработчики фильтров / действий ---
