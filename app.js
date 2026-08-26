@@ -404,7 +404,13 @@ function drawFmodal(){
 // --- страница архива / результатов ---
 function archive(qs){
   FILT=parseFilt(qs);
-  const {res,direct}=runSearch();
+  const {res:res0,direct}=runSearch();
+  // выбранные в фильтрах сущности — контекст: поднимаем карточками над выдачей, из результатов убираем
+  const ctx=[]; ENTKEYS.forEach(k=>FILT[k].forEach(v=>{if(v!=='__all'&&DB[v])ctx.push(DB[v]);}));
+  const ctxIds=new Set(ctx.map(o=>o.id));
+  const res=res0.filter(o=>!ctxIds.has(o.id));
+  const ctxCard=o=>`<a class="card ctxcard" href="#/e/${o.id}"><span class="cthumb"${o.type==='person'?' style="border-radius:50%"':''}></span><span><span class="kicker">${TYPES[o.type].l}</span><span class="t" style="display:block;font-weight:600">${esc(o.title)}</span><span class="muted" style="font-size:13px">${esc(tileMeta(o))}</span><span class="muted" style="display:block;font-size:13px;margin-top:6px;text-decoration:underline">Открыть карточку →</span></span></a>`;
+  const ctxBlock=ctx.length?`<div class="fctx"><div class="kicker" style="margin-bottom:10px">Выбрано в фильтрах — ниже всё, что с ${ctx.length===1?'этим':'ними'} связано</div><div class="grid g3">${ctx.map(ctxCard).join('')}</div></div>`:'';
   const browse=!FILT.q&&!hasFilters();
   const order=['material','person','place','event','theme','project','org','collection','source','tag','media'];
   const by={}; res.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
@@ -428,7 +434,7 @@ function archive(qs){
   return page('#/archive',`${head}
     ${searchInput(FILT.q)}
     ${filterBar()}
-    <div style="margin-top:18px">${activeChips()}${toolbar(res.length)}${body}</div>`);
+    <div style="margin-top:18px">${activeChips()}${ctxBlock}${toolbar(res.length)}${body}</div>`);
 }
 
 // --- обработчики фильтров / действий ---

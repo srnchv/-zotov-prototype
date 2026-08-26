@@ -203,6 +203,10 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .colgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 .colcard{display:flex;gap:14px;align-items:flex-start}
 
+/* контекст фильтра: выбранные сущности карточками над выдачей */
+.fctx{margin:2px 0 18px;padding:16px 18px;background:var(--fill);border-radius:12px}
+.ctxcard{display:flex;gap:14px;align-items:flex-start}
+
 /* modal */
 #modal-root .ov{position:fixed;inset:0;background:rgba(20,20,20,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:50}
 .modal{background:#fff;border-radius:14px;padding:32px;width:520px;max-width:92vw}
