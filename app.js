@@ -135,7 +135,12 @@ window.filterCat=q=>{const ql=q.trim().toLowerCase();document.querySelectorAll('
 
 // ---------- views ----------
 const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
-function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.previousElementSibling.value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;}
+const SCOPES=[['','Все разделы'],['material','Материалы'],['person','Личности'],['place','Места'],['event','События'],['theme','Темы'],['project','Проекты'],['org','Организации'],['collection','Коллекции'],['source','Источники']];
+window.setScope=v=>{FILT.scope=v;navFilt();};
+function searchInput(q,ph,withScope){
+  const scope=withScope?`<select class="scopesel" onchange="setScope(this.value)" title="Раздел поиска">${SCOPES.map(([v,l])=>`<option value="${v}"${FILT.scope===v?' selected':''}>${l}</option>`).join('')}</select>`:'';
+  return `<div class="searchbar">${scope}<input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.parentElement.querySelector('input').value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;
+}
 const homeSec=(dot,kick,href,label,body)=>`<section class="hsec"><div class="hsec-h"><div class="hkick"><span class="hdot" style="background:${dot}"></span>${kick}</div><a class="btn sm" href="${href}">→ ${label}</a></div>${body}</section>`;
 // ===== Главная v2.1 — «Стэк» (вайрфрейм 30.07.2026) =====
 // Порядок: hero → поиск (+расш. поиск) → Темы → Проекты (тёмная секция) →
@@ -168,7 +173,7 @@ function home(){
   </section>
   <section class="hsec" style="border-top:none;padding-top:0">
     ${searchInput('')}
-    <div style="margin-top:12px"><a class="lnk muted" style="font-size:14px" href="#/archive" onclick="advOpen=true">Расширенный поиск →</a></div>
+    <div style="margin-top:12px"><a class="lnk muted" style="font-size:14px" href="#/archive">Расширенный поиск →</a></div>
   </section>
   ${homeSec('#16a34a','Темы','#/cat/theme','Все темы',`<div class="themesgrid">${themes.map(themeCard).join('')}</div>`)}
   <section class="hsec"><div class="darkblock">
@@ -210,9 +215,9 @@ const ENT=[['person','Личность'],['place','Место'],['event','Соб
 const ENTKEYS=ENT.map(e=>e[0]);
 const DIMS=['type','subtype','decade','access','media','a11y','lang',...ENTKEYS];
 
-let advOpen=false;
+let openDim=null; // раскрытая категория фильтров (паттерн RAAN)
 let FILT=blankFilt();
-function blankFilt(){const f={q:'',sort:'rel'};DIMS.forEach(d=>f[d]=new Set());return f;}
+function blankFilt(){const f={q:'',sort:'rel',scope:''};DIMS.forEach(d=>f[d]=new Set());return f;}
 const decadeOf=d=>{const m=(d||'').match(/\d{4}/);return m?Math.floor(+m[0]/10)*10+'-е':'';};
 const yearOf=d=>{const m=(d||'').match(/\d{4}/);return m?+m[0]:0;};
 const subtypesAll=()=>[...new Set(all('material').map(m=>(m.subtype||'').split('·')[0].trim()).filter(Boolean))];
@@ -225,6 +230,7 @@ function parseFilt(qs){
   new URLSearchParams(qs||'').forEach((v,k)=>{
     if(k==='q') f.q=v;
     else if(k==='sort') f.sort=v;
+    else if(k==='scope') f.scope=v;
     else if(f[k]instanceof Set) v.split(',').filter(Boolean).forEach(x=>f[k].add(x));
   });
   return f;
@@ -232,6 +238,7 @@ function parseFilt(qs){
 function buildHash(){
   const p=new URLSearchParams();
   if(FILT.q) p.set('q',FILT.q);
+  if(FILT.scope) p.set('scope',FILT.scope);
   DIMS.forEach(d=>{ if(FILT[d].size) p.set(d,[...FILT[d]].join(',')); });
   if(FILT.sort&&FILT.sort!=='rel') p.set('sort',FILT.sort);
   const s=p.toString();
@@ -267,12 +274,14 @@ function runSearch(){
     const ids=new Set(direct);
     hits.forEach(o=>(o.links||[]).forEach(id=>ids.add(id))); // + связанные данные (ТЗ)
     pool=[...ids].map(id=>DB[id]).filter(Boolean);
-  } else if(hasFilters()){
+  } else if(hasFilters()||FILT.scope){
     pool=RAW.slice();
   } else {
     pool=all('material'); // browse-каталог
   }
-  return {res:pool.filter(passes),direct};
+  let res=pool.filter(passes);
+  if(FILT.scope) res=res.filter(o=>o.type===FILT.scope); // скоуп «Все разделы» (паттерн RAAN)
+  return {res,direct};
 }
 function sortItems(arr,direct){
   const cmp={
@@ -329,38 +338,38 @@ function toolbar(count){
     </div></div>`;
 }
 
-// --- фильтр-панель (чипы, множественный выбор) ---
-function chipGroup(dim,label,opts){
-  if(!opts.length) return '';
-  return `<div class="grp"><div class="lbl">${label}</div><div class="chips">${opts.map(([v,l])=>`<span class="fchip${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join('')}</div></div>`;
+// --- фильтр-бар (паттерн RAAN: категории раскрываются «плюсом», выбор из любого раздела) ---
+const FCATS=()=>[
+  ['type','Тип материала',TYPELIST.map(t=>[t,t])],
+  ['subtype','Подтип',subtypesAll().map(s=>[s,s])],
+  ['decade','Период',decadesAll().map(d=>[d,d])],
+  ...ENT.map(([k])=>[k,TYPES[k].pl,all(k).map(o=>[o.id,o.title])]),
+  ['access','Доступ',Object.entries(ACCESS)],
+  ['media','Медиа',Object.entries(MEDIA)],
+  ['a11y','Доступность',A11Y.map(a=>[a,a])],
+  ['lang','Язык',langsAll().map(l=>[l,l])]
+];
+function filterBar(){
+  const cats=FCATS().filter(c=>c[2].length);
+  const bar=cats.map(([dim,label])=>{
+    const n=FILT[dim].size, open=openDim===dim;
+    return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
+  }).join('');
+  const cur=cats.find(c=>c[0]===openDim);
+  const panel=cur?`<div class="fpanel">
+    <div class="chips">${cur[2].map(([v,l])=>`<span class="fchip${FILT[cur[0]].has(''+v)?' on':''}" onclick="tf('${cur[0]}','${esc(''+v)}')">${esc(l)}</span>`).join('')}</div>
+    ${cur[0]==='decade'?'<div class="muted" style="font-size:13px;margin-top:10px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
+    ${FILT[cur[0]].size?`<div style="margin-top:10px"><span class="muted lnk" style="font-size:13px" onclick="FILT['${cur[0]}'].clear();navFilt()">Сбросить категорию</span></div>`:''}
+  </div>`:'';
+  return `<div class="fbar">${bar}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>${panel}`;
 }
-function filtersPanel(){
-  return `<div class="filters">
-    <div class="grp" style="display:flex;align-items:baseline;justify-content:space-between">
-      <div class="lbl" style="font-size:17px;font-weight:600;margin:0">Фильтры</div>
-      <span class="muted lnk" style="font-size:13px" onclick="resetFilters()">Сбросить</span></div>
-    ${chipGroup('type','Тип материала',TYPELIST.map(t=>[t,t]))}
-    ${chipGroup('decade','Дата / период',decadesAll().map(d=>[d,d]))}
-    <div class="muted" style="font-size:13px;margin:-6px 0 16px">Точная дата, диапазон и «около» — в полной версии.</div>
-    <details class="adv"${advOpen?' open':''} ontoggle="advOpen=this.open">
-      <summary>Расширенные фильтры</summary>
-      <div style="margin-top:12px">
-      ${chipGroup('subtype','Подтип материала',subtypesAll().map(s=>[s,s]))}
-      ${ENT.map(([k,lbl])=>chipGroup(k,lbl,all(k).map(o=>[o.id,o.title]))).join('')}
-      ${chipGroup('access','Уровень доступа',Object.entries(ACCESS))}
-      ${chipGroup('media','Наличие медиафайла',Object.entries(MEDIA))}
-      ${chipGroup('a11y','Доступность',A11Y.map(a=>[a,a]))}
-      ${chipGroup('lang','Язык',langsAll().map(l=>[l,l]))}
-      </div>
-    </details>
-  </div>`;
-}
+window.toggleDim=d=>{openDim=openDim===d?null:d;render();};
 
 // --- страница архива / результатов ---
 function archive(qs){
   FILT=parseFilt(qs);
   const {res,direct}=runSearch();
-  const browse=!FILT.q&&!hasFilters();
+  const browse=!FILT.q&&!hasFilters()&&!FILT.scope;
   const order=['material','person','place','event','theme','project','org','collection','source','tag','media'];
   const by={}; res.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
   let body;
@@ -379,8 +388,9 @@ function archive(qs){
     ?`<div class="crumbs">Архив</div><h1>Архив</h1><div class="muted">Каталог материалов. Введите запрос или выберите фильтры слева — результаты обновятся.</div>`
     :`<div class="crumbs"><a href="#/archive">Архив</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
   return page('#/archive',`${head}
-    ${searchInput(FILT.q)}
-    <div class="archive" style="margin-top:18px">${filtersPanel()}<div>${activeChips()}${toolbar(res.length)}${body}</div></div>`);
+    ${searchInput(FILT.q,null,true)}
+    ${filterBar()}
+    <div style="margin-top:18px">${activeChips()}${toolbar(res.length)}${body}</div>`);
 }
 
 // --- обработчики фильтров / действий ---

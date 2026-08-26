@@ -150,6 +150,18 @@ footer .cols{display:flex;justify-content:space-between;gap:24px;padding:48px 24
 footer h4{color:#fff;font-size:15px;margin:0 0 10px;font-weight:500}
 footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 
+/* расширенный поиск — фильтр-бар по паттерну RAAN */
+.searchbar .scopesel{border:none;border-right:1px solid var(--line);background:transparent;font:inherit;font-size:15px;color:var(--ink);padding:4px 28px 4px 0;margin-right:16px;cursor:pointer;outline:none;flex:none}
+.fbar{display:flex;flex-wrap:wrap;gap:2px 28px;padding:14px 2px 12px;border-bottom:1px solid var(--line)}
+.fcat{display:inline-flex;align-items:center;gap:7px;padding:6px 0;font-size:15px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.fcat i{font-style:normal;font-size:17px;color:var(--muted);line-height:1}
+.fcat:hover i{color:var(--ink)}
+.fcat.open{font-weight:600}
+.fcat .cnt{font-size:11px;font-weight:600;background:var(--ink);color:#fff;border-radius:9px;padding:1px 7px}
+.fcat.reset{color:var(--muted);font-size:13px;margin-left:auto}
+.fcat.reset:hover{color:var(--ink)}
+.fpanel{padding:16px 2px;border-bottom:1px solid var(--line);background:#fafaf9}
+
 /* home v2.1 — «Стэк» по вайрфрейму 30.07.2026 */
 .themesgrid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:16px;align-items:start}
 .darkblock{background:#1c1c1c;border-radius:14px;padding:26px 28px;color:#ececec}
