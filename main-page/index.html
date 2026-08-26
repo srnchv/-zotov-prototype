@@ -31,7 +31,7 @@
   #mini-arhiv img{height:16px;width:auto}
   #menu{position:absolute;left:8px;top:128px;width:136px}
   #menu .rule{height:4px;background:var(--ink)}
-  #menu a{display:block;padding:4px 0;font-size:14.2px;line-height:16px;font-weight:700;letter-spacing:.01em;text-transform:uppercase}
+  #menu a{display:block;padding:4px 0;font-size:14px;line-height:16px;font-weight:800;letter-spacing:.02em;text-transform:uppercase}
   #menu a:hover{color:var(--red)}
   #soc{position:absolute;left:8px;bottom:8px;width:136px;display:flex;gap:4px}
   #soc span{flex:1;background:var(--ink);color:#fff;border-radius:24px;padding:6px 0;text-align:center;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;cursor:pointer}
@@ -68,10 +68,11 @@
   /* ============ scrolled content (rest) ============ */
   #scrollspace{width:1px}
   #restWrap{position:relative;z-index:10}
-  #rest{width:1736px;background:#fff;transform-origin:0 0;padding:80px 8px 120px 8px}
+  #rest{width:1736px;background:#fff;transform-origin:0 0;padding:80px 8px 8px 8px}
 
-  .sec-title{display:flex;align-items:center;justify-content:space-between;height:144px;margin-bottom:64px}
-  .sec-title .ch{font-family:Oswald,sans-serif;font-weight:600;font-size:120px;line-height:120px;text-transform:uppercase;color:var(--ink)}
+  /* макет: TITLE = 144px (80px букв + 64px отступ), сетка начинается сразу под ним */
+  .sec-title{display:flex;align-items:flex-start;justify-content:space-between;height:144px}
+  .sec-title .ch{font-family:Oswald,sans-serif;font-weight:600;font-size:106px;line-height:82px;text-transform:uppercase;color:var(--ink)}
   .sec-title .circle{width:80px;height:80px;margin-left:40px;cursor:pointer}
   .sec-title .circle:hover{background:var(--red)}
 
@@ -96,9 +97,9 @@
   .p-mid .im{height:320px}
   .p-tall .im{height:498px}
 
-  /* chronograph */
+  /* chronograph: контент по макету 570px */
   #chrono{margin-top:160px}
-  #chrono .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0 8px}
+  #chrono .grid{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:570px;gap:0 8px}
   .ch-item{cursor:pointer}
   .ch-item .rule{height:4px;background:var(--ink);margin-bottom:8px}
   .ch-item .year{font-family:Oswald,sans-serif;font-weight:600;font-size:34px;line-height:36px}
@@ -107,9 +108,38 @@
   .ch-item:hover .rule,.ch-item:hover .bar{background:var(--red)}
   .ch-item:hover .year,.ch-item:hover .d{color:var(--red)}
 
-  /* footer strip */
-  #foot{margin-top:160px;display:flex;justify-content:flex-end}
-  #foot img{height:120px;width:auto;opacity:.9}
+  /* личности: мозаика 12×4 по 170px */
+  #persons{margin-top:160px}
+  #persons .mosaic{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:170px;gap:8px;padding:8px 0}
+  .mtile{border:8px solid var(--ink);background:#e2e2e2;cursor:pointer}
+  .mtile:hover{border-color:var(--red)}
+
+  /* коллекции */
+  #colls{margin-top:160px}
+  #colls .row{display:flex;gap:8px}
+  .coll{width:856px;flex:0 0 auto;cursor:pointer}
+  .coll .topline{height:16px;border-top:8px solid var(--ink)}
+  .coll .text{padding:0 32px 8px 0}
+  .coll .type{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding-bottom:4px}
+  .coll h3{font-size:40px;line-height:40px;font-weight:600;letter-spacing:-0.8px;text-transform:uppercase}
+  .coll .desc{font-size:16px;line-height:16px;font-weight:500;padding-top:4px}
+  .coll .vline{border-left:8px solid var(--ink);height:80px}
+  .coll .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:8px 0}
+  .coll .im{margin-top:8px;height:640px;background:#e2e2e2;position:relative}
+  .coll .slider{position:absolute;right:8px;bottom:8px;display:flex;gap:2px;align-items:flex-end}
+  .coll .slider .s{background:#fff;height:24px;min-width:24px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .coll:hover .topline,.coll:hover .vline{border-color:var(--red)}
+  .coll:hover .type,.coll:hover h3,.coll:hover .desc{color:var(--red)}
+
+  /* карта: баннер-пилюля 1720×400 */
+  #mapb{margin-top:160px;height:400px;border:8px solid var(--ink);border-radius:240px;background:#f2f2f2;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;cursor:pointer}
+  #mapb .sec-title{height:auto;width:856px}
+  #mapb p{width:653px;text-align:center;font-size:16px;line-height:16px;font-weight:500;color:rgba(0,0,0,.85);position:relative;z-index:1}
+  #mapb svg.deco{position:absolute;right:-40px;top:-60px;height:520px;width:900px;opacity:.55;z-index:0}
+
+  /* footer: большой баркод */
+  #foot{margin-top:160px}
+  #foot img{width:1728px;height:900px}
 </style>
 </head>
 <body>
@@ -214,6 +244,67 @@
         <div class="ch-item"><div class="rule"></div><div class="year">1960</div><div class="d">Умер Владимир Маяковский</div><div class="bar" style="height:200px"></div></div>
         <div class="ch-item"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:110px"></div></div>
       </div>
+    </section>
+
+    <section id="persons">
+      <div class="sec-title" data-title="личности"></div>
+      <div class="mosaic">
+        <div class="mtile" style="grid-column:3/span 2;grid-row:1/span 2"></div>
+        <div class="mtile" style="grid-column:5;grid-row:1"></div>
+        <div class="mtile" style="grid-column:9;grid-row:1"></div>
+        <div class="mtile" style="grid-column:1;grid-row:2"></div>
+        <div class="mtile" style="grid-column:8;grid-row:2"></div>
+        <div class="mtile" style="grid-column:10/span 2;grid-row:2/span 2"></div>
+        <div class="mtile" style="grid-column:2;grid-row:3"></div>
+        <div class="mtile" style="grid-column:5;grid-row:3"></div>
+        <div class="mtile" style="grid-column:6/span 2;grid-row:3/span 2"></div>
+        <div class="mtile" style="grid-column:9;grid-row:3"></div>
+        <div class="mtile" style="grid-column:12;grid-row:3"></div>
+        <div class="mtile" style="grid-column:1;grid-row:4"></div>
+        <div class="mtile" style="grid-column:10;grid-row:4"></div>
+      </div>
+    </section>
+
+    <section id="colls">
+      <div class="sec-title" data-title="коллекции"></div>
+      <div class="row">
+        <div class="coll">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставочный фонд</div>
+            <h3>Архив Стригалева</h3>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im">
+            <div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div>
+          </div>
+        </div>
+        <div class="coll">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">личный фонд</div>
+            <h3>Коллекция центра</h3>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im">
+            <div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mapb">
+      <svg class="deco" viewBox="0 0 900 520" fill="none">
+        <path d="M60 430 L240 180 L470 300 L700 90 L880 210" stroke="#262626" stroke-width="3" stroke-dasharray="2 14" stroke-linecap="round"/>
+        <path d="M120 60 L330 250 L560 140 L800 420" stroke="#262626" stroke-width="3" stroke-dasharray="2 14" stroke-linecap="round"/>
+        <circle cx="240" cy="180" r="10" fill="#262626"/><circle cx="470" cy="300" r="10" fill="#262626"/><circle cx="700" cy="90" r="10" fill="#262626"/><circle cx="330" cy="250" r="10" fill="#262626"/><circle cx="560" cy="140" r="10" fill="#262626"/>
+      </svg>
+      <div class="sec-title" data-title="карта"></div>
+      <p>Географический слой архива: здания, города и адреса, связанные с материалами, событиями и людьми. Существующие и давно утраченные&nbsp;— на&nbsp;одной карте.</p>
     </section>
 
     <div id="foot"><img src="assets/union.svg" alt=""></div>
