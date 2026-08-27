@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЗОТОВ — Архив</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400..900&display=swap" rel="stylesheet">
+<style>
+  @font-face{font-family:'PT Root UI';src:url('../main-page/assets/fonts/pt-root-ui.woff2') format('woff2');font-weight:300 700;font-display:swap}
+  @font-face{font-family:'Roboto Flex';src:url('../main-page/assets/fonts/roboto-flex.woff2') format('woff2');font-weight:100 1000;font-display:swap}
+  @font-face{font-family:'Zotov Contrast';src:url('../main-page/assets/fonts/zotov-contrast.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'Zotov Bold';src:url('../main-page/assets/fonts/zotov-bold.woff2') format('woff2');font-weight:400;font-display:swap}
+  @font-face{font-family:'Zotov Light';src:url('../main-page/assets/fonts/zotov-light.woff2') format('woff2');font-weight:400;font-display:swap}
+  :root{
+    --ink:#262626;
+    --red:#F43C3A;
+    --grey3:#bfbfbf;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#fff}
+  body{font-family:'PT Root UI','Golos Text',system-ui,sans-serif;color:var(--ink);overflow-x:hidden}
+  img,svg{display:block}
+  a{color:inherit;text-decoration:none}
+
+  /* ============ fixed scaled stage: sidebar + hero ============ */
+  #stage{position:fixed;top:0;left:0;width:1920px;height:1080px;transform-origin:0 0;z-index:5}
+
+  /* ---------- sidebar ---------- */
+  #sidebar{position:absolute;left:0;top:0;width:184px;height:1080px;background:#fff;z-index:30}
+  #sidebar .logo{position:absolute;left:8px;top:8px;width:136px}
+  #sidebar .logo img{width:136px;height:auto}
+  #mini-arhiv{position:absolute;left:8px;top:100px;width:136px;height:16px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .45s ease}
+  #mini-arhiv.on{opacity:1}
+  #mini-arhiv img{height:16px;width:auto}
+  #menu{position:absolute;left:8px;top:128px;width:136px}
+  #menu .rule{height:4px;background:var(--ink)}
+  #menu a{display:block;padding:4px 0;font-size:14px;line-height:16px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+  #menu a:hover{color:var(--red)}
+  #soc{position:absolute;left:8px;bottom:8px;width:136px;display:flex;gap:4px}
+  #soc span{flex:1;background:var(--ink);color:#fff;border-radius:24px;padding:6px 0;text-align:center;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;cursor:pointer}
+  #soc span:hover{background:var(--red)}
+
+  /* ---------- hero ---------- */
+  #hero{position:absolute;left:184px;top:0;width:1736px;height:1080px;background:#fff;overflow:hidden}
+  #word{position:absolute;left:8px;top:8px;height:320px;width:1720px;display:flex;align-items:flex-start;justify-content:space-between}
+  #word img{height:320px;width:auto;flex:0 0 auto}
+  #barcode{position:absolute;right:8px;top:8px;height:320px;width:0;overflow:hidden}
+  #barcode .bwrap{position:absolute;right:0;top:0;width:856px;height:320px;display:flex}
+  .bhalf{flex:0 0 428px;height:320px;overflow:hidden;position:relative}
+  .bhalf .bspin{position:absolute;left:50%;top:50%;width:780px;height:780px;margin:-390px 0 0 -390px;background:url('../main-page/assets/union.svg');background-size:856px 320px;animation:bspin 36s linear infinite}
+  .bhalf:nth-child(2) .bspin{animation-direction:reverse}
+  @keyframes bspin{to{transform:rotate(360deg)}}
+  #lede{position:absolute;left:8px;top:336px;width:1720px;font-size:40px;line-height:38px;letter-spacing:-1.2px;font-weight:500;color:rgba(0,0,0,.85)}
+  #search{position:absolute;left:315px;top:618px;width:1106px;height:80px}
+  #search .box{position:absolute;inset:0;border:4px solid var(--ink);border-radius:56px}
+  #search .ph{position:absolute;left:32px;top:50%;transform:translateY(-50%);font-size:20px;line-height:20px;letter-spacing:-0.2px;font-weight:500;color:var(--grey3);white-space:nowrap}
+  #search .ic{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:24px;height:24px}
+
+  /* actual themes block */
+  #themes{position:absolute;left:8px;top:944px;width:1728px}
+  /* заголовок тем есть в структуре макета, но визуально скрыт (белый в макете) */
+  #themes .t-title{width:856px;height:24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;visibility:hidden}
+  #themes .t-title span{font-family:'Zotov Contrast',sans-serif;font-weight:400;font-size:34.3px;line-height:34.3px;margin-top:-10.3px;text-transform:uppercase;color:var(--ink)}
+  .circle{border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .circle svg{display:block}
+  #themes .row{display:flex;gap:8px}
+  .theme{width:320px;height:88px;flex:0 0 auto;background:#fff;border-left:2px solid var(--ink);border-top:2px solid var(--ink);padding:8px 0 0 8px;display:flex;gap:8px;cursor:pointer}
+  .theme .tx{flex:1 1 auto;min-width:1px;display:flex;flex-direction:column;gap:8px;padding-right:8px}
+  .theme h4{font-size:14px;line-height:16px;font-weight:700;text-transform:uppercase}
+  .theme .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .theme .im{width:80px;height:78px;background:var(--ink);overflow:hidden}
+  .theme .im img{width:100%;height:100%;object-fit:cover}
+  .theme:hover h4{color:var(--red)}
+  .theme:hover{border-color:var(--red)}
+
+  /* ============ scrolled content (rest) ============ */
+  #scrollspace{width:1px}
+  #restWrap{position:relative;z-index:10}
+  #rest{width:1736px;background:#fff;transform-origin:0 0;padding:80px 8px 8px 8px}
+
+  /* макет: TITLE = 144px (80px букв + 64px отступ), сетка начинается сразу под ним */
+  .sec-title{display:flex;align-items:flex-start;justify-content:space-between;height:144px}
+  .sec-title .ch{font-family:'Zotov Bold',sans-serif;font-weight:400;font-size:114.3px;line-height:114.3px;margin-top:-.154em;text-transform:uppercase;color:var(--ink)}
+  .sec-title .circle{width:80px;height:80px;margin-left:40px;cursor:pointer}
+  .sec-title .circle:hover{background:var(--red)}
+
+  /* projects */
+  #projects .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0 8px;grid-auto-rows:866px}
+  .project{display:flex;flex-direction:column;cursor:pointer}
+  .project .topline{height:16px;border-top:8px solid var(--ink)}
+  .project .type{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding-bottom:4px}
+  .project h3{font-size:20px;line-height:20px;font-weight:600;letter-spacing:-0.2px;text-transform:uppercase}
+  .project .dates{font-size:20px;line-height:20px;font-weight:600;letter-spacing:-0.2px;text-transform:uppercase}
+  .project .desc{font-size:16px;line-height:16px;font-weight:500;padding-top:4px}
+  .project .text{padding:0 32px 8px 0;display:flex;flex-direction:column}
+  .project .vline{border-left:8px solid var(--ink);flex:1 1 auto;min-height:80px}
+  .project .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:8px 0}
+  .project .im{overflow:hidden}
+  .project .im img{width:100%;height:100%;object-fit:cover}
+  .project:hover .topline{border-color:var(--red)}
+  .project:hover .vline{border-color:var(--red)}
+  .project:hover .type,.project:hover h3,.project:hover .dates,.project:hover .desc{color:var(--red)}
+  .p-big{grid-column:1/span 2}
+  .p-big .im{height:636px}
+  .p-mid .im{height:320px}
+  .p-tall .im{height:498px}
+
+  /* chronograph: контент по макету 570px */
+  #chrono{margin-top:160px}
+  #chrono .grid{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:570px;gap:0 8px}
+  .ch-item{cursor:pointer;display:flex;flex-direction:column;align-items:flex-start}
+  .ch-item .rule{height:8px;background:var(--ink);margin-bottom:8px;width:100%}
+  .ch-item .year{font-weight:700;font-size:40px;line-height:44px}
+  .ch-item .d{font-size:14px;line-height:16px;font-weight:500;margin-top:6px;max-width:250px}
+  .ch-item .bar{width:8px;background:var(--ink);margin-top:16px}
+  .ch-item .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding-top:8px}
+  .ch-item .im{margin-top:auto;width:100%}
+  .ch-item .im img{width:100%;display:block}
+  .ch-item:hover .rule,.ch-item:hover .bar{background:var(--red)}
+  .ch-item:hover .year,.ch-item:hover .d{color:var(--red)}
+
+  /* личности: мозаика 12×4 по 170px */
+  #persons{margin-top:160px}
+  #persons .mosaic{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:170px;gap:8px;padding:8px 0}
+  .mtile{border:8px solid var(--ink);background:#e2e2e2;cursor:pointer;overflow:hidden}
+  .mtile img{width:100%;height:100%;object-fit:cover}
+  .mtile:hover{border-color:var(--red)}
+
+  /* коллекции */
+  #colls{margin-top:160px}
+  #colls .row{display:flex;gap:8px}
+  .coll{width:856px;flex:0 0 auto;cursor:pointer}
+  .coll .topline{height:16px;border-top:8px solid var(--ink)}
+  .coll .text{padding:0 32px 8px 0}
+  .coll .type{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding-bottom:4px}
+  .coll h3{font-size:40px;line-height:40px;font-weight:600;letter-spacing:-0.8px;text-transform:uppercase}
+  .coll .desc{font-size:16px;line-height:16px;font-weight:500;padding-top:4px}
+  .coll .vline{border-left:8px solid var(--ink);height:80px}
+  .coll .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;padding:8px 0}
+  .coll .im{margin-top:8px;height:640px;background:#e2e2e2;position:relative;overflow:hidden}
+  .coll .im>img{width:100%;height:100%;object-fit:cover;display:block}
+  .coll .slider{position:absolute;right:8px;bottom:8px;display:flex;gap:2px;align-items:flex-end}
+  .coll .slider .s{background:#fff;height:24px;min-width:24px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .coll:hover .topline,.coll:hover .vline{border-color:var(--red)}
+  .coll:hover .type,.coll:hover h3,.coll:hover .desc{color:var(--red)}
+
+  /* карта: баннер из макета 1720×400 */
+  #mapb{margin-top:160px;cursor:pointer}
+  #mapb img{width:1720px;height:400px;display:block}
+
+  /* footer: большой баркод + строка ссылок */
+  #foot{margin-top:160px}
+  #foot img{width:1728px;height:auto;display:block}
+  #foot .flinks{display:flex;align-items:center;padding:12px 0 4px;font-size:13px;line-height:16px;font-weight:500}
+  #foot .flinks a{margin-right:32px}
+  #foot .flinks a:hover{color:var(--red)}
+  #foot .flinks .cop{margin-left:auto;margin-right:0}
+
+  /* ==== scroll-driven animations: хореография на компоузиторе, без JS в кадре ==== */
+  @supports (animation-timeline: scroll()) {
+    @keyframes wordRide{to{width:856px}}
+    @keyframes barRide{to{width:856px}}
+    @keyframes searchRide{to{transform:translateY(var(--dockShiftS))}}
+    @keyframes themesRide{to{transform:translateY(var(--dockShiftT))}}
+    @keyframes heroRide{to{transform:translateY(var(--heroShift))}}
+    #word{animation:wordRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
+    #barcode{animation:barRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
+    #search{animation:searchRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEndS);will-change:transform}
+    #themes{animation:themesRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEnd);will-change:transform}
+    #hero{animation:heroRide linear both;animation-timeline:scroll(root);animation-range:var(--cStart) var(--cEnd);will-change:transform}
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <aside id="sidebar">
+    <div class="logo"><img src="../main-page/assets/logo-zotov.svg" alt="Зотов"></div>
+    <div id="mini-arhiv">
+      <img src="../main-page/assets/letter-a.svg" alt="А"><img src="../main-page/assets/letter-r.svg" alt="Р"><img src="../main-page/assets/letter-h.svg" alt="Х"><img src="../main-page/assets/letter-i.svg" alt="И"><img src="../main-page/assets/letter-v.svg" alt="В">
+    </div>
+    <nav id="menu">
+      <div class="rule"></div><a href="#">каталог</a>
+      <div class="rule"></div><a href="#">темы</a>
+      <div class="rule"></div><a href="#">хронограф</a>
+      <div class="rule"></div><a href="#">карта</a>
+      <div class="rule"></div><a href="#">личности</a>
+      <div class="rule"></div><a href="#">коллекции</a>
+      <div class="rule"></div><a href="#">проекты</a>
+      <div class="rule"></div><a href="#">тексты</a>
+      <div class="rule"></div>
+    </nav>
+    <div id="soc"><span>VK</span><span>TG</span></div>
+  </aside>
+
+  <section id="hero">
+    <div id="word">
+      <img src="../main-page/assets/letter-a.svg" alt="А"><img src="../main-page/assets/letter-r.svg" alt="Р"><img src="../main-page/assets/letter-h.svg" alt="Х"><img src="../main-page/assets/letter-i.svg" alt="И"><img src="../main-page/assets/letter-v.svg" alt="В">
+    </div>
+    <div id="barcode">
+      <div class="bwrap">
+        <div class="bhalf"><div class="bspin"></div></div>
+        <div class="bhalf"><div class="bspin"></div></div>
+      </div>
+    </div>
+    <p id="lede">Уникальный архив о&nbsp;конструктивизме, медиа и&nbsp;городской истории: материалы, личности, события, места и&nbsp;проекты, объединённые в&nbsp;единую систему связей</p>
+    <div id="search">
+      <div class="box"></div>
+      <div class="ph">Поиск в архиве: события, люди, места и т.д.</div>
+      <svg class="ic" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2a9 9 0 1 1-5.6 16.05l-3.28 3.27-1.44-1.44 3.27-3.28A9 9 0 0 1 11 2Zm0 2.3a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="#262626"/></svg>
+    </div>
+    <div id="themes">
+      <div class="t-title" id="themesTitle"></div>
+      <div class="row">
+        <div class="theme"><div class="tx"><h4>расцвет конструктивизма</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th1.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>дзига вертов</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th2.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>вхутемас и вхутеин</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th3.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>эксперименты с формой</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th4.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>золотой век авангарда</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th5.jpg" alt=""></div></div>
+        <div class="theme"><div class="tx"><h4>дзига вертов</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="../main-page/assets/th2.jpg" alt=""></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="scrollspace"></div>
+
+<div id="restWrap">
+  <div id="rest">
+    <section id="projects">
+      <div class="sec-title" data-title="проекты центра"></div>
+      <div class="grid">
+        <div class="project p-big">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставка</div>
+            <h3>Любовь в авангарде</h3>
+            <div class="dates">29.08–20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="../main-page/assets/proj-interior.jpg" alt=""></div>
+        </div>
+        <div class="project p-mid">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставка</div>
+            <h3>Владимир Маяковский идет в гости</h3>
+            <div class="dates">29.08–20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="../main-page/assets/proj-mayak.jpg" alt=""></div>
+        </div>
+        <div class="project p-tall">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">конференция</div>
+            <h3>Человек с киноаппаратом</h3>
+            <div class="dates">20.10.26</div>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="../main-page/assets/proj-kino.jpg" alt=""></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="chrono">
+      <div class="sec-title" data-title="хронограф"></div>
+      <div class="grid">
+        <div class="ch-item"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:204px"></div><div class="cnt">(128 связей)</div><div class="im"><img src="../main-page/assets/ch1910.jpg" alt=""></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1912</div><div class="d">Презентация новых форм и материалов в изобразительном искусстве, вызов традициям.</div><div class="bar" style="height:80px"></div><div class="cnt">(128 связей)</div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1933</div><div class="d">Первая выставка с акцентом на социальный реализм и тематические поиски в живописи.</div><div class="bar" style="height:80px"></div><div class="cnt">(145 связей)</div><div class="im"><img src="../main-page/assets/ch1933.jpg" alt=""></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1947</div><div class="d">Ретроспектива ранних работ художников, подчеркивающая развитие индивидуальных стилей.</div><div class="bar" style="height:220px"></div><div class="cnt">(87 связей)</div><div class="im"><img src="../main-page/assets/ch1947.jpg" alt=""></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1960</div><div class="d">Умер Владимир Маяковский</div><div class="bar" style="height:112px"></div><div class="cnt">(133 связи)</div><div class="im"><img src="../main-page/assets/ch1960.jpg" alt=""></div></div>
+        <div class="ch-item"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:80px"></div><div class="cnt">(128 связей)</div></div>
+      </div>
+    </section>
+
+    <section id="persons">
+      <div class="sec-title" data-title="личности"></div>
+      <div class="mosaic">
+        <div class="mtile" style="grid-column:3/span 2;grid-row:1/span 2"><img src="../main-page/assets/p1.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:5;grid-row:1"><img src="../main-page/assets/p2.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:9;grid-row:1"><img src="../main-page/assets/p3.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:1;grid-row:2"><img src="../main-page/assets/p4.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:8;grid-row:2"><img src="../main-page/assets/p5.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:10/span 2;grid-row:2/span 2"><img src="../main-page/assets/p6.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:2;grid-row:3"><img src="../main-page/assets/p7.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:5;grid-row:3"><img src="../main-page/assets/p8.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:6/span 2;grid-row:3/span 2"><img src="../main-page/assets/p9.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:9;grid-row:3"><img src="../main-page/assets/p10.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:12;grid-row:3"><img src="../main-page/assets/p11.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:1;grid-row:4"><img src="../main-page/assets/p12.jpg" alt=""></div>
+        <div class="mtile" style="grid-column:10;grid-row:4"><img src="../main-page/assets/p13.jpg" alt=""></div>
+      </div>
+    </section>
+
+    <section id="colls">
+      <div class="sec-title" data-title="коллекции"></div>
+      <div class="row">
+        <div class="coll">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">выставочный фонд</div>
+            <h3>Архив Стригалева</h3>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im"><img src="../main-page/assets/coll1.jpg" alt="">
+            <div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div>
+          </div>
+        </div>
+        <div class="coll">
+          <div class="topline"></div>
+          <div class="text">
+            <div class="type">личный фонд</div>
+            <h3>Коллекция центра</h3>
+            <div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div>
+          </div>
+          <div class="vline"></div>
+          <div class="cnt">(128 связей)</div>
+          <div class="im">
+            <div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mapb">
+      <img src="../main-page/assets/map-banner.png" alt="Карта">
+    </section>
+
+    <div id="foot">
+      <img src="../main-page/assets/footer.png" alt="">
+      <div class="flinks">
+        <a href="#">Политика конфиденциальности</a>
+        <a href="#">Обработка персональных данных</a>
+        <a href="#">Публичная оферта</a>
+        <a href="#" class="cop">© Центр Зотов, 2022–2026</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DESIGN_W = 1920;
+
+  // scroll choreography distances (design px)
+  const D1 = 800;      // phase A: АРХИВ compresses, barcode arrives
+  let D2 = 500;        // phase B: search + themes ride up to compact layout
+  let D  = D1 + D2;    // recomputed in layout() from the viewport height
+
+  // hero element keyframes (design px)
+  const WORD_W0 = 1720, WORD_W1 = 856;   // АРХИВ width
+  const BAR_W1  = 856;                    // barcode width
+  const SEARCH_Y1 = 460;
+  const THEMES_Y1 = 548;
+  const COMPACT_H = 676;                  // hero content height in compact state
+  const WORD_BOTTOM = 328;                // hero word bottom (for sidebar fade)
+  // initial positions depend on the real viewport height (design 1080: themes 944, search 618)
+  let HERO_H = 1080, THEMES_Y0 = 944, SEARCH_Y0 = 618;
+
+  const stage   = document.getElementById('stage');
+  const hero    = document.getElementById('hero');
+  const word    = document.getElementById('word');
+  const barcode = document.getElementById('barcode');
+  const search  = document.getElementById('search');
+  const themes  = document.getElementById('themes');
+  const mini    = document.getElementById('mini-arhiv');
+  const space   = document.getElementById('scrollspace');
+  const restWrap= document.getElementById('restWrap');
+  const rest    = document.getElementById('rest');
+
+  // justified display titles
+  function buildTitle(el, big){
+    const t = el.dataset ? el.dataset.title : null;
+    const txt = t !== undefined && t !== null ? t : el.textContent;
+    el.innerHTML = '';
+    for (const ch of txt){
+      const s = document.createElement('span');
+      s.className = 'ch';
+      s.textContent = ch === ' ' ? ' ' : ch;
+      if (ch === ' ') s.style.width = '40px';
+      el.appendChild(s);
+    }
+    const c = document.createElement('div');
+    c.className = 'circle';
+    const size = big ? 24 : 16;
+    c.innerHTML = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 16 16" fill="none"><path d="M2 7.2002H11.25L7.53906 3.5H9.5L14 8L9.5 12.5H7.53906L11.25 8.7998H2V7.2002Z" fill="white"/></svg>';
+    el.appendChild(c);
+  }
+  document.querySelectorAll('.sec-title').forEach(el => buildTitle(el, true));
+  const tt = document.getElementById('themesTitle');
+  tt.dataset.title = 'актуальные темы';
+  buildTitle(tt, false);
+  tt.querySelector('.circle').style.width = '24px';
+  tt.querySelector('.circle').style.height = '24px';
+
+  let k = 1;
+
+  function layout(){
+    k = window.innerWidth / DESIGN_W;
+    // hero fills the real viewport: themes block hugs the bottom edge
+    HERO_H = Math.max(900, window.innerHeight / k);
+    THEMES_Y0 = HERO_H - 136;             // 128px block + 8px bottom margin
+    SEARCH_Y0 = THEMES_Y0 - 326;          // same offset from themes as in the mockup
+    // phase B: блоки едут 1:1 со скроллом и докуются; едут ровно столько, сколько темам до финала
+    D2 = THEMES_Y0 - THEMES_Y1;
+    D  = D1 + D2;
+    stage.style.height = HERO_H + 'px';
+    document.getElementById('sidebar').style.height = HERO_H + 'px';
+    hero.style.height = HERO_H + 'px';
+    stage.style.transform = 'scale(' + k + ')';
+    // scroll space above rest: compact hero height + choreography distance
+    space.style.height = ((COMPACT_H + D) * k) + 'px';
+    rest.style.transform = 'translateX(' + (184 * k) + 'px) scale(' + k + ')';
+    restWrap.style.height = (rest.offsetHeight * k) + 'px';
+    // стартовые позиции блоков; движение — через transform
+    search.style.top = SEARCH_Y0 + 'px';
+    themes.style.top = THEMES_Y0 + 'px';
+    // параметры scroll-driven анимаций (px скролла — в экранных, сдвиги — в дизайнерских)
+    const r = document.documentElement.style;
+    r.setProperty('--aEnd',   (D1 * k) + 'px');
+    r.setProperty('--bStart', (D1 * k) + 'px');
+    r.setProperty('--bEndS',  ((D1 + (SEARCH_Y0 - SEARCH_Y1)) * k) + 'px');
+    r.setProperty('--bEnd',   (D * k) + 'px');
+    r.setProperty('--cStart', (D * k) + 'px');
+    r.setProperty('--cEnd',   ((D + HERO_H) * k) + 'px');
+    r.setProperty('--dockShiftS', -(SEARCH_Y0 - SEARCH_Y1) + 'px');
+    r.setProperty('--dockShiftT', -(THEMES_Y0 - THEMES_Y1) + 'px');
+    r.setProperty('--heroShift', -HERO_H + 'px');
+    update();
+  }
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const lerp  = (a,b,t) => a + (b-a)*t;
+
+  // хореография идёт на CSS scroll-driven animations, если браузер умеет;
+  // JS остаётся фолбэком для старых браузеров
+  const NATIVE = CSS.supports('animation-timeline', 'scroll()');
+
+  function update(){
+    const S = window.scrollY / k;      // scroll in design px
+    const off = Math.max(0, S - D);
+
+    if (!NATIVE){
+      const p1 = clamp(S / D1 || 1, 0, 1);
+      const s2 = clamp(S - D1, 0, D2);
+      word.style.width = lerp(WORD_W0, WORD_W1, p1) + 'px';
+      if (barcode) barcode.style.width = (BAR_W1 * p1) + 'px';
+      search.style.transform = 'translateY(' + (-Math.min(s2, SEARCH_Y0 - SEARCH_Y1)) + 'px)';
+      themes.style.transform = 'translateY(' + (-s2) + 'px)';
+      hero.style.transform = 'translateY(' + (-off) + 'px)';
+    }
+
+    // sidebar АРХИВ fades in when the big АРХИВ has left the screen
+    mini.classList.toggle('on', off > WORD_BOTTOM);
+  }
+
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking){
+      ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    }
+  }, {passive:true});
+  window.addEventListener('resize', layout);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  window.addEventListener('load', layout);
+  layout();
+})();
+</script>
+</body>
+</html>
