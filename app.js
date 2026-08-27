@@ -77,7 +77,10 @@ RAW.push(
   {id:'m9',type:'material',title:'Статья о фотомонтаже',subtype:'Статья',mtype:'Текст',date:'1926',access:'open',media:[],a11y:[],lang:'рус',links:['t2','p1','s1']},
   {id:'m10',type:'material',title:'Макет агитустановки',subtype:'Эскиз-макет',mtype:'Макет',date:'1929',access:'request',media:['image','3d'],a11y:[],lang:'—',links:['p3','t1','pl3']},
   {id:'m11',type:'material',title:'Плакат «Москва строится»',subtype:'Плакат',mtype:'Графика',date:'1931',access:'open',media:['image'],a11y:[],lang:'рус',links:['pl3','t1','o2']},
-  {id:'m12',type:'material',title:'Аудиогид по выставке',subtype:'Аудиогид',mtype:'Аудио',date:'2023',access:'open',media:['audio'],a11y:['аудиоописание','расшифровка'],lang:'рус',links:['pr1']}
+  {id:'m12',type:'material',title:'Аудиогид по выставке',subtype:'Аудиогид',mtype:'Аудио',date:'2023',access:'open',media:['audio'],a11y:['аудиоописание','расшифровка'],lang:'рус',links:['pr1']},
+  // тексты — для раздела «Тексты» (материалы типа «Текст»)
+  {id:'m13',type:'material',title:'Манифест конструктивистов',subtype:'Манифест',mtype:'Текст',date:'1922',access:'open',media:['pdf'],a11y:[],lang:'рус',links:['t1','p1','o1']},
+  {id:'m14',type:'material',title:'Рецензия на выставку «1927»',subtype:'Рецензия',mtype:'Текст',date:'1927',access:'open',media:[],a11y:[],lang:'рус',links:['pr1','e1','s1']}
 );
 
 // index + bidirectional links
@@ -87,8 +90,8 @@ const all = t => RAW.filter(o=>o.type===t);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
-// порядок по вайрфрейму «Главная v2 · Стэк» (30.07.2026); Библиотека сохранена — публичный раздел по ТЗ (разд. 19)
-const NAV=[['Архив / поиск','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Библиотека','#/library']];
+// меню 27.08.2026; «Тексты» = материалы типа «Текст» отдельным разделом (заменил «Библиотеку»)
+const NAV=[['Каталог','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты','#/cat/project'],['Тексты','#/texts']];
 function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
@@ -98,7 +101,7 @@ function header(active){
 }
 function footer(){return `<footer><div class="cols">
   <div><h4>Архив</h4><a href="#/chrono">Хронограф</a><a href="#/map">Карта</a><a href="#/cat/person">Личности</a><a href="#/cat/theme">Темы</a></div>
-  <div><h4>Коллекции</h4><a href="#/cat/collection">Проекты Центра</a><a href="#/library">Библиотека</a><a href="#/archive">Весь архив</a></div>
+  <div><h4>Коллекции</h4><a href="#/cat/collection">Коллекции и фонды</a><a href="#/texts">Тексты</a><a href="#/archive">Каталог</a></div>
   <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a></div>
   <div><h4>Центр «Зотов»</h4><a href="#/">О центре</a><a href="#/">Контакты</a><a href="#/">hello@zotov.ru</a></div>
 </div></footer>`;}
@@ -424,8 +427,8 @@ function archive(qs){
     }).join('');
   }
   const head=browse
-    ?`<div class="crumbs">Архив</div><h1>Архив</h1><div class="muted">Каталог материалов. Введите запрос или выберите фильтры слева — результаты обновятся.</div>`
-    :`<div class="crumbs"><a href="#/archive">Архив</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
+    ?`<div class="crumbs">Каталог</div><h1>Каталог</h1><div class="muted">Каталог материалов архива. Введите запрос или выберите фильтры — результаты обновятся.</div>`
+    :`<div class="crumbs"><a href="#/archive">Каталог</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
   return page('#/archive',`${head}
     ${searchInput(FILT.q)}
     ${filterBar()}
@@ -512,12 +515,12 @@ function catalog(type){
     ${sectionSearch('Поиск среди: '+T.pl.toLowerCase())}
     <div class="grid ${type==='person'?'g4':'g3'}" id="catgrid" style="margin-top:18px">${items.map(tile).join('')}</div>`);
 }
-function library(){
-  const items=all('material').filter(m=>['Печатная продукция','Текст'].includes(m.mtype));
-  return page('#/library',`<div class="crumbs">Библиотека</div><h1>Библиотека</h1>
-    <div class="muted">Издания, тексты и публикации: каталоги, книги, статьи, печатная продукция.</div>
-    ${sectionSearch('Поиск по библиотеке')}
-    <div class="grid g3" id="catgrid" style="margin-top:18px">${items.length?items.map(resultCard).join(''):'<p class="muted">В библиотеке пока нет материалов нужных типов.</p>'}</div>`);
+function texts(){
+  const items=all('material').filter(m=>m.mtype==='Текст');
+  return page('#/texts',`<div class="crumbs">Тексты</div><h1>Тексты</h1>
+    <div class="muted">Текстовые материалы архива: статьи, манифесты, рецензии, публикации.</div>
+    ${sectionSearch('Поиск по текстам')}
+    <div class="grid g3" id="catgrid" style="margin-top:18px">${items.length?items.map(resultCard).join(''):'<p class="muted">Пока нет текстовых материалов.</p>'}</div>`);
 }
 
 // entity detail (generic + per-type hero)
@@ -689,7 +692,8 @@ function render(hash){
   else if(seg[0]==='search'){location.hash='#/archive';return;}
   else if(seg[0]==='chrono') html=chrono();
   else if(seg[0]==='map') html=map();
-  else if(seg[0]==='library') html=library();
+  else if(seg[0]==='texts') html=texts();
+  else if(seg[0]==='library'){location.hash='#/texts';return;} // legacy
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=catalog(seg[1]);
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
