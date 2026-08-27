@@ -153,6 +153,20 @@
   #foot .flinks a{margin-right:32px}
   #foot .flinks a:hover{color:var(--red)}
   #foot .flinks .cop{margin-left:auto;margin-right:0}
+
+  /* ==== scroll-driven animations: хореография на компоузиторе, без JS в кадре ==== */
+  @supports (animation-timeline: scroll()) {
+    @keyframes wordRide{to{width:856px}}
+    @keyframes barRide{to{width:856px}}
+    @keyframes searchRide{to{transform:translateY(var(--dockShiftS))}}
+    @keyframes themesRide{to{transform:translateY(var(--dockShiftT))}}
+    @keyframes heroRide{to{transform:translateY(var(--heroShift))}}
+    #word{animation:wordRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
+    #barcode{animation:barRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
+    #search{animation:searchRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEndS);will-change:transform}
+    #themes{animation:themesRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEnd);will-change:transform}
+    #hero{animation:heroRide linear both;animation-timeline:scroll(root);animation-range:var(--cStart) var(--cEnd);will-change:transform}
+  }
 </style>
 </head>
 <body>
@@ -401,27 +415,43 @@
     space.style.height = ((COMPACT_H + D) * k) + 'px';
     rest.style.transform = 'translateX(' + (184 * k) + 'px) scale(' + k + ')';
     restWrap.style.height = (rest.offsetHeight * k) + 'px';
+    // стартовые позиции блоков; движение — через transform
+    search.style.top = SEARCH_Y0 + 'px';
+    themes.style.top = THEMES_Y0 + 'px';
+    // параметры scroll-driven анимаций (px скролла — в экранных, сдвиги — в дизайнерских)
+    const r = document.documentElement.style;
+    r.setProperty('--aEnd',   (D1 * k) + 'px');
+    r.setProperty('--bStart', (D1 * k) + 'px');
+    r.setProperty('--bEndS',  ((D1 + (SEARCH_Y0 - SEARCH_Y1)) * k) + 'px');
+    r.setProperty('--bEnd',   (D * k) + 'px');
+    r.setProperty('--cStart', (D * k) + 'px');
+    r.setProperty('--cEnd',   ((D + HERO_H) * k) + 'px');
+    r.setProperty('--dockShiftS', -(SEARCH_Y0 - SEARCH_Y1) + 'px');
+    r.setProperty('--dockShiftT', -(THEMES_Y0 - THEMES_Y1) + 'px');
+    r.setProperty('--heroShift', -HERO_H + 'px');
     update();
   }
 
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const lerp  = (a,b,t) => a + (b-a)*t;
 
+  // хореография идёт на CSS scroll-driven animations, если браузер умеет;
+  // JS остаётся фолбэком для старых браузеров
+  const NATIVE = CSS.supports('animation-timeline', 'scroll()');
+
   function update(){
     const S = window.scrollY / k;      // scroll in design px
-    const p1 = clamp(S / D1, 0, 1);
-    // фаза B: 1:1 со скроллом, каждый блок докуется на своей финальной позиции —
-    // никаких промежуточных скоростей, отступы не сжимаются меньше компактных
-    const s2 = clamp(S - D1, 0, D2);
-
-    word.style.width = lerp(WORD_W0, WORD_W1, p1) + 'px';
-    barcode.style.width = (BAR_W1 * p1) + 'px';
-    search.style.top = Math.max(SEARCH_Y1, SEARCH_Y0 - s2) + 'px';
-    themes.style.top = (THEMES_Y0 - s2) + 'px';
-
-    // after choreography — hero (and stage word zone) scrolls away
     const off = Math.max(0, S - D);
-    hero.style.transform = 'translateY(' + (-off) + 'px)';
+
+    if (!NATIVE){
+      const p1 = clamp(S / D1 || 1, 0, 1);
+      const s2 = clamp(S - D1, 0, D2);
+      word.style.width = lerp(WORD_W0, WORD_W1, p1) + 'px';
+      if (barcode) barcode.style.width = (BAR_W1 * p1) + 'px';
+      search.style.transform = 'translateY(' + (-Math.min(s2, SEARCH_Y0 - SEARCH_Y1)) + 'px)';
+      themes.style.transform = 'translateY(' + (-s2) + 'px)';
+      hero.style.transform = 'translateY(' + (-off) + 'px)';
+    }
 
     // sidebar АРХИВ fades in when the big АРХИВ has left the screen
     mini.classList.toggle('on', off > WORD_BOTTOM);
