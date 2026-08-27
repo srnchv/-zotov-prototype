@@ -140,67 +140,209 @@ window.filterCat=q=>{const ql=q.trim().toLowerCase();document.querySelectorAll('
 const goSearch="if(event.key==='Enter')location.hash=this.value.trim()?'#/archive?q='+encodeURIComponent(this.value.trim()):'#/archive'";
 function searchInput(q,ph){return `<div class="searchbar"><input value="${esc(q||'')}" placeholder="${ph||'Поиск по архиву — материалы, личности, темы, события…'}" onkeydown="${goSearch}"><button class="btn dark" onclick="var v=this.parentElement.querySelector('input').value.trim();location.hash=v?'#/archive?q='+encodeURIComponent(v):'#/archive'">Найти</button></div>`;}
 const homeSec=(dot,kick,href,label,body)=>`<section class="hsec"><div class="hsec-h"><div class="hkick"><span class="hdot" style="background:${dot}"></span>${kick}</div><a class="btn sm" href="${href}">→ ${label}</a></div>${body}</section>`;
-// ===== Главная v2.1 — «Стэк» (вайрфрейм 30.07.2026) =====
-// Порядок: hero → поиск (+расш. поиск) → Темы → Проекты (тёмная секция) →
-// «Когда · Где · Кто»: Хронограф (вся ширина) + Карта 2/3 + Личности 1/3 → Коллекции.
+// ===== Главная — утверждённый дизайн (Figma ZOTOV-WIP, node 6433-318) =====
+// Фикс-сцена 1920px со скролл-хореографией; вёрстка и ассеты — из main-page/ (реализация макета).
+const BH='main-page/assets';
 function home(){
-  const themes=all('theme').slice(0,4), projs=all('project').slice(0,2), persons=all('person').slice(0,6);
-  const colls=all('collection'), places=all('place'), pts=[[26,40],[48,56],[64,28]];
-  const evs=[...all('event'),...all('material').filter(m=>m.date&&/19/.test(m.date))].slice(0,3);
-
-  const themeCard=(o,i)=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${i===0?' style="aspect-ratio:16/8"':''}></div><div class="kicker">Тема</div><div class="t"${i===0?' style="font-size:17px"':''}>${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.def||'')}</div></a>`;
-  const projCard=(o,i)=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:16/${i===0?8:9}"></div><div class="kicker">Проект · ${esc(o.prType||'')}</div><div class="t" style="font-size:${i===0?18:15}px">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.dates||'')}</div>${i===0?'<span class="btn light">Смотреть →</span>':''}</a>`;
-  const evCard=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img" style="aspect-ratio:auto;height:140px"></div><div class="kicker">${TYPES[o.type].l}${o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(o.date||'')}</div></a>`;
-  const portrait=o=>`<a class="prscard" href="#/e/${o.id}"><span class="pava" style="width:48px;height:48px;margin:0 auto 8px"></span><span class="t" style="display:block;font-size:13px;font-weight:600">${esc(o.title)}</span><span class="muted" style="font-size:11px">${esc(o.role||o.life||'')}</span></a>`;
-  const colCard=c=>{const n=(c.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='material').length;
-    return `<a class="card colcard" href="#/e/${c.id}"><span class="cthumb"></span><span><span class="t" style="font-weight:600;display:block">${esc(c.title)}</span><span class="muted" style="font-size:13px">${esc(c.colType||'')}</span><span class="chip" style="display:inline-block;margin-top:8px;font-size:12px;padding:4px 10px">${n} материалов</span></span></a>`;};
-
-  // шкала хронографа: десятилетия + плотность материалов/событий (статичная, MVP-вид)
-  const dated=[...all('event'),...all('material')].filter(o=>o.date);
-  const decCount={}; dated.forEach(o=>{const d=decadeOf(o.date); if(d) decCount[d]=(decCount[d]||0)+1;});
-  const decs=Object.keys(decCount).sort(); const mx=Math.max(...Object.values(decCount));
-  const scale=`<a class="chrscale" href="#/chrono" title="Открыть хронограф">
-    <span class="chrline"></span>
-    <span class="chrdens">${decs.map(d=>`<i style="height:${4+Math.round(10*decCount[d]/mx)}px" title="${d}: ${decCount[d]}"></i>`).join('')}</span>
-    <span class="chrdecs">${decs.map(d=>`<span class="dd"><span class="dot"></span><span class="lb">${d}</span></span>`).join('')}</span></a>`;
-
-  return page('#/',`
-  <section class="hero" style="padding:64px 0 32px"><div class="kicker">Цифровой архив</div>
-    <h1>Цифровой архив Центра «Зотов»</h1>
-    <div class="lead">Связный архив о конструктивизме, медиа и городской истории: материалы, личности, события, места и проекты, объединённые в единую систему связей.</div>
-  </section>
-  <section class="hsec" style="border-top:none;padding-top:0">
-    ${searchInput('')}
-    <div style="margin-top:12px"><a class="lnk muted" style="font-size:14px" href="#/archive">Расширенный поиск →</a></div>
-  </section>
-  ${homeSec('#16a34a','Темы','#/cat/theme','Все темы',`<div class="themesgrid">${themes.map(themeCard).join('')}</div>`)}
-  <section class="hsec"><div class="darkblock">
-    <div class="hsec-h"><div class="hkick" style="color:#d0a8c4"><span class="hdot" style="background:#c8a0c0"></span>Проекты Центра</div><a class="btn sm ghost" href="#/cat/project">→ Все проекты</a></div>
-    <div class="projgrid">${projs.map(projCard).join('')}</div>
-  </div></section>
-  <section class="hsec">
-    <div class="kicker" style="margin-bottom:2px">Войти через</div>
-    <h2 style="margin:0 0 26px">Когда · Где · Кто</h2>
-    <div class="chrblock">
-      <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#c05020"></span>Хронограф</div><a class="btn sm" href="#/chrono">→ Хронограф</a></div>
-      ${scale}
-      <div class="chrcards">${evs.map(evCard).join('')}</div>
-    </div>
-    <div class="maplayer">
-      <div>
-        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта</a></div>
-        <div class="mapbox" style="height:320px">${places.map((p,i)=>`<a class="pin ${i===0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}
-          <a class="mappop" href="#/e/${places[0].id}"><span class="kicker" style="font-size:10px">Место</span><b style="display:block;margin:2px 0">${esc(places[0].title)}</b><span class="muted" style="font-size:12px">${(DB[places[0].id].links||[]).length} связей</span></a>
+  const th=(href,t,img)=>`<a class="theme" href="${href}"><div class="tx"><h4>${t}</h4><div class="cnt">(128 связей)</div></div><div class="im"><img src="${BH}/${img}" alt=""></div></a>`;
+  return `<div class="bhome">
+  <div id="stage">
+    <aside id="sidebar">
+      <div class="logo"><img src="${BH}/logo-zotov.svg" alt="Зотов"></div>
+      <div id="mini-arhiv"><img src="${BH}/letter-a.svg" alt="А"><img src="${BH}/letter-r.svg" alt="Р"><img src="${BH}/letter-h.svg" alt="Х"><img src="${BH}/letter-i.svg" alt="И"><img src="${BH}/letter-v.svg" alt="В"></div>
+      <nav id="menu">
+        <div class="rule"></div><a href="#/archive">каталог</a>
+        <div class="rule"></div><a href="#/cat/theme">темы</a>
+        <div class="rule"></div><a href="#/chrono">хронограф</a>
+        <div class="rule"></div><a href="#/map">карта</a>
+        <div class="rule"></div><a href="#/cat/person">личности</a>
+        <div class="rule"></div><a href="#/cat/collection">коллекции</a>
+        <div class="rule"></div><a href="#/cat/project">проекты</a>
+        <div class="rule"></div><a href="#/texts">тексты</a>
+        <div class="rule"></div>
+      </nav>
+      <div id="soc"><span>VK</span><span>TG</span></div>
+    </aside>
+    <section id="bhero">
+      <div id="word"><img src="${BH}/letter-a.svg" alt="А"><img src="${BH}/letter-r.svg" alt="Р"><img src="${BH}/letter-h.svg" alt="Х"><img src="${BH}/letter-i.svg" alt="И"><img src="${BH}/letter-v.svg" alt="В"></div>
+      <div id="barcode"><img src="${BH}/union.svg" alt=""></div>
+      <p id="lede">Уникальный архив о&nbsp;конструктивизме, медиа и&nbsp;городской истории: материалы, личности, события, места и&nbsp;проекты, объединённые в&nbsp;единую систему связей</p>
+      <a id="bsearch" href="#/archive">
+        <div class="box"></div>
+        <div class="ph">Поиск в архиве: события, люди, места и т.д.</div>
+        <svg class="ic" viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2a9 9 0 1 1-5.6 16.05l-3.28 3.27-1.44-1.44 3.27-3.28A9 9 0 0 1 11 2Zm0 2.3a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="#262626"/></svg>
+      </a>
+      <div id="bthemes">
+        <div class="t-title" id="themesTitle"></div>
+        <div class="row">
+          ${th('#/e/t1','расцвет конструктивизма','th1.jpg')}
+          ${th('#/e/p4','дзига вертов','th2.jpg')}
+          ${th('#/e/o1','вхутемас и вхутеин','th3.jpg')}
+          ${th('#/e/t3','эксперименты с формой','th4.jpg')}
+          ${th('#/e/t4','золотой век авангарда','th5.jpg')}
+          ${th('#/cat/theme','дзига вертов','th2.jpg')}
         </div>
       </div>
-      <div>
-        <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#7c3aed"></span>Личности</div><a class="btn sm" href="#/cat/person">→ Личности</a></div>
-        <div class="prs2">${persons.map(portrait).join('')}</div>
+    </section>
+  </div>
+  <div id="scrollspace"></div>
+  <div id="restWrap"><div id="rest">
+    <section id="bprojects">
+      <div class="sec-title" data-title="проекты центра" data-href="#/cat/project"></div>
+      <div class="grid">
+        <a class="project p-big" href="#/e/pr1">
+          <div class="topline"></div>
+          <div class="text"><div class="type">выставка</div><h3>Любовь в авангарде</h3><div class="dates">29.08–20.10.26</div><div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div></div>
+          <div class="vline"></div><div class="cnt">(128 связей)</div>
+          <div class="im"><img src="${BH}/proj-interior.jpg" alt=""></div>
+        </a>
+        <a class="project p-mid" href="#/e/pr2">
+          <div class="topline"></div>
+          <div class="text"><div class="type">выставка</div><h3>Владимир Маяковский идет в гости</h3><div class="dates">29.08–20.10.26</div><div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div></div>
+          <div class="vline"></div><div class="cnt">(128 связей)</div>
+          <div class="im"><img src="${BH}/proj-mayak.jpg" alt=""></div>
+        </a>
+        <a class="project p-tall" href="#/cat/project">
+          <div class="topline"></div>
+          <div class="text"><div class="type">конференция</div><h3>Человек с киноаппаратом</h3><div class="dates">20.10.26</div><div class="desc">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div></div>
+          <div class="vline"></div><div class="cnt">(128 связей)</div>
+          <div class="im"><img src="${BH}/proj-kino.jpg" alt=""></div>
+        </a>
+      </div>
+    </section>
+    <section id="bchrono">
+      <div class="sec-title" data-title="хронограф" data-href="#/chrono"></div>
+      <div class="grid">
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:204px"></div><div class="cnt">(128 связей)</div><div class="im"><img src="${BH}/ch1910.jpg" alt=""></div></a>
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1912</div><div class="d">Презентация новых форм и материалов в изобразительном искусстве, вызов традициям.</div><div class="bar" style="height:80px"></div><div class="cnt">(128 связей)</div></a>
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1933</div><div class="d">Первая выставка с акцентом на социальный реализм и тематические поиски в живописи.</div><div class="bar" style="height:80px"></div><div class="cnt">(145 связей)</div><div class="im"><img src="${BH}/ch1933.jpg" alt=""></div></a>
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1947</div><div class="d">Ретроспектива ранних работ художников, подчеркивающая развитие индивидуальных стилей.</div><div class="bar" style="height:220px"></div><div class="cnt">(87 связей)</div><div class="im"><img src="${BH}/ch1947.jpg" alt=""></div></a>
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1960</div><div class="d">Умер Владимир Маяковский</div><div class="bar" style="height:112px"></div><div class="cnt">(133 связи)</div><div class="im"><img src="${BH}/ch1960.jpg" alt=""></div></a>
+        <a class="ch-item" href="#/chrono"><div class="rule"></div><div class="year">1910</div><div class="d">Выставка о формировании художественного высказывания и поиске метода у начинающих художников.</div><div class="bar" style="height:80px"></div><div class="cnt">(128 связей)</div></a>
+      </div>
+    </section>
+    <section id="bpersons">
+      <div class="sec-title" data-title="личности" data-href="#/cat/person"></div>
+      <div class="mosaic">
+        <a class="mtile" href="#/e/p1" style="grid-column:3/span 2;grid-row:1/span 2"><img src="${BH}/p1.jpg" alt=""></a>
+        <a class="mtile" href="#/e/p2" style="grid-column:5;grid-row:1"><img src="${BH}/p2.jpg" alt=""></a>
+        <a class="mtile" href="#/e/p3" style="grid-column:9;grid-row:1"><img src="${BH}/p3.jpg" alt=""></a>
+        <a class="mtile" href="#/e/p4" style="grid-column:1;grid-row:2"><img src="${BH}/p4.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:8;grid-row:2"><img src="${BH}/p5.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:10/span 2;grid-row:2/span 2"><img src="${BH}/p6.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:2;grid-row:3"><img src="${BH}/p7.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:5;grid-row:3"><img src="${BH}/p8.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:6/span 2;grid-row:3/span 2"><img src="${BH}/p9.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:9;grid-row:3"><img src="${BH}/p10.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:12;grid-row:3"><img src="${BH}/p11.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:1;grid-row:4"><img src="${BH}/p12.jpg" alt=""></a>
+        <a class="mtile" href="#/cat/person" style="grid-column:10;grid-row:4"><img src="${BH}/p13.jpg" alt=""></a>
+      </div>
+    </section>
+    <section id="bcolls">
+      <div class="sec-title" data-title="коллекции" data-href="#/cat/collection"></div>
+      <div class="row">
+        <a class="coll" href="#/e/c1">
+          <div class="topline"></div>
+          <div class="text"><div class="type">выставочный фонд</div><h3>Архив Стригалева</h3><div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div></div>
+          <div class="vline"></div><div class="cnt">(128 связей)</div>
+          <div class="im"><img src="${BH}/coll1.jpg" alt="">
+            <div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div>
+          </div>
+        </a>
+        <a class="coll" href="#/e/c2">
+          <div class="topline"></div>
+          <div class="text"><div class="type">личный фонд</div><h3>Коллекция центра</h3><div class="desc">Выставка о формировании художественного высказывания и поиске метода<br>у начинающих художников.</div></div>
+          <div class="vline"></div><div class="cnt">(128 связей)</div>
+          <div class="im"><div class="slider"><div class="s">1&nbsp;&nbsp;записки стригалева</div><div class="s">2</div><div class="s">3</div><div class="s">4</div><div class="s">5</div></div></div>
+        </a>
+      </div>
+    </section>
+    <a id="bmapb" href="#/map"><img src="${BH}/map-banner.png" alt="Карта"></a>
+    <div id="bfoot">
+      <img src="${BH}/footer.png" alt="">
+      <div class="flinks">
+        <a href="#">Политика конфиденциальности</a>
+        <a href="#">Обработка персональных данных</a>
+        <a href="#">Публичная оферта</a>
+        <a href="#" class="cop">© Центр Зотов, 2022–2026</a>
       </div>
     </div>
-  </section>
-  ${homeSec('#d97706','Коллекции','#/cat/collection','Все коллекции',`<div class="colgrid">${colls.map(colCard).join('')}</div>`)}
-  `);
+  </div></div>
+  </div>`;
+}
+
+// скролл-хореография главной (перенос из main-page; слушатели вешаются один раз, работают только при наличии #stage)
+let bhL=null,bhU=null,bhBound=false;
+function initBrandHome(){
+  const $=id=>document.getElementById(id);
+  const stage=$('stage'); if(!stage) return;
+  const DESIGN_W=1920, D1=800;
+  let D2=500, D=D1+D2;
+  const WORD_W0=1720, WORD_W1=856, BAR_W1=856, SEARCH_Y1=460, THEMES_Y1=548, COMPACT_H=676, WORD_BOTTOM=328;
+  let HERO_H=1080, THEMES_Y0=944, SEARCH_Y0=618;
+  const hero=$('bhero'), word=$('word'), barcode=$('barcode'), search=$('bsearch'), themes=$('bthemes'),
+        mini=$('mini-arhiv'), space=$('scrollspace'), restWrap=$('restWrap'), rest=$('rest');
+  function buildTitle(el,big){
+    const t=el.dataset?el.dataset.title:null;
+    const txt=(t!==undefined&&t!==null)?t:el.textContent;
+    el.innerHTML='';
+    for(const ch of txt){
+      const s=document.createElement('span'); s.className='ch';
+      s.textContent=ch===' '?' ':ch; if(ch===' ')s.style.width='40px';
+      el.appendChild(s);
+    }
+    const c=document.createElement('div'); c.className='circle';
+    const size=big?24:16;
+    c.innerHTML='<svg width="'+size+'" height="'+size+'" viewBox="0 0 16 16" fill="none"><path d="M2 7.2002H11.25L7.53906 3.5H9.5L14 8L9.5 12.5H7.53906L11.25 8.7998H2V7.2002Z" fill="white"/></svg>';
+    if(el.dataset&&el.dataset.href)c.onclick=()=>{location.hash=el.dataset.href;};
+    el.appendChild(c);
+  }
+  document.querySelectorAll('.sec-title').forEach(el=>buildTitle(el,true));
+  const tt=$('themesTitle');
+  if(tt){tt.dataset.title='актуальные темы';buildTitle(tt,false);const c=tt.querySelector('.circle');c.style.width='24px';c.style.height='24px';}
+  let k=1;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+  function update(){
+    if(!document.getElementById('stage'))return;
+    const S=window.scrollY/k;
+    const p1=clamp(S/D1,0,1);
+    const s2=clamp(S-D1,0,D2);
+    word.style.width=lerp(WORD_W0,WORD_W1,p1)+'px';
+    barcode.style.width=(BAR_W1*p1)+'px';
+    search.style.top=Math.max(SEARCH_Y1,SEARCH_Y0-s2)+'px';
+    themes.style.top=(THEMES_Y0-s2)+'px';
+    const off=Math.max(0,S-D);
+    hero.style.transform='translateY('+(-off)+'px)';
+    mini.classList.toggle('on',off>WORD_BOTTOM);
+  }
+  function layout(){
+    if(!document.getElementById('stage'))return;
+    k=window.innerWidth/DESIGN_W;
+    HERO_H=Math.max(900,window.innerHeight/k);
+    THEMES_Y0=HERO_H-136;
+    SEARCH_Y0=THEMES_Y0-326;
+    D2=THEMES_Y0-THEMES_Y1; D=D1+D2;
+    stage.style.height=HERO_H+'px';
+    $('sidebar').style.height=HERO_H+'px';
+    hero.style.height=HERO_H+'px';
+    stage.style.transform='scale('+k+')';
+    space.style.height=((COMPACT_H+D)*k)+'px';
+    rest.style.transform='translateX('+(184*k)+'px) scale('+k+')';
+    restWrap.style.height=(rest.offsetHeight*k)+'px';
+    update();
+  }
+  bhL=layout; bhU=update;
+  if(!bhBound){
+    let ticking=false;
+    window.addEventListener('scroll',()=>{
+      if(!ticking&&document.getElementById('stage')&&bhU){ticking=true;requestAnimationFrame(()=>{bhU();ticking=false;});}
+    },{passive:true});
+    window.addEventListener('resize',()=>{if(document.getElementById('stage')&&bhL)bhL();});
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(document.getElementById('stage')&&bhL)bhL();});
+    bhBound=true;
+  }
+  layout();
 }
 
 // ===== ПОИСК И ФИЛЬТРАЦИЯ (ТЗ: простой + расширенный, многомерные фильтры, URL-состояние) =====
@@ -701,6 +843,7 @@ function render(hash){
   else html=home();
   if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
   if(seg[0]!=='archive') openDim=null;
+  if(seg.length===0) initBrandHome(); // брендовая главная: хореография скролла
   if(seg[0]==='request') request(seg[1]);
   else if(seg[0]==='archive'&&openDim) drawFmodal();
 }
