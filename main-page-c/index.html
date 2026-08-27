@@ -44,14 +44,13 @@
 
   /* ---------- hero ---------- */
   #hero{position:absolute;left:184px;top:0;width:1736px;height:1080px;background:#fff;overflow:hidden}
-  #word{position:absolute;left:8px;top:8px;height:320px;width:1720px;display:flex;align-items:flex-start;justify-content:space-between}
+  #word{position:absolute;left:8px;top:8px;height:320px;width:856px;display:flex;align-items:flex-start;justify-content:space-between}
   #word img{height:320px;width:auto;flex:0 0 auto}
-  #barcode{position:absolute;right:8px;top:8px;height:320px;width:0;overflow:hidden}
+  #barcode{position:absolute;right:8px;top:8px;height:320px;width:856px;overflow:visible}
   #barcode .bwrap{position:absolute;right:0;top:0;width:856px;height:320px;display:flex}
-  .bhalf{flex:0 0 428px;height:320px;overflow:hidden;position:relative}
-  .bhalf .bspin{position:absolute;left:50%;top:50%;width:780px;height:780px;margin:-390px 0 0 -390px;background:url('../main-page/assets/union.svg');background-size:856px 320px;animation:bspin 36s linear infinite}
-  .bhalf:nth-child(2) .bspin{animation-direction:reverse}
-  @keyframes bspin{to{transform:rotate(360deg)}}
+  .bhalf{flex:0 0 428px;height:320px;perspective:1100px}
+  .bhalf .bspin{width:428px;height:320px;background:url('../main-page/assets/union.svg');background-size:856px 320px;will-change:transform}
+  .bhalf:nth-child(2) .bspin{background-position:-428px 0}
   #lede{position:absolute;left:8px;top:336px;width:1720px;font-size:40px;line-height:38px;letter-spacing:-1.2px;font-weight:500;color:rgba(0,0,0,.85)}
   #search{position:absolute;left:315px;top:618px;width:1106px;height:80px}
   #search .box{position:absolute;inset:0;border:4px solid var(--ink);border-radius:56px}
@@ -160,16 +159,12 @@
 
   /* ==== scroll-driven animations: хореография на компоузиторе, без JS в кадре ==== */
   @supports (animation-timeline: scroll()) {
-    @keyframes wordRide{to{width:856px}}
-    @keyframes barRide{to{width:856px}}
-    @keyframes searchRide{to{transform:translateY(var(--dockShiftS))}}
-    @keyframes themesRide{to{transform:translateY(var(--dockShiftT))}}
     @keyframes heroRide{to{transform:translateY(var(--heroShift))}}
-    #word{animation:wordRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
-    #barcode{animation:barRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
-    #search{animation:searchRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEndS);will-change:transform}
-    #themes{animation:themesRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEnd);will-change:transform}
+    @keyframes bspinL{to{transform:rotateY(1080deg)}}
+    @keyframes bspinR{to{transform:rotateY(-1080deg)}}
     #hero{animation:heroRide linear both;animation-timeline:scroll(root);animation-range:var(--cStart) var(--cEnd);will-change:transform}
+    .bhalf:first-child .bspin{animation:bspinL linear both;animation-timeline:scroll(root);animation-range:0px var(--spinRange)}
+    .bhalf:nth-child(2) .bspin{animation:bspinR linear both;animation-timeline:scroll(root);animation-range:0px var(--spinRange)}
   }
 </style>
 </head>
@@ -355,9 +350,9 @@
   const DESIGN_W = 1920;
 
   // scroll choreography distances (design px)
-  const D1 = 800;      // phase A: АРХИВ compresses, barcode arrives
-  let D2 = 500;        // phase B: search + themes ride up to compact layout
-  let D  = D1 + D2;    // recomputed in layout() from the viewport height
+  const D1 = 0;        // вариант C: старт сразу в компактном состоянии
+  let D2 = 0;
+  let D  = 0;
 
   // hero element keyframes (design px)
   const WORD_W0 = 1720, WORD_W1 = 856;   // АРХИВ width
@@ -409,15 +404,12 @@
 
   function layout(){
     k = window.innerWidth / DESIGN_W;
-    // hero fills the real viewport: themes block hugs the bottom edge
-    HERO_H = Math.max(900, window.innerHeight / k);
-    THEMES_Y0 = HERO_H - 136;             // 128px block + 8px bottom margin
-    SEARCH_Y0 = THEMES_Y0 - 326;          // same offset from themes as in the mockup
-    // phase B: блоки едут 1:1 со скроллом и докуются; едут ровно столько, сколько темам до финала
-    D2 = THEMES_Y0 - THEMES_Y1;
-    D  = D1 + D2;
-    stage.style.height = HERO_H + 'px';
-    document.getElementById('sidebar').style.height = HERO_H + 'px';
+    // старт сразу компактный: шапка 676, всё на финальных местах
+    HERO_H = COMPACT_H;
+    THEMES_Y0 = THEMES_Y1; SEARCH_Y0 = SEARCH_Y1; D2 = 0; D = 0;
+    const stageH = Math.max(900, window.innerHeight / k);
+    stage.style.height = stageH + 'px';
+    document.getElementById('sidebar').style.height = stageH + 'px';
     hero.style.height = HERO_H + 'px';
     stage.style.transform = 'scale(' + k + ')';
     // scroll space above rest: compact hero height + choreography distance
@@ -433,8 +425,9 @@
     r.setProperty('--bStart', (D1 * k) + 'px');
     r.setProperty('--bEndS',  ((D1 + (SEARCH_Y0 - SEARCH_Y1)) * k) + 'px');
     r.setProperty('--bEnd',   (D * k) + 'px');
-    r.setProperty('--cStart', (D * k) + 'px');
-    r.setProperty('--cEnd',   ((D + HERO_H) * k) + 'px');
+    r.setProperty('--cStart', '0px');
+    r.setProperty('--cEnd',   (HERO_H * k) + 'px');
+    r.setProperty('--spinRange', (1000 * k) + 'px');
     r.setProperty('--dockShiftS', -(SEARCH_Y0 - SEARCH_Y1) + 'px');
     r.setProperty('--dockShiftT', -(THEMES_Y0 - THEMES_Y1) + 'px');
     r.setProperty('--heroShift', -HERO_H + 'px');
@@ -453,13 +446,11 @@
     const off = Math.max(0, S - D);
 
     if (!NATIVE){
-      const p1 = clamp(S / D1 || 1, 0, 1);
-      const s2 = clamp(S - D1, 0, D2);
-      word.style.width = lerp(WORD_W0, WORD_W1, p1) + 'px';
-      if (barcode) barcode.style.width = (BAR_W1 * p1) + 'px';
-      search.style.transform = 'translateY(' + (-Math.min(s2, SEARCH_Y0 - SEARCH_Y1)) + 'px)';
-      themes.style.transform = 'translateY(' + (-s2) + 'px)';
-      hero.style.transform = 'translateY(' + (-off) + 'px)';
+      hero.style.transform = 'translateY(' + (-Math.min(S, HERO_H)) + 'px)';
+      const ang = S * 1.08;   // 1080° за 1000 дизайн-px
+      document.querySelectorAll('.bhalf .bspin').forEach((el,i)=>{
+        el.style.transform = 'rotateY(' + (i ? -ang : ang) + 'deg)';
+      });
     }
 
     // sidebar АРХИВ fades in when the big АРХИВ has left the screen
