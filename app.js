@@ -169,11 +169,9 @@ function home(){
       <span class="chbar" style="height:${40+((i*53)%140)}px"></span>
       <span class="muted" style="font-size:12px">(${items.length} ${items.length===1?'объект':'объекта'})</span>
       ${i%2===0?'<span class="img" style="display:block;border-radius:8px;background:var(--img);height:120px;margin-top:10px"></span>':''}</a>`;};
-  // этаж «личности»: мозаика тайлов (первые — реальные персоны)
+  // этаж «личности»: простые карточки-портреты в ряд
   const persons=all('person');
-  const MOS=[[3,2,1,2],[5,1,1,1],[9,1,1,1],[1,1,2,1],[8,1,2,1],[10,2,2,2],[2,1,3,1],[5,1,3,1],[6,2,3,2],[9,1,3,1],[12,1,3,1],[1,1,4,1],[10,1,4,1]];
-  const mosaic=MOS.map(([c,cs,r,rs],i)=>{const p=persons[i];
-    return `<a class="mos" style="grid-column:${c}${cs>1?'/span '+cs:''};grid-row:${r}${rs>1?'/span '+rs:''}" href="${p?'#/e/'+p.id:'#/cat/person'}" title="${p?esc(p.title):'Личности'}"></a>`;}).join('');
+  const personCard=o=>`<a class="pcard card" style="padding:20px 12px" href="#/e/${o.id}"><span class="pava" style="width:96px;height:96px"></span><span class="t" style="display:block">${esc(o.title)}</span><span class="muted" style="font-size:12px">${esc(o.role||o.life||'')}</span><span class="muted" style="display:block;font-size:12px;margin-top:6px">(${nlinks(o)} связей)</span></a>`;
   // этаж «коллекции»: 2 широкие карточки
   const collCard=c=>{const n=(c.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='material').length;
     return `<a class="card collw" href="#/e/${c.id}">
@@ -195,7 +193,7 @@ function home(){
   ${homeSec('#16a34a','Актуальные темы','#/cat/theme','Все темы',`<div class="throw">${themeItems.map(thCard).join('')}</div>`)}
   ${homeSec('#db2777','Проекты Центра','#/cat/project','Все проекты',`<div class="pgrid">${projCard(projs[0],320)}${projCard(projs[1],200)}<a class="card pcell" href="#/cat/project"><span class="kicker">Конференция</span><span class="t" style="display:block;font-weight:600;font-size:17px;text-transform:uppercase">Человек с киноаппаратом</span><span class="muted" style="font-size:14px">20.10.2026</span><span class="muted" style="display:block;font-size:13px;margin-top:6px">Краткое описание события.</span><span class="muted" style="display:block;font-size:12px;margin:10px 0 8px">(анонс)</span><span class="img" style="display:block;border-radius:8px;background:var(--img);height:260px"></span></a></div>`)}
   ${homeSec('#c2410c','Хронограф','#/chrono','Хронограф',`<div class="chgrid">${years.map(chCol).join('')}</div>`)}
-  ${homeSec('#7c3aed','Личности','#/cat/person','Личности',`<div class="mosaic">${mosaic}</div>`)}
+  ${homeSec('#7c3aed','Личности','#/cat/person','Личности',`<div class="prow" style="grid-template-columns:repeat(4,1fr)">${persons.map(personCard).join('')}</div>`)}
   ${homeSec('#d97706','Коллекции','#/cat/collection','Все коллекции',`<div class="collrow">${all('collection').map(collCard).join('')}</div>`)}
   <section class="hsec">
     <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта</a></div>

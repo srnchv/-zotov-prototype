@@ -215,9 +215,6 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .chcol .yr{font-size:28px;font-weight:600;display:block;margin-bottom:4px}
 .chbar{display:block;width:6px;background:var(--line);margin:12px 0 8px}
 .chcol:hover .chrule,.chcol:hover .chbar{background:#bdbdbd}
-.mosaic{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:84px;gap:10px}
-.mos{display:block;background:var(--img);border-radius:8px;border:1px solid var(--line)}
-.mos:hover{border-color:#9a9a9a}
 .collrow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .collw{display:block}
 
