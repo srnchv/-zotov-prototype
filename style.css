@@ -169,7 +169,6 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .fopt.on{color:var(--ink);font-weight:600}
 .fopt.on:before{content:'✓ '}
 .fitem{break-inside:avoid}
-.fopt.all{font-weight:600;padding-bottom:10px;margin-bottom:6px;border-bottom:1px solid var(--line);column-span:all}
 .fsubs{margin:2px 0 8px 10px;border-left:1px solid var(--line);padding-left:12px}
 .fopt.sub{font-size:13px;padding:4px 0}
 
