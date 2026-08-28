@@ -46,13 +46,10 @@
   #hero{position:absolute;left:184px;top:0;width:1736px;height:1080px;background:#fff;overflow:hidden}
   #word{position:absolute;left:8px;top:8px;height:320px;width:856px;display:flex;align-items:flex-start;justify-content:space-between}
   #word img{height:320px;width:auto;flex:0 0 auto}
-  #barcode{position:absolute;right:8px;top:8px;height:320px;width:856px;overflow:hidden}
-  .bcol{position:absolute;top:0;width:428px;height:320px;overflow:hidden}
-  .bleft{left:0}
-  .bright{left:428px}
-  .bcol .bstrip{position:absolute;left:0;width:428px;height:1280px;background:url('../main-page/assets/union.svg') repeat-y;background-size:856px 320px;will-change:transform}
-  .bleft .bstrip{top:0;background-position:0 0}
-  .bright .bstrip{top:-960px;background-position:-428px 0}
+  #barcode{position:absolute;right:8px;top:8px;height:320px;width:856px}
+  .tubewrap{position:absolute;top:0;width:428px;height:320px;perspective:1600px}
+  .tube{position:absolute;left:0;top:0;width:428px;height:320px;transform-style:preserve-3d;will-change:transform}
+  .facet{position:absolute;left:50%;top:0;width:57px;height:320px;margin-left:-28.5px;background:url('../main-page/assets/union.svg') repeat-x;background-size:856px 320px;backface-visibility:hidden}
   #lede{position:absolute;left:8px;top:336px;width:1720px;font-size:40px;line-height:38px;letter-spacing:-1.2px;font-weight:500;color:rgba(0,0,0,.85)}
   #search{position:absolute;left:315px;top:618px;width:1106px;height:80px}
   #search .box{position:absolute;inset:0;border:4px solid var(--ink);border-radius:56px}
@@ -164,13 +161,13 @@
     @keyframes searchRide{to{transform:translateY(var(--dockShiftS))}}
     @keyframes themesRide{to{transform:translateY(var(--dockShiftT))}}
     @keyframes heroRide{to{transform:translateY(var(--heroShift))}}
-    @keyframes bstreamUp{to{transform:translateY(-960px)}}
-    @keyframes bstreamDown{to{transform:translateY(960px)}}
+    @keyframes tubeSpinL{to{transform:rotateY(360deg)}}
+    @keyframes tubeSpinR{to{transform:rotateY(-360deg)}}
     #search{animation:searchRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEndS);will-change:transform}
     #themes{animation:themesRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEnd);will-change:transform}
     #hero{animation:heroRide linear both;animation-timeline:scroll(root);animation-range:var(--cStart) var(--cEnd);will-change:transform}
-    .bleft .bstrip{animation:bstreamUp linear both;animation-timeline:scroll(root);animation-range:0px var(--streamRange)}
-    .bright .bstrip{animation:bstreamDown linear both;animation-timeline:scroll(root);animation-range:0px var(--streamRange)}
+    #tubeL{animation:tubeSpinL linear both;animation-timeline:scroll(root);animation-range:0px var(--streamRange)}
+    #tubeR{animation:tubeSpinR linear both;animation-timeline:scroll(root);animation-range:0px var(--streamRange)}
   }
 </style>
 </head>
@@ -201,8 +198,8 @@
       <img src="../main-page/assets/letter-a.svg" alt="А"><img src="../main-page/assets/letter-r.svg" alt="Р"><img src="../main-page/assets/letter-h.svg" alt="Х"><img src="../main-page/assets/letter-i.svg" alt="И"><img src="../main-page/assets/letter-v.svg" alt="В">
     </div>
     <div id="barcode">
-      <div class="bcol bleft"><div class="bstrip"></div></div>
-      <div class="bcol bright"><div class="bstrip"></div></div>
+      <div class="tubewrap" style="left:0"><div class="tube" id="tubeL"></div></div>
+      <div class="tubewrap" style="left:428px"><div class="tube" id="tubeR"></div></div>
     </div>
     <p id="lede">Уникальный архив о&nbsp;конструктивизме, медиа и&nbsp;городской истории: материалы, личности, события, места и&nbsp;проекты, объединённые в&nbsp;единую систему связей</p>
     <div id="search">
@@ -354,9 +351,24 @@
   const DESIGN_W = 1920;
 
   // scroll choreography distances (design px)
-  const D1 = 0;        // вариант C: слово сразу компактное, баркод на месте
+  const D1 = 0;        // вариант C: слово сразу компактное, трубы на месте
   let D2 = 500;
   let D  = D1 + D2;
+
+  // грани цилиндров: N штук, намотка текстуры баркода
+  (function buildTubes(){
+    const N = 24, R = 214, w = 2 * R * Math.tan(Math.PI / N);
+    [['tubeL', 0], ['tubeR', -428]].forEach(([id, off]) => {
+      const tube = document.getElementById(id);
+      for (let i = 0; i < N; i++){
+        const f = document.createElement('div');
+        f.className = 'facet';
+        f.style.transform = 'rotateY(' + (i * 360 / N) + 'deg) translateZ(' + R + 'px)';
+        f.style.backgroundPosition = (off - i * w) + 'px 0';
+        tube.appendChild(f);
+      }
+    });
+  })();
 
   // hero element keyframes (design px)
   const WORD_W0 = 1720, WORD_W1 = 856;   // АРХИВ width
@@ -437,7 +449,7 @@
     r.setProperty('--dockShiftS', -(SEARCH_Y0 - SEARCH_Y1) + 'px');
     r.setProperty('--dockShiftT', -(THEMES_Y0 - THEMES_Y1) + 'px');
     r.setProperty('--heroShift', -HERO_H + 'px');
-    r.setProperty('--streamRange', (2000 * k) + 'px');
+    r.setProperty('--streamRange', (2400 * k) + 'px');
     update();
   }
 
@@ -454,11 +466,9 @@
 
     if (!NATIVE){
       const s2 = clamp(S - D1, 0, D2);
-      const sh = Math.min(S, 2000) * 0.48;
-      const stL = document.querySelector('.bleft .bstrip');
-      const stR = document.querySelector('.bright .bstrip');
-      if (stL) stL.style.transform = 'translateY(' + (-sh) + 'px)';
-      if (stR) stR.style.transform = 'translateY(' + sh + 'px)';
+      const ang = Math.min(S, 2400) * 0.15;
+      document.getElementById('tubeL').style.transform = 'rotateY(' + ang + 'deg)';
+      document.getElementById('tubeR').style.transform = 'rotateY(' + (-ang) + 'deg)';
       search.style.transform = 'translateY(' + (-Math.min(s2, SEARCH_Y0 - SEARCH_Y1)) + 'px)';
       themes.style.transform = 'translateY(' + (-s2) + 'px)';
       hero.style.transform = 'translateY(' + (-off) + 'px)';
