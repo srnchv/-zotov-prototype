@@ -160,7 +160,7 @@ function footer(){return `<footer><div class="cols">
 const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+footer();
 const link=o=>`<a class="chip" href="#/e/${o.id}">${esc(o.title)}</a>`;
 const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.colType||o.prType||o.orgType||'';
-const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
+const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
 
 // основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
 const CARD_TYPES=['material','person','place','event','theme','project','collection'];
@@ -526,9 +526,8 @@ window.delCollection=i=>{const c=lsGet('zotov_coll');c.splice(i,1);lsSet('zotov_
 
 // ===== Хронограф: только события-сущности (клик → карточка со связями) =====
 function chrono(){
-  const evs=all('event').filter(o=>o.date&&yearOf(o.date))
-    .map(o=>({y:yearOf(o.date),title:o.title,sub:o.evType||'Событие',href:'#/e/'+o.id}));
-  const byY={}; evs.forEach(it=>(byY[it.y]=byY[it.y]||[]).push(it));
+  const evs=all('event').filter(o=>o.date&&yearOf(o.date));
+  const byY={}; evs.forEach(o=>(byY[yearOf(o.date)]=byY[yearOf(o.date)]||[]).push(o));
   const ys=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   const minY=ys[0],maxY=ys[ys.length-1];
   const mx=Math.max(...ys.map(y=>byY[y].length));
@@ -571,7 +570,7 @@ function chrono(){
     if(byY[y]){
       const list=byY[y],dec=Math.floor(y/10)*10+'-е';
       rows+=`<div class="chyear" id="y${y}" data-d="${dec}"><div><div class="ynum">${y}</div><div class="muted" style="font-size:12px">${list.length} ${wordN(list.length)}</div></div>
-        <div class="evgrid">${list.map(it=>`<a class="evm" href="${it.href}"><span class="kicker" style="font-size:10px">${esc(it.sub)}</span><span class="t">${esc(it.title)}</span></a>`).join('')}</div></div>`;
+        <div class="grid g3">${list.map(tile).join('')}</div></div>`;
       y++;
     } else {
       let z=y;while(z<=maxY&&!byY[z])z++;
@@ -595,6 +594,17 @@ window.filterChrono=(el,d)=>{
   document.querySelectorAll('#tl .chyear').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
   document.querySelectorAll('#tl .chgap').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
 };
+// шкала закреплена при скролле; подсветка года, который сейчас на экране
+function chronoSpy(){
+  const rows=document.querySelectorAll('#tl .chyear'); if(!rows.length)return;
+  let cur=null; rows.forEach(r=>{if(r.style.display!=='none'&&r.getBoundingClientRect().top<=200)cur=r;});
+  if(!cur)cur=rows[0];
+  const y=+cur.id.slice(1);
+  document.querySelectorAll('.chrscale2 .ct.on').forEach(c=>c.classList.remove('on'));
+  const t=document.getElementById('ct'+y)||document.getElementById('ctd'+(Math.floor(y/10)*10));
+  if(t)t.classList.add('on');
+}
+window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
 function map(){
   const places=all('place');
