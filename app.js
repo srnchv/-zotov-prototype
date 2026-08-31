@@ -667,7 +667,7 @@ function redrawMarkers(){
     },{preset:'islands#blackCircleDotIcon'});
     mapObj.geoObjects.add(m); mapMarks[p.id]=m;
   });
-  if(pts.length>1) mapObj.setBounds(ymaps.util.bounds.fromPoints(pts),{checkZoomRange:true,zoomMargin:40});
+  if(pts.length>1){mapObj.container.fitToViewport();mapObj.setBounds(ymaps.util.bounds.fromPoints(pts),{zoomMargin:60});}
   else if(pts.length===1) mapObj.setCenter(pts[0],13);
 }
 function initLiveMap(){
@@ -679,7 +679,7 @@ function initLiveMap(){
     try{
       mapObj=new ymaps.Map('livemap',{center:[55.76,37.61],zoom:11,controls:['zoomControl']});
       mapObj.behaviors.disable('scrollZoom');
-      redrawMarkers();
+      setTimeout(redrawMarkers,60); // контейнер должен получить размеры до setBounds
     }catch(e){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась: '+esc(e.message||'ошибка API')+'</div>';}
   });
 }
