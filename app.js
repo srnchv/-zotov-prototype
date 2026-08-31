@@ -532,18 +532,37 @@ function chrono(){
   const ys=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   const minY=ys[0],maxY=ys[ys.length-1];
   const mx=Math.max(...ys.map(y=>byY[y].length));
-  // обзорная шкала: столбик = год, цифра = число событий, клик = прыжок к году
-  const ticks=[];let y=minY;
-  while(y<=maxY){
-    if(byY[y]){ticks.push({y,n:byY[y].length});y++;}
-    else{let z=y;while(z<=maxY&&!byY[z])z++;
-      if(z-y<=4){for(let k=y;k<z;k++)ticks.push({y:k,n:0});} else ticks.push({gap:[y,z-1]});
-      y=z;}
+  // обзорная шкала масштабируется под объём данных:
+  // до ~40 лет — деление на каждый год; больше — агрегируется по десятилетиям
+  const span=maxY-minY+1;
+  let scale='';
+  if(span<=40){
+    const ticks=[];let y=minY;
+    while(y<=maxY){
+      if(byY[y]){ticks.push({y,n:byY[y].length});y++;}
+      else{let z=y;while(z<=maxY&&!byY[z])z++;
+        if(z-y<=4){for(let k=y;k<z;k++)ticks.push({y:k,n:0});} else ticks.push({gap:[y,z-1]});
+        y=z;}
+    }
+    scale=`<div class="chrscale2">${ticks.map(t=>t.gap
+      ?`<span class="ct gapt" title="${t.gap[0]}–${t.gap[1]}"><i></i><b>⋯</b></span>`
+      :`<span class="ct${t.n?' has':' zero'}" id="ct${t.y}" onclick="jumpYear(${t.y})" title="${t.y}">${t.n?`<em>${t.n}</em>`:''}<i style="height:${t.n?6+Math.round(40*t.n/mx):2}px"></i>${(span<=16||t.y%5===0)?`<b>${t.y}</b>`:''}</span>`).join('')}</div>`;
+  } else {
+    const byD={},firstY={};
+    ys.forEach(yy=>{const d=Math.floor(yy/10)*10;byD[d]=(byD[d]||0)+byY[yy].length;if(!(d in firstY))firstY[d]=yy;});
+    const d0=Math.floor(minY/10)*10,d1=Math.floor(maxY/10)*10;
+    const mxd=Math.max(...Object.values(byD));
+    const ticks=[];let d=d0;
+    while(d<=d1){
+      if(byD[d]){ticks.push({d,n:byD[d]});d+=10;}
+      else{let z=d;while(z<=d1&&!byD[z])z+=10;
+        if(z-d<=20){for(let k=d;k<z;k+=10)ticks.push({d:k,n:0});} else ticks.push({gap:[d,z-10]});
+        d=z;}
+    }
+    scale=`<div class="chrscale2">${ticks.map(t=>t.gap
+      ?`<span class="ct gapt" title="${t.gap[0]}-е – ${t.gap[1]}-е"><i></i><b>⋯</b></span>`
+      :`<span class="ct${t.n?' has':' zero'}" id="ctd${t.d}" onclick="${t.n?`jumpYear(${firstY[t.d]})`:''}" title="${t.d}-е">${t.n?`<em>${t.n}</em>`:''}<i style="height:${t.n?6+Math.round(40*t.n/mxd):2}px"></i><b>${t.d}-е</b></span>`).join('')}</div>`;
   }
-  const scale=`<div class="chrscale2">${ticks.map(t=>t.gap
-    ?`<span class="ct gapt" title="${t.gap[0]}–${t.gap[1]}: событий нет"><i></i><b>⋯</b></span>`
-    :`<span class="ct${t.n?' has':' zero'}" id="ct${t.y}" onclick="jumpYear(${t.y})" title="${t.y}: событий — ${t.n}">${t.n?`<em>${t.n}</em>`:''}<i style="height:${t.n?6+Math.round(40*t.n/mx):2}px"></i><b>${t.y}</b></span>`).join('')}</div>
-    <div class="muted" style="font-size:12px;margin:-8px 0 0 4px">Высота столбика — число событий за год; клик — переход к году. Пустые годы и разрывы показываются честно (⋯).</div>`;
   const decs=[...new Set(ys.map(yy=>Math.floor(yy/10)*10+'-е'))];
   const chips=`<div class="chips" style="margin:18px 0 4px"><span class="chip on" style="background:#1f1f1f;color:#fff" onclick="filterChrono(this,'all')">Все периоды</span>${decs.map(d=>`<span class="chip" onclick="filterChrono(this,'${d}')">${d}</span>`).join('')}</div>`;
   const wordN=n=>n===1?'событие':(n<5?'события':'событий');
@@ -561,7 +580,7 @@ function chrono(){
     }
   }
   return page('#/chrono',`<h1>Хронограф</h1>
-    <div class="lead" style="font-size:17px">${evs.length} событий, ${minY}–${maxY}. Каждое событие — сущность архива: клик открывает карточку со связанными материалами, личностями и местами.</div>
+    <div class="lead" style="font-size:17px">История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.</div>
     ${scale}${chips}
     <div id="tl" style="margin-top:14px">${rows}</div>`);
 }
