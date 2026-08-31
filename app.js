@@ -621,8 +621,8 @@ function chronoSpy(){
 }
 window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
-// ===== Карта: живая подложка (Leaflet + OSM; в проде — Яндекс.Карты с той же логикой) =====
-let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapLayer=null, mapMarks={};
+// ===== Карта: Яндекс.Карты JS API 2.1 (точки-сущности, фильтры страна/город/тип) =====
+let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapMarks={};
 const mpPass=p=>{
   const t=(p.placeType||'Место').split('·')[0].trim();
   return (mpCountry==='all'||p.country===mpCountry)
@@ -655,25 +655,33 @@ function map(){
     <div id="livemap" class="mapbox" style="height:620px;position:relative;z-index:0"></div></div>`);
 }
 function redrawMarkers(){
-  if(!mapObj||!mapLayer)return;
-  mapLayer.clearLayers(); mapMarks={};
+  if(!mapObj||typeof ymaps==='undefined')return;
+  mapObj.geoObjects.removeAll(); mapMarks={};
   const pts=[];
   all('place').filter(p=>p.coord&&mpPass(p)).forEach(p=>{
     const ll=p.coord.split(',').map(Number); pts.push(ll);
-    const m=L.circleMarker(ll,{radius:9,color:'#1f1f1f',weight:2,fillColor:'#1f1f1f',fillOpacity:.85})
-      .bindPopup(`<b>${esc(p.title)}</b><br><span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`);
-    m.addTo(mapLayer); mapMarks[p.id]=m;
+    const m=new ymaps.Placemark(ll,{
+      hintContent:p.title,
+      balloonContentHeader:esc(p.title),
+      balloonContentBody:`<span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`
+    },{preset:'islands#blackCircleDotIcon'});
+    mapObj.geoObjects.add(m); mapMarks[p.id]=m;
   });
-  if(pts.length)mapObj.fitBounds(pts,{padding:[40,40],maxZoom:13});
+  if(pts.length>1) mapObj.setBounds(ymaps.util.bounds.fromPoints(pts),{checkZoomRange:true,zoomMargin:40});
+  else if(pts.length===1) mapObj.setCenter(pts[0],13);
 }
 function initLiveMap(){
   const el=document.getElementById('livemap');
   if(!el)return;
-  if(typeof L==='undefined'){el.innerHTML='<div class="muted" style="padding:40px">Картографическая библиотека не загрузилась — офлайн-заглушка.</div>';return;}
-  mapObj=L.map('livemap',{scrollWheelZoom:false});
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapObj);
-  mapLayer=L.layerGroup().addTo(mapObj);
-  redrawMarkers();
+  if(typeof ymaps==='undefined'){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась (API недоступен или ключ ещё активируется).</div>';return;}
+  ymaps.ready(()=>{
+    if(!document.getElementById('livemap'))return;
+    try{
+      mapObj=new ymaps.Map('livemap',{center:[55.76,37.61],zoom:11,controls:['zoomControl']});
+      mapObj.behaviors.disable('scrollZoom');
+      redrawMarkers();
+    }catch(e){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась: '+esc(e.message||'ошибка API')+'</div>';}
+  });
 }
 window.mapSet=(dim,v,el)=>{
   if(dim==='mpCountry'){mpCountry=v;mpCity='all';mpType='all';}
@@ -683,7 +691,8 @@ window.mapSet=(dim,v,el)=>{
 };
 window.mapFocus=id=>{
   const m=mapMarks[id]; if(!m||!mapObj)return;
-  mapObj.setView(m.getLatLng(),14); m.openPopup();
+  mapObj.setCenter(m.geometry.getCoordinates(),15);
+  m.balloon.open();
 };
 
 function catalog(type){
