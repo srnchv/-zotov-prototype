@@ -127,7 +127,8 @@ a.chip:hover{background:#ececec}
 .chip{cursor:pointer}
 
 /* хронограф: обзорная шкала + лента годов */
-.chrscale2{display:flex;align-items:flex-end;gap:3px;border:1px solid var(--line);border-radius:12px;padding:16px 18px 30px;margin-top:20px;position:sticky;top:76px;z-index:5;background:#fff}
+.chr-sticky{position:sticky;top:60px;z-index:5;background:#fff;padding:8px 0 12px;margin-top:12px}
+.chrscale2{display:flex;align-items:flex-end;gap:3px;border:1px solid var(--line);border-radius:12px;padding:16px 18px 30px;background:#fff}
 .chrscale2 .ct{flex:1 1 0;min-width:5px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:64px;position:relative;cursor:pointer}
 .chrscale2 .ct i{width:60%;min-width:4px;background:#c6c6c4;border-radius:2px;display:block}
 .chrscale2 .ct.zero i{background:#ececea}
@@ -138,7 +139,8 @@ a.chip:hover{background:#ececec}
 .chrscale2 .ct.on b,.chrscale2 .ct.on em{color:var(--ink);font-weight:600}
 .chrscale2 .ct.gapt{cursor:default;flex:0 0 18px}
 .chrscale2 .ct.gapt i{height:2px;background:transparent;border-bottom:2px dotted #c6c6c4;width:100%;border-radius:0}
-.chyear{display:grid;grid-template-columns:110px 1fr;gap:24px;padding:22px 0;border-top:1px solid var(--line);scroll-margin-top:80px}
+.chyear{display:grid;grid-template-columns:110px 1fr;gap:24px;padding:22px 0;border-top:1px solid var(--line);scroll-margin-top:248px}
+.chyear>div:first-child{position:sticky;top:256px;align-self:start}
 .chyear .ynum{font-size:30px;font-weight:600;line-height:1.1}
 .chgap{padding:10px 0 10px 134px;color:var(--muted);font-size:13px;border-top:1px dashed var(--line)}
 

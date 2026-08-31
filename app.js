@@ -580,7 +580,7 @@ function chrono(){
   }
   return page('#/chrono',`<h1>Хронограф</h1>
     <div class="lead" style="font-size:17px">История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.</div>
-    ${scale}${chips}
+    <div class="chr-sticky">${scale}${chips}</div>
     <div id="tl" style="margin-top:14px">${rows}</div>`);
 }
 window.jumpYear=y=>{
