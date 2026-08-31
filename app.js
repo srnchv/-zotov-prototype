@@ -651,7 +651,7 @@ function map(){
       ${row('Тип','mpType',types,mpType)}
     </div>
     ${sectionSearch('Поиск по местам')}
-    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.filter(mpPass).map(cardHtml).join('')||'<p class="muted">Нет мест по выбранным фильтрам.</p>'}</div>
+    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.filter(mpPass).sort((a,b)=>(DB[b.id].links||[]).length-(DB[a.id].links||[]).length).map(cardHtml).join('')||'<p class="muted">Нет мест по выбранным фильтрам.</p>'}</div>
     <div id="livemap" class="mapbox" style="height:620px;position:relative;z-index:0"></div></div>`);
 }
 function redrawMarkers(){
