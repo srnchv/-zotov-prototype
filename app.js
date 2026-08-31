@@ -666,7 +666,7 @@ function redrawMarkers(){
       balloonContentBody:`<span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}" style="font-size:13px">Открыть карточку →</a>`
     },{
       iconLayout:markLayout,
-      iconShape:{type:'Circle',coordinates:[0,0],radius:11},
+      iconShape:{type:'Rectangle',coordinates:[[-8,-8],[8,8]]},
       balloonOffset:[0,-6]
     });
     mapObj.geoObjects.add(m); mapMarks[p.id]=m;
