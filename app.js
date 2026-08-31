@@ -667,8 +667,13 @@ function redrawMarkers(){
     },{preset:'islands#blackCircleDotIcon'});
     mapObj.geoObjects.add(m); mapMarks[p.id]=m;
   });
-  if(pts.length>1){mapObj.container.fitToViewport();mapObj.setBounds(ymaps.util.bounds.fromPoints(pts),{zoomMargin:60});}
-  else if(pts.length===1) mapObj.setCenter(pts[0],13);
+  if(pts.length){
+    const lats=pts.map(p=>p[0]),lons=pts.map(p=>p[1]);
+    const c=[(Math.min(...lats)+Math.max(...lats))/2,(Math.min(...lons)+Math.max(...lons))/2];
+    const spread=Math.max(Math.max(...lats)-Math.min(...lats),(Math.max(...lons)-Math.min(...lons))*0.6);
+    const z=spread>30?4:spread>12?5:spread>5?6:spread>1.5?8:spread>0.4?10:spread>0.08?12:14;
+    mapObj.setCenter(c,z);
+  }
 }
 function initLiveMap(){
   const el=document.getElementById('livemap');
@@ -679,7 +684,7 @@ function initLiveMap(){
     try{
       mapObj=new ymaps.Map('livemap',{center:[55.76,37.61],zoom:11,controls:['zoomControl']});
       mapObj.behaviors.disable('scrollZoom');
-      setTimeout(redrawMarkers,60); // контейнер должен получить размеры до setBounds
+      redrawMarkers();
     }catch(e){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась: '+esc(e.message||'ошибка API')+'</div>';}
   });
 }
