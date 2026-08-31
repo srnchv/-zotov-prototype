@@ -632,12 +632,12 @@ const mpPass=p=>{
 function map(){
   const places=all('place').filter(p=>p.coord);
   const countries=[...new Set(places.map(p=>p.country).filter(Boolean))];
-  const cities=[...new Set(places.map(p=>p.city).filter(Boolean))];
-  const types=[...new Set(places.map(p=>(p.placeType||'Место').split('·')[0].trim()))];
+  const inCountry=places.filter(p=>mpCountry==='all'||p.country===mpCountry);
+  const cities=[...new Set(inCountry.map(p=>p.city).filter(Boolean))];
+  const types=[...new Set(inCountry.map(p=>(p.placeType||'Место').split('·')[0].trim()))];
   const row=(label,dim,vals,cur,extra)=>`<div style="display:flex;gap:10px;align-items:baseline;margin-top:10px"><span class="muted" style="font-size:12px;width:64px;flex:none;text-transform:uppercase;letter-spacing:.5px">${label}</span><div class="chips" style="margin:0">
     <span class="chip${cur==='all'?' on':''}" ${cur==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','all',this)">Все</span>
     ${vals.map(v=>`<span class="chip" ${extra?extra(v):''} ${cur===v?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','${esc(v)}',this)">${esc(v)}</span>`).join('')}</div></div>`;
-  const cityOf={}; places.forEach(p=>{if(p.city)cityOf[p.city]=p.country;});
   const cardHtml=p=>`<a class="card" data-t="${esc((p.placeType||'Место').split('·')[0].trim())}" data-city="${esc(p.city||'')}" data-c="${esc(p.country||'')}" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
       <span style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></span>
       <span style="min-width:1px"><span class="t" style="display:block;font-weight:600">${esc(p.title)}</span>
@@ -647,11 +647,11 @@ function map(){
     <div class="muted" style="font-size:15px">Конструктивистские адреса на карте: здания, клубы, инженерные сооружения.</div>
     <div style="margin-top:8px">
       ${row('Страна','mpCountry',countries,mpCountry)}
-      ${row('Город','mpCity',cities,mpCity,v=>`data-cc="${esc(cityOf[v]||'')}" class="chip cchip"`)}
+      ${row('Город','mpCity',cities,mpCity)}
       ${row('Тип','mpType',types,mpType)}
     </div>
     ${sectionSearch('Поиск по местам')}
-    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.map(cardHtml).join('')}</div>
+    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.filter(mpPass).map(cardHtml).join('')||'<p class="muted">Нет мест по выбранным фильтрам.</p>'}</div>
     <div id="livemap" class="mapbox" style="height:620px;position:relative;z-index:0"></div></div>`);
 }
 function redrawMarkers(){
@@ -676,7 +676,7 @@ function initLiveMap(){
   redrawMarkers();
 }
 window.mapSet=(dim,v,el)=>{
-  if(dim==='mpCountry'){mpCountry=v;mpCity='all';}
+  if(dim==='mpCountry'){mpCountry=v;mpCity='all';mpType='all';}
   else if(dim==='mpCity')mpCity=v;
   else mpType=v;
   render(); // страница перерисуется с актуальными чипами, картой и списком
