@@ -126,6 +126,10 @@ a.chip:hover{background:#ececec}
 .secsearch:focus{border-color:#bdbdbd}
 .chip{cursor:pointer}
 
+/* карта: серая стилизация подложки (тайлы Яндекса обесцвечиваются CSS-фильтром; метки и балуны не трогаем) */
+#livemap [class*="ground-pane"]{filter:grayscale(1) brightness(1.06) contrast(.9)}
+#livemap [class*="copyrights-pane"]{filter:grayscale(1)}
+
 /* хронограф: обзорная шкала + лента годов */
 .chr-sticky{position:sticky;top:60px;z-index:5;background:#fff;padding:8px 0 12px;margin-top:12px}
 .chrscale2{display:flex;align-items:flex-end;gap:3px;border:1px solid var(--line);border-radius:12px;padding:16px 18px 30px;background:#fff}
