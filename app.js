@@ -26,8 +26,8 @@ const RAW = [
   {id:'p2',type:'person',title:'Варвара Степанова',life:'1894–1958',role:'художница, дизайнер',links:['pr1','t1','o1']},
   {id:'p3',type:'person',title:'Эль Лисицкий',life:'1890–1941',role:'архитектор, типограф',links:['t1','t2','o1','pl1']},
 
-  {id:'pl1',type:'place',title:'Хлебозавод №5',placeType:'Здание · промышленная архитектура',address:'Москва, ул. Ходынская, 2',status:'Существует',coord:'55.79, 37.59',links:['e1','o1','pr1','s1']},
-  {id:'pl2',type:'place',title:'ВХУТЕМАС (Мясницкая, 21)',placeType:'Учебное заведение',address:'Москва, Мясницкая, 21',status:'Существует',coord:'55.76, 37.63',links:['o1','e2']},
+  {id:'pl1',type:'place',title:'Хлебозавод №5',placeType:'Здание · промышленная архитектура',city:'Москва',country:'Россия',address:'Москва, ул. Ходынская, 2',status:'Существует',coord:'55.79, 37.59',links:['e1','o1','pr1','s1']},
+  {id:'pl2',type:'place',title:'ВХУТЕМАС (Мясницкая, 21)',placeType:'Учебное заведение',city:'Москва',country:'Россия',address:'Москва, Мясницкая, 21',status:'Существует',coord:'55.76, 37.63',links:['o1','e2']},
 
   {id:'e1',type:'event',title:'Открытие выставки «1927»',date:'12 марта 1927',evType:'Открытие выставки',inChrono:true,links:['pr1','o1','t1']},
   {id:'e2',type:'event',title:'Лекция об архитектуре конструктивизма',date:'1928',evType:'Лекция',inChrono:true,links:['pl2','t1']},
@@ -53,7 +53,7 @@ const RAW = [
 // --- расширение данных для демонстрации фильтрации ---
 RAW.push(
   {id:'p4',type:'person',title:'Дзига Вертов',life:'1896–1954',role:'кинорежиссёр, теоретик кино',links:['pr2','t1']},
-  {id:'pl3',type:'place',title:'Москва',placeType:'Город',address:'Россия',status:'Существует',coord:'55.75, 37.62',links:[]},
+  {id:'pl3',type:'place',title:'Дом Моссельпрома',placeType:'Здание · административное',city:'Москва',country:'Россия',address:'Москва, Калашный пер., 2/10',status:'Существует',coord:'55.7527, 37.5960',links:['t1','p1']},
   {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
   {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]},
   {id:'c2',type:'collection',title:'Коллекция 2',colType:'Личный фонд',period:'1920-е',sub:['Фотографии','Письма'],links:['p3','t2','m3']},
@@ -81,6 +81,21 @@ RAW.push(
   // тексты — для раздела «Тексты» (материалы типа «Текст»)
   {id:'m13',type:'material',title:'Манифест конструктивистов',subtype:'Манифест',mtype:'Текст',date:'1922',access:'open',media:['pdf'],a11y:[],lang:'рус',links:['t1','p1','o1']},
   {id:'m14',type:'material',title:'Рецензия на выставку «1927»',subtype:'Рецензия',mtype:'Текст',date:'1927',access:'open',media:[],a11y:[],lang:'рус',links:['pr1','e1','s1']}
+);
+// --- карта: реальные конструктивистские адреса бывшего СССР ---
+RAW.push(
+  {id:'pl4',type:'place',title:'Дом Наркомфина',placeType:'Жилой дом',city:'Москва',country:'Россия',address:'Москва, Новинский бул., 25',status:'Существует',coord:'55.7602, 37.5837',links:['t1','ev30','ev37']},
+  {id:'pl5',type:'place',title:'Клуб им. Русакова',placeType:'Клуб',city:'Москва',country:'Россия',address:'Москва, Стромынка, 6',status:'Существует',coord:'55.7893, 37.6683',links:['t1','ev24','ev34']},
+  {id:'pl6',type:'place',title:'Шуховская башня',placeType:'Инженерное сооружение',city:'Москва',country:'Россия',address:'Москва, Шухова, 8',status:'Существует',coord:'55.7172, 37.6112',links:['t1']},
+  {id:'pl7',type:'place',title:'ДК ЗИЛ',placeType:'Дворец культуры',city:'Москва',country:'Россия',address:'Москва, Восточная, 4',status:'Существует',coord:'55.7091, 37.6570',links:['t1']},
+  {id:'pl8',type:'place',title:'Белая башня',placeType:'Инженерное сооружение',city:'Екатеринбург',country:'Россия',address:'Екатеринбург, Бакинских Комиссаров, 2а',status:'Существует',coord:'56.8583, 60.5586',links:['t1']},
+  {id:'pl9',type:'place',title:'Городок чекистов',placeType:'Жилой комплекс',city:'Екатеринбург',country:'Россия',address:'Екатеринбург, пр. Ленина, 69',status:'Существует',coord:'56.8447, 60.6122',links:['t1']},
+  {id:'pl10',type:'place',title:'Госпром',placeType:'Здание · административное',city:'Харьков',country:'Украина',address:'Харьков, пл. Свободы, 5',status:'Существует',coord:'50.0049, 36.2280',links:['t1']},
+  {id:'pl11',type:'place',title:'ДК им. Горького',placeType:'Дворец культуры',city:'Санкт-Петербург',country:'Россия',address:'Санкт-Петербург, пл. Стачек, 4',status:'Существует',coord:'59.8998, 30.2739',links:['t1']},
+  {id:'pl12',type:'place',title:'Дом правительства',placeType:'Здание · административное',city:'Минск',country:'Беларусь',address:'Минск, пл. Независимости',status:'Существует',coord:'53.8966, 27.5474',links:['t1']},
+  {id:'pl13',type:'place',title:'Дом печати',placeType:'Здание · административное',city:'Баку',country:'Азербайджан',address:'Баку, просп. Азадлыг',status:'Существует',coord:'40.3777, 49.8920',links:['t1']},
+  {id:'pl14',type:'place',title:'Дом-корабль',placeType:'Жилой дом',city:'Иваново',country:'Россия',address:'Иваново, пр. Ленина, 49',status:'Существует',coord:'56.9964, 40.9819',links:['t1']},
+  {id:'pl15',type:'place',title:'Дом с часами',placeType:'Жилой дом',city:'Новосибирск',country:'Россия',address:'Новосибирск, Красный пр., 11',status:'Существует',coord:'55.0415, 82.9346',links:['t1']}
 );
 // --- хронограф: 48 событий 1922–1932 (+e1, e2 = 50), каждое — полноценная сущность со связями ---
 const CH_EVENTS=[
@@ -249,7 +264,7 @@ function home(){
   ${homeSec('#d97706','Коллекции','#/cat/collection','Все коллекции',`<div class="collrow">${all('collection').map(collCard).join('')}</div>`)}
   <section class="hsec">
     <div class="hsec-h"><div class="hkick"><span class="hdot" style="background:#0d9488"></span>Карта</div><a class="btn sm" href="#/map">→ Карта</a></div>
-    <a class="mapbox" style="display:block;height:260px" href="#/map">${all('place').map((p,i)=>`<span class="pin ${i===0?'on':''}" style="left:${[26,48,64][i%3]}%;top:${[40,56,28][i%3]}%" title="${esc(p.title)}"></span>`).join('')}</a>
+    <a class="mapbox" style="display:block;height:260px" href="#/map">${all('place').slice(0,6).map((p,i)=>`<span class="pin ${i===0?'on':''}" style="left:${[26,48,64,38,72,55][i]}%;top:${[40,56,28,68,50,22][i]}%" title="${esc(p.title)}"></span>`).join('')}</a>
   </section>
   `);
 }
@@ -606,53 +621,65 @@ function chronoSpy(){
 }
 window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
-// ===== Карта: живая подложка (Leaflet + OSM, без ключей; в проде заменяется на Яндекс.Карты с той же логикой) =====
-let mpFilter='all', mapObj=null, mapLayer=null, mapMarks={};
+// ===== Карта: живая подложка (Leaflet + OSM; в проде — Яндекс.Карты с той же логикой) =====
+let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapLayer=null, mapMarks={};
+const mpPass=p=>{
+  const t=(p.placeType||'Место').split('·')[0].trim();
+  return (mpCountry==='all'||p.country===mpCountry)
+    &&(mpCity==='all'||p.city===mpCity)
+    &&(mpType==='all'||t===mpType);
+};
 function map(){
   const places=all('place').filter(p=>p.coord);
+  const countries=[...new Set(places.map(p=>p.country).filter(Boolean))];
+  const cities=[...new Set(places.map(p=>p.city).filter(Boolean))];
   const types=[...new Set(places.map(p=>(p.placeType||'Место').split('·')[0].trim()))];
-  const chips=`<div class="chips" style="margin:14px 0 4px">
-    <span class="chip${mpFilter==='all'?' on':''}" ${mpFilter==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapFilter(this,'all')">Все места</span>
-    ${types.map(t=>`<span class="chip${mpFilter===t?' on':''}" ${mpFilter===t?'style="background:#1f1f1f;color:#fff"':''} onclick="mapFilter(this,'${esc(t)}')">${esc(t)}</span>`).join('')}</div>`;
-  const cardHtml=p=>`<a class="card" data-t="${esc((p.placeType||'Место').split('·')[0].trim())}" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+  const row=(label,dim,vals,cur,extra)=>`<div style="display:flex;gap:10px;align-items:baseline;margin-top:10px"><span class="muted" style="font-size:12px;width:64px;flex:none;text-transform:uppercase;letter-spacing:.5px">${label}</span><div class="chips" style="margin:0">
+    <span class="chip${cur==='all'?' on':''}" ${cur==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','all',this)">Все</span>
+    ${vals.map(v=>`<span class="chip" ${extra?extra(v):''} ${cur===v?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','${esc(v)}',this)">${esc(v)}</span>`).join('')}</div></div>`;
+  const cityOf={}; places.forEach(p=>{if(p.city)cityOf[p.city]=p.country;});
+  const cardHtml=p=>`<a class="card" data-t="${esc((p.placeType||'Место').split('·')[0].trim())}" data-city="${esc(p.city||'')}" data-c="${esc(p.country||'')}" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
       <span style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></span>
       <span style="min-width:1px"><span class="t" style="display:block;font-weight:600">${esc(p.title)}</span>
-      <span class="muted" style="font-size:13px">${esc(p.placeType||'Место')} · ${esc(p.status||'')} · ${(DB[p.id].links||[]).length} связей</span>
+      <span class="muted" style="font-size:13px">${esc(p.city||'')}${p.country&&p.country!=='Россия'?', '+esc(p.country):''} · ${esc((p.placeType||'Место').split('·')[0].trim())} · ${(DB[p.id].links||[]).length} связей</span>
       <span class="lnk muted" style="display:inline-block;font-size:12px;margin-top:4px" onclick="event.preventDefault();mapFocus('${p.id}')">Показать на карте</span></span></a>`;
   return page('#/map',`<h1>Карта</h1>
-    <div class="muted" style="font-size:15px">Места архива на карте: здания, организации, места событий и съёмок.</div>
-    ${chips}
+    <div class="muted" style="font-size:15px">Конструктивистские адреса на карте: здания, клубы, инженерные сооружения.</div>
+    <div style="margin-top:8px">
+      ${row('Страна','mpCountry',countries,mpCountry)}
+      ${row('Город','mpCity',cities,mpCity,v=>`data-cc="${esc(cityOf[v]||'')}" class="chip cchip"`)}
+      ${row('Тип','mpType',types,mpType)}
+    </div>
     ${sectionSearch('Поиск по местам')}
     <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.map(cardHtml).join('')}</div>
-    <div id="livemap" class="mapbox" style="height:560px;position:relative;z-index:0"></div></div>`);
+    <div id="livemap" class="mapbox" style="height:620px;position:relative;z-index:0"></div></div>`);
 }
 function redrawMarkers(){
   if(!mapObj||!mapLayer)return;
   mapLayer.clearLayers(); mapMarks={};
-  all('place').filter(p=>p.coord).forEach(p=>{
-    const t=(p.placeType||'Место').split('·')[0].trim();
-    if(mpFilter!=='all'&&t!==mpFilter)return;
-    const ll=p.coord.split(',').map(Number);
+  const pts=[];
+  all('place').filter(p=>p.coord&&mpPass(p)).forEach(p=>{
+    const ll=p.coord.split(',').map(Number); pts.push(ll);
     const m=L.circleMarker(ll,{radius:9,color:'#1f1f1f',weight:2,fillColor:'#1f1f1f',fillOpacity:.85})
-      .bindPopup(`<b>${esc(p.title)}</b><br><span style="color:#8a8a8c;font-size:12px">${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`);
+      .bindPopup(`<b>${esc(p.title)}</b><br><span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`);
     m.addTo(mapLayer); mapMarks[p.id]=m;
   });
+  if(pts.length)mapObj.fitBounds(pts,{padding:[40,40],maxZoom:13});
 }
 function initLiveMap(){
   const el=document.getElementById('livemap');
   if(!el)return;
   if(typeof L==='undefined'){el.innerHTML='<div class="muted" style="padding:40px">Картографическая библиотека не загрузилась — офлайн-заглушка.</div>';return;}
-  mapObj=L.map('livemap',{scrollWheelZoom:false}).setView([55.767,37.61],12);
+  mapObj=L.map('livemap',{scrollWheelZoom:false});
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapObj);
   mapLayer=L.layerGroup().addTo(mapObj);
   redrawMarkers();
 }
-window.mapFilter=(el,t)=>{
-  mpFilter=t;
-  [...el.parentElement.children].forEach(c=>{c.classList.remove('on');c.removeAttribute('style');});
-  el.classList.add('on');el.style.background='#1f1f1f';el.style.color='#fff';
-  document.querySelectorAll('#catgrid > a').forEach(c=>{c.style.display=(t==='all'||c.dataset.t===t)?'':'none';});
-  redrawMarkers();
+window.mapSet=(dim,v,el)=>{
+  if(dim==='mpCountry'){mpCountry=v;mpCity='all';}
+  else if(dim==='mpCity')mpCity=v;
+  else mpType=v;
+  render(); // страница перерисуется с актуальными чипами, картой и списком
 };
 window.mapFocus=id=>{
   const m=mapMarks[id]; if(!m||!mapObj)return;
@@ -719,7 +746,7 @@ function entity(o){
   } else if(o.type==='place'){
     hero=`${crumbs}<div class="kicker">Место</div><h1>${esc(o.title)}</h1>
       <div class="two" style="grid-template-columns:560px 1fr"><div><div class="mapbox" style="height:300px;position:relative"><span class="pin on" style="left:50%;top:50%"></span></div><div class="muted" style="margin-top:8px">Координаты: ${esc(o.coord)}</div></div>
-      <div class="metabox">${[['Тип места',o.placeType],['Адрес',o.address],['Статус',o.status]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div></div>`;
+      <div class="metabox">${[['Тип места',o.placeType],['Город',o.city],['Страна',o.country],['Адрес',o.address],['Статус',o.status]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div></div>`;
   } else if(o.type==='source'){
     hero=`${crumbs}<div class="kicker">Источник / библиография</div><h1 style="font-size:32px">${esc(o.title)}</h1>
       <div class="metabox" style="max-width:560px">${[['Автор / составитель',o.author],['Год',o.year],['Тип источника',o.srcType],['Издательство',o.publisher],['Место издания',o.pubplace]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>`;
