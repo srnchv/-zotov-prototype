@@ -472,16 +472,114 @@ window.clearHist=()=>{lsSet('zotov_hist',[]);toast('История очищен�
 window.newCollection=()=>{const n=prompt('Название подборки:');if(!n)return;const c=lsGet('zotov_coll');c.unshift({name:n,n:0});lsSet('zotov_coll',c);toast('Подборка создана');render();};
 window.delCollection=i=>{const c=lsGet('zotov_coll');c.splice(i,1);lsSet('zotov_coll',c);render();};
 
+// ===== Хронограф: реалистичная плотность (50 демо-событий 1910–1930 + реальные объекты) =====
+// Демо-набор живёт только в хронографе — в каталог, поиск и связи не попадает.
+const CHRONO_DEMO=`1910|Выставка|«Бубновый валет» — первая выставка
+1910|Диспут|Диспут о новом искусстве
+1912|Выставка|«Ослиный хвост»
+1913|Премьера|Опера «Победа над Солнцем»
+1913|Выставка|«Мишень»
+1913|Публикация|«Пощёчина общественному вкусу», переиздание
+1914|Лекция|Турне футуристов по городам
+1917|Событие|Роспуск Академии художеств
+1917|Диспут|«Искусство и революция»
+1918|Декрет|План монументальной пропаганды
+1919|Выставка|X Государственная выставка
+1919|Открытие|Свободные художественные мастерские
+1920|Основание|ВХУТЕМАС: учреждение мастерских
+1920|Основание|ИНХУК
+1920|Манифест|Реалистический манифест
+1920|Выставка|Вторая выставка ОБМОХУ
+1920|Диспут|О композиции и конструкции
+1921|Выставка|«5×5=25»
+1921|Лекция|Цикл о производственном искусстве
+1921|Событие|Программа группы ЛЕФ
+1921|Диспут|Дискуссия ИНХУК о станковизме
+1922|Публикация|Журнал «Вещь», №1–2
+1922|Выставка|Первая русская выставка в Берлине
+1922|Манифест|Манифест конструктивистов
+1922|Премьера|«Великодушный рогоносец», сценография Поповой
+1922|Открытие|Рабфак искусств
+1923|Публикация|ЛЕФ №1
+1923|Выставка|Выставка театрального конструктивизма
+1923|Премьера|«Земля дыбом»
+1924|Выставка|Первая дискуссионная выставка
+1924|Премьера|«Киноглаз»
+1924|Публикация|«Про это» с фотомонтажами
+1924|Событие|Реорганизация ВХУТЕМАС
+1926|Открытие|Дом Моссельпрома: завершение
+1926|Премьера|«Шестая часть мира»
+1926|Публикация|«Современная архитектура», №1
+1927|Выставка|Выставка «1927»: подготовка
+1927|Событие|Клуб им. Русакова: начало стройки
+1927|Публикация|Новый ЛЕФ №1
+1927|Диспут|О функциональном методе
+1927|Премьера|«Одиннадцатый»
+1928|Выставка|Первая выставка современной архитектуры
+1928|Событие|Конкурс на Дом промышленности
+1928|Лекция|Гинзбург: жильё нового типа
+1928|Публикация|«Фотография и кино»
+1929|Выставка|Проект персональной выставки Родченко
+1929|Премьера|«Человек с киноаппаратом»
+1929|Открытие|Московский планетарий
+1930|Событие|Расформирование ВХУТЕИН
+1930|Лекция|Итоги десятилетия конструктивизма`.split('\n').map(r=>{const p=r.split('|');return{y:+p[0],evType:p[1],title:p[2]};});
+
 function chrono(){
-  const items=[...all('event'),...all('material').filter(m=>m.date)];
-  const byYear={}; items.forEach(o=>{const y=(o.date||'').match(/\d{4}/);const k=y?y[0]:'—';(byYear[k]=byYear[k]||[]).push(o);});
-  const years=Object.keys(byYear).sort();
-  const decs=['Все периоды','1910-е','1920-е','1930-е','2020-е'];
-  return page('#/chrono',`<h1>Хронограф</h1><div class="lead" style="font-size:17px">События и материалы на единой временной шкале.</div>
-    <div class="chips" style="margin:18px 0">${decs.map((s,i)=>`<span class="chip" onclick="filterChrono(this,'${i==0?'all':s}')"${i==0?' style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
-    <div class="tl" id="tl">${years.map(y=>{const d=/^\d/.test(y)?Math.floor(+y/10)*10+'-е':'—';return `<div class="row" data-d="${d}"><div class="yr">${y}</div><div class="cont">${byYear[y].map(o=>`<a class="evt" href="#/e/${o.id}"><div class="th"></div><div><div class="kicker">${TYPES[o.type].l}</div><div class="t" style="font-weight:600;font-size:17px">${esc(o.title)}</div><div class="muted">${esc(o.date)}</div></div></a>`).join('')}</div></div>`}).join('')}</div>`);
+  const real=[...all('event'),...all('material')].filter(o=>o.date&&yearOf(o.date))
+    .map(o=>({y:yearOf(o.date),title:o.title,sub:(o.evType||TYPES[o.type].l),href:'#/e/'+o.id}));
+  const demo=CHRONO_DEMO.map(d=>({y:d.y,title:d.title,sub:d.evType,href:null,demo:true}));
+  const items=[...real,...demo];
+  const byY={}; items.forEach(it=>(byY[it.y]=byY[it.y]||[]).push(it));
+  const ys=Object.keys(byY).map(Number).sort((a,b)=>a-b);
+  const minY=ys[0],maxY=ys[ys.length-1];
+  const mx=Math.max(...ys.map(y=>byY[y].length));
+  // --- обзорная шкала: каждый год диапазона; длинные пустоты сжимаются в «⋯» ---
+  const ticks=[];let y=minY;
+  while(y<=maxY){
+    if(byY[y]){ticks.push({y,n:byY[y].length});y++;}
+    else{let z=y;while(z<=maxY&&!byY[z])z++;
+      if(z-y<=4){for(let k=y;k<z;k++)ticks.push({y:k,n:0});}
+      else ticks.push({gap:[y,z-1]});
+      y=z;}
+  }
+  const scale=`<div class="chrscale2">${ticks.map(t=>t.gap
+    ?`<span class="ct gapt" title="${t.gap[0]}–${t.gap[1]}: событий нет"><i></i><b>⋯</b></span>`
+    :`<span class="ct${t.n?' has':' zero'}" onclick="jumpYear(${t.y})" title="${t.y}: ${t.n}"><i style="height:${t.n?6+Math.round(40*t.n/mx):2}px"></i>${(t.y%5===0||t.n>=mx-1)?`<b>${t.y}</b>`:''}</span>`).join('')}</div>`;
+  // --- фильтр десятилетий из данных ---
+  const decs=[...new Set(ys.map(yy=>Math.floor(yy/10)*10+'-е'))];
+  const chips=`<div class="chips" style="margin:16px 0 4px"><span class="chip on" style="background:#1f1f1f;color:#fff" onclick="filterChrono(this,'all')">Все периоды</span>${decs.map(d=>`<span class="chip" onclick="filterChrono(this,'${d}')">${d}</span>`).join('')}</div>`;
+  // --- лента: только непустые годы, разрывы — маркером ---
+  const wordN=n=>n===1?'событие':(n<5?'события':'событий');
+  let rows='';y=minY;
+  while(y<=maxY){
+    if(byY[y]){
+      const list=byY[y],dec=Math.floor(y/10)*10+'-е';
+      rows+=`<div class="chyear" id="y${y}" data-d="${dec}"><div><div class="ynum">${y}</div><div class="muted" style="font-size:12px">${list.length} ${wordN(list.length)}</div></div>
+        <div class="evgrid">${list.map(it=>it.href
+          ?`<a class="evm" href="${it.href}"><span class="kicker" style="font-size:10px">${esc(it.sub)}</span><span class="t">${esc(it.title)}</span></a>`
+          :`<span class="evm demo"><span class="kicker" style="font-size:10px">${esc(it.sub)}</span><span class="t">${esc(it.title)}</span></span>`).join('')}</div></div>`;
+      y++;
+    } else {
+      let z=y;while(z<=maxY&&!byY[z])z++;
+      const d0=Math.floor(y/10)*10+'-е';
+      rows+=`<div class="chgap" data-d="${d0}">${y===z-1?y:y+'–'+(z-1)} — событий в архиве нет</div>`;
+      y=z;
+    }
+  }
+  return page('#/chrono',`<h1>Хронограф</h1>
+    <div class="lead" style="font-size:17px">События и материалы на единой шкале времени. Диапазон и плотность строятся из данных; пустые годы — лакуны архива.</div>
+    <div class="muted" style="font-size:13px;margin-top:6px">Для проверки плотности добавлено 50 демонстрационных событий 1910–1930 (серые, без карточек). Шкала кликабельна — прыжок к году.</div>
+    ${scale}${chips}
+    <div id="tl" style="margin-top:14px">${rows}</div>`);
 }
-window.filterChrono=(el,d)=>{[...el.parentElement.children].forEach(c=>c.removeAttribute('style'));el.style.background='#1f1f1f';el.style.color='#fff';document.querySelectorAll('#tl .row').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});};
+window.jumpYear=y=>{const el=document.getElementById('y'+y);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});};
+window.filterChrono=(el,d)=>{
+  [...el.parentElement.children].forEach(c=>{c.classList.remove('on');c.removeAttribute('style');});
+  el.classList.add('on');el.style.background='#1f1f1f';el.style.color='#fff';
+  document.querySelectorAll('#tl .chyear').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
+  document.querySelectorAll('#tl .chgap').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
+};
 
 function map(){
   const places=all('place');

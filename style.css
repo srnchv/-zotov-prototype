@@ -126,12 +126,23 @@ a.chip:hover{background:#ececec}
 .secsearch:focus{border-color:#bdbdbd}
 .chip{cursor:pointer}
 
-/* timeline */
-.tl .row{display:grid;grid-template-columns:120px 1fr;gap:0}
-.tl .yr{font-size:22px;font-weight:600;padding-top:16px}
-.tl .cont{border-left:2px solid var(--line);padding:16px 0 36px 32px;display:flex;flex-direction:column;gap:14px}
-.evt{display:flex;gap:16px;border:1px solid var(--line);border-radius:10px;padding:16px 18px}
-.evt .th{width:120px;flex:none;background:var(--img);border-radius:6px;aspect-ratio:3/2}
+/* хронограф: обзорная шкала + лента годов */
+.chrscale2{display:flex;align-items:flex-end;gap:3px;border:1px solid var(--line);border-radius:12px;padding:16px 18px 30px;margin-top:20px}
+.chrscale2 .ct{flex:1 1 0;min-width:5px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:64px;position:relative;cursor:pointer}
+.chrscale2 .ct i{width:60%;min-width:4px;background:#c6c6c4;border-radius:2px;display:block}
+.chrscale2 .ct.zero i{background:#ececea}
+.chrscale2 .ct.has:hover i{background:var(--ink)}
+.chrscale2 .ct b{position:absolute;bottom:-20px;font-size:10px;font-weight:500;color:var(--muted);white-space:nowrap}
+.chrscale2 .ct.gapt{cursor:default;flex:0 0 18px}
+.chrscale2 .ct.gapt i{height:2px;background:transparent;border-bottom:2px dotted #c6c6c4;width:100%;border-radius:0}
+.chyear{display:grid;grid-template-columns:110px 1fr;gap:24px;padding:22px 0;border-top:1px solid var(--line);scroll-margin-top:80px}
+.chyear .ynum{font-size:30px;font-weight:600;line-height:1.1}
+.evgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:stretch}
+.evm{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;background:#fff}
+a.evm:hover{border-color:#bdbdbd}
+.evm .t{font-weight:500;font-size:14px;line-height:1.35}
+.evm.demo{background:var(--fill);border-style:dashed;color:#5a5a5c}
+.chgap{padding:10px 0 10px 134px;color:var(--muted);font-size:13px;border-top:1px dashed var(--line)}
 
 /* map */
 .maprow{display:grid;grid-template-columns:340px 1fr;gap:40px;align-items:start}
