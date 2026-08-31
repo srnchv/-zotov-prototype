@@ -647,7 +647,7 @@ function map(){
     <div class="muted" style="font-size:15px">Конструктивистские адреса на карте: здания, клубы, инженерные сооружения.</div>
     <div style="margin-top:8px">
       ${row('Страна','mpCountry',countries,mpCountry)}
-      ${row('Город','mpCity',cities,mpCity)}
+      ${mpCountry!=='all'?row('Город','mpCity',cities,mpCity):''}
       ${row('Тип','mpType',types,mpType)}
     </div>
     ${sectionSearch('Поиск по местам')}
