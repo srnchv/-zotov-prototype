@@ -622,7 +622,7 @@ function chronoSpy(){
 window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
 // ===== Карта: Яндекс.Карты JS API 2.1 (точки-сущности, фильтры страна/город/тип) =====
-let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapMarks={};
+let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapMarks={}, markLayout=null;
 const mpPass=p=>{
   const t=(p.placeType||'Место').split('·')[0].trim();
   return (mpCountry==='all'||p.country===mpCountry)
@@ -663,8 +663,12 @@ function redrawMarkers(){
     const m=new ymaps.Placemark(ll,{
       hintContent:p.title,
       balloonContentHeader:esc(p.title),
-      balloonContentBody:`<span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`
-    },{preset:'islands#blackCircleDotIcon'});
+      balloonContentBody:`<span style="color:#8a8a8c;font-size:12px">${esc(p.city||'')} · ${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}" style="font-size:13px">Открыть карточку →</a>`
+    },{
+      iconLayout:markLayout,
+      iconShape:{type:'Circle',coordinates:[0,0],radius:11},
+      balloonOffset:[0,-6]
+    });
     mapObj.geoObjects.add(m); mapMarks[p.id]=m;
   });
   if(pts.length){
@@ -684,6 +688,7 @@ function initLiveMap(){
     try{
       mapObj=new ymaps.Map('livemap',{center:[55.76,37.61],zoom:11,controls:['zoomControl']});
       mapObj.behaviors.disable('scrollZoom');
+      markLayout=ymaps.templateLayoutFactory.createClass('<div class="ymark"></div>');
       redrawMarkers();
     }catch(e){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась: '+esc(e.message||'ошибка API')+'</div>';}
   });
