@@ -606,17 +606,58 @@ function chronoSpy(){
 }
 window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
+// ===== Карта: живая подложка (Leaflet + OSM, без ключей; в проде заменяется на Яндекс.Карты с той же логикой) =====
+let mpFilter='all', mapObj=null, mapLayer=null, mapMarks={};
 function map(){
-  const places=all('place');
-  const pts=[[28,26],[55,42],[40,62]];
+  const places=all('place').filter(p=>p.coord);
+  const types=[...new Set(places.map(p=>(p.placeType||'Место').split('·')[0].trim()))];
+  const chips=`<div class="chips" style="margin:14px 0 4px">
+    <span class="chip${mpFilter==='all'?' on':''}" ${mpFilter==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapFilter(this,'all')">Все места</span>
+    ${types.map(t=>`<span class="chip${mpFilter===t?' on':''}" ${mpFilter===t?'style="background:#1f1f1f;color:#fff"':''} onclick="mapFilter(this,'${esc(t)}')">${esc(t)}</span>`).join('')}</div>`;
+  const cardHtml=p=>`<a class="card" data-t="${esc((p.placeType||'Место').split('·')[0].trim())}" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+      <span style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></span>
+      <span style="min-width:1px"><span class="t" style="display:block;font-weight:600">${esc(p.title)}</span>
+      <span class="muted" style="font-size:13px">${esc(p.placeType||'Место')} · ${esc(p.status||'')} · ${(DB[p.id].links||[]).length} связей</span>
+      <span class="lnk muted" style="display:inline-block;font-size:12px;margin-top:4px" onclick="event.preventDefault();mapFocus('${p.id}')">Показать на карте</span></span></a>`;
   return page('#/map',`<h1>Карта</h1>
     <div class="muted" style="font-size:15px">Места архива на карте: здания, организации, места событий и съёмок.</div>
-    <div class="chips" style="margin:14px 0 4px">${['Все места','Здания','Организации','Места событий','Утраченные'].map((s,i)=>`<span class="chip"${i==0?' style="background:#1f1f1f;color:#fff"':''}>${s}</span>`).join('')}</div>
+    ${chips}
     ${sectionSearch('Поиск по местам')}
-    <div class="maprow" style="margin-top:14px"><div id="catgrid">
-      ${places.map(p=>`<a class="card" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px"><div style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></div><div><div class="t" style="font-weight:600">${esc(p.title)}</div><div class="muted" style="font-size:13px">${esc(p.placeType||'Место')} · ${esc(p.status||'')} · ${DB[p.id].links.length} связей</div></div></a>`).join('')}
-    </div><div class="mapbox">${places.map((p,i)=>`<a class="pin ${i==0?'on':''}" style="left:${pts[i%3][0]}%;top:${pts[i%3][1]}%" href="#/e/${p.id}" title="${esc(p.title)}"></a>`).join('')}</div></div>`);
+    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.map(cardHtml).join('')}</div>
+    <div id="livemap" class="mapbox" style="height:560px;position:relative;z-index:0"></div></div>`);
 }
+function redrawMarkers(){
+  if(!mapObj||!mapLayer)return;
+  mapLayer.clearLayers(); mapMarks={};
+  all('place').filter(p=>p.coord).forEach(p=>{
+    const t=(p.placeType||'Место').split('·')[0].trim();
+    if(mpFilter!=='all'&&t!==mpFilter)return;
+    const ll=p.coord.split(',').map(Number);
+    const m=L.circleMarker(ll,{radius:9,color:'#1f1f1f',weight:2,fillColor:'#1f1f1f',fillOpacity:.85})
+      .bindPopup(`<b>${esc(p.title)}</b><br><span style="color:#8a8a8c;font-size:12px">${esc(p.placeType||'')}</span><br><a href="#/e/${p.id}">Открыть карточку →</a>`);
+    m.addTo(mapLayer); mapMarks[p.id]=m;
+  });
+}
+function initLiveMap(){
+  const el=document.getElementById('livemap');
+  if(!el)return;
+  if(typeof L==='undefined'){el.innerHTML='<div class="muted" style="padding:40px">Картографическая библиотека не загрузилась — офлайн-заглушка.</div>';return;}
+  mapObj=L.map('livemap',{scrollWheelZoom:false}).setView([55.767,37.61],12);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapObj);
+  mapLayer=L.layerGroup().addTo(mapObj);
+  redrawMarkers();
+}
+window.mapFilter=(el,t)=>{
+  mpFilter=t;
+  [...el.parentElement.children].forEach(c=>{c.classList.remove('on');c.removeAttribute('style');});
+  el.classList.add('on');el.style.background='#1f1f1f';el.style.color='#fff';
+  document.querySelectorAll('#catgrid > a').forEach(c=>{c.style.display=(t==='all'||c.dataset.t===t)?'':'none';});
+  redrawMarkers();
+};
+window.mapFocus=id=>{
+  const m=mapMarks[id]; if(!m||!mapObj)return;
+  mapObj.setView(m.getLatLng(),14); m.openPopup();
+};
 
 function catalog(type){
   const items=all(type); const T=TYPES[type];
@@ -812,6 +853,7 @@ function render(hash){
   if(seg[0]!=='archive') openDim=null;
   if(seg[0]==='request') request(seg[1]);
   else if(seg[0]==='archive'&&openDim) drawFmodal();
+  else if(seg[0]==='map') initLiveMap();
 }
 window.addEventListener('hashchange',()=>render());
 render();
