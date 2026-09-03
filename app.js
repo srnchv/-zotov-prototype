@@ -84,9 +84,9 @@ RAW.push(
 );
 // --- карта: реальные конструктивистские адреса бывшего СССР ---
 RAW.push(
-  {id:'pl4',type:'place',title:'Дом Наркомфина',placeType:'Жилой дом',city:'Москва',country:'Россия',address:'Москва, Новинский бул., 25',status:'Существует',coord:'55.7602, 37.5837',links:['t1','ev30','ev37']},
+  {id:'pl4',type:'place',title:'Дом Наркомфина',placeType:'Жилой дом',city:'Москва',country:'Россия',address:'Москва, Новинский бул., 25',status:'Реконструирован',coord:'55.7602, 37.5837',links:['t1','ev30','ev37']},
   {id:'pl5',type:'place',title:'Клуб им. Русакова',placeType:'Клуб',city:'Москва',country:'Россия',address:'Москва, Стромынка, 6',status:'Существует',coord:'55.7893, 37.6683',links:['t1','ev24','ev34']},
-  {id:'pl6',type:'place',title:'Шуховская башня',placeType:'Инженерное сооружение',city:'Москва',country:'Россия',address:'Москва, Шухова, 8',status:'Существует',coord:'55.7172, 37.6112',links:['t1']},
+  {id:'pl6',type:'place',title:'Шуховская башня',placeType:'Инженерное сооружение',city:'Москва',country:'Россия',address:'Москва, Шухова, 8',status:'Под угрозой утраты',coord:'55.7172, 37.6112',links:['t1']},
   {id:'pl7',type:'place',title:'ДК ЗИЛ',placeType:'Дворец культуры',city:'Москва',country:'Россия',address:'Москва, Восточная, 4',status:'Существует',coord:'55.7091, 37.6570',links:['t1']},
   {id:'pl8',type:'place',title:'Белая башня',placeType:'Инженерное сооружение',city:'Екатеринбург',country:'Россия',address:'Екатеринбург, Бакинских Комиссаров, 2а',status:'Существует',coord:'56.8583, 60.5586',links:['t1']},
   {id:'pl9',type:'place',title:'Городок чекистов',placeType:'Жилой комплекс',city:'Екатеринбург',country:'Россия',address:'Екатеринбург, пр. Ленина, 69',status:'Существует',coord:'56.8447, 60.6122',links:['t1']},
@@ -539,15 +539,45 @@ window.clearHist=()=>{lsSet('zotov_hist',[]);toast('История очищен�
 window.newCollection=()=>{const n=prompt('Название подборки:');if(!n)return;const c=lsGet('zotov_coll');c.unshift({name:n,n:0});lsSet('zotov_coll',c);toast('Подборка создана');render();};
 window.delCollection=i=>{const c=lsGet('zotov_coll');c.splice(i,1);lsSet('zotov_coll',c);render();};
 
-// ===== Хронограф: только события-сущности (клик → карточка со связями) =====
+// ===== Хронограф: фильтры по ТЗ разд. 18 — период, тип события, тема, место, личность, выставка =====
+let chDec='all',chType='all',chTheme='all',chPlace='all',chPerson='all',chProj='all';
+const chPass=o=>{
+  const L=o.links||[];
+  return (chDec==='all'||Math.floor(yearOf(o.date)/10)*10+'-е'===chDec)
+    &&(chType==='all'||o.evType===chType)
+    &&(chTheme==='all'||L.includes(chTheme))
+    &&(chPlace==='all'||L.includes(chPlace))
+    &&(chPerson==='all'||L.includes(chPerson))
+    &&(chProj==='all'||L.includes(chProj));
+};
+const chActive=()=>[chDec,chType,chTheme,chPlace,chPerson,chProj].some(v=>v!=='all');
 function chrono(){
-  const evs=all('event').filter(o=>o.date&&yearOf(o.date));
+  const allEvs=all('event').filter(o=>o.date&&yearOf(o.date));
+  const evs=allEvs.filter(chPass);
+  const evTypes=[...new Set(allEvs.map(o=>o.evType).filter(Boolean))].sort();
+  const decsAll=[...new Set(allEvs.map(o=>Math.floor(yearOf(o.date)/10)*10+'-е'))].sort();
+  const sel=(label,dim,opts,cur)=>`<select class="sel" onchange="chSet('${dim}',this.value)" title="${label}">
+    <option value="all">${label}: все</option>
+    ${opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  const selects=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
+    ${sel('Тип события','chType',evTypes.map(t=>[t,t]),chType)}
+    ${sel('Тема','chTheme',all('theme').map(o=>[o.id,o.title]),chTheme)}
+    ${sel('Место','chPlace',all('place').map(o=>[o.id,o.title]),chPlace)}
+    ${sel('Личность','chPerson',all('person').map(o=>[o.id,o.title]),chPerson)}
+    ${sel('Выставка','chProj',all('project').map(o=>[o.id,o.title]),chProj)}
+    ${chActive()?`<span class="lnk muted" style="font-size:13px" onclick="chReset()">Сбросить фильтры ✕</span>`:''}
+  </div>`;
+  const chips=`<div class="chips" style="margin:14px 0 4px"><span class="chip" ${chDec==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="chSet('chDec','all')">Все периоды</span>${decsAll.map(d=>`<span class="chip" ${chDec===d?'style="background:#1f1f1f;color:#fff"':''} onclick="chSet('chDec','${d}')">${d}</span>`).join('')}</div>`;
+  if(!evs.length){
+    return page('#/chrono',`<h1>Хронограф</h1>
+      <div class="lead" style="font-size:17px">История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.</div>
+      ${selects}${chips}
+      <p class="muted" style="margin-top:24px">Нет событий по выбранным фильтрам. <span class="lnk" onclick="chReset()">Сбросить фильтры</span></p>`);
+  }
   const byY={}; evs.forEach(o=>(byY[yearOf(o.date)]=byY[yearOf(o.date)]||[]).push(o));
   const ys=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   const minY=ys[0],maxY=ys[ys.length-1];
   const mx=Math.max(...ys.map(y=>byY[y].length));
-  // обзорная шкала масштабируется под объём данных:
-  // до ~40 лет — деление на каждый год; больше — агрегируется по десятилетиям
   const span=maxY-minY+1;
   let scale='';
   if(span<=40){
@@ -577,37 +607,36 @@ function chrono(){
       ?`<span class="ct gapt" title="${t.gap[0]}-е – ${t.gap[1]}-е"><i></i><b>⋯</b></span>`
       :`<span class="ct${t.n?' has':' zero'}" id="ctd${t.d}" onclick="${t.n?`jumpYear(${firstY[t.d]})`:''}" title="${t.d}-е">${t.n?`<em>${t.n}</em>`:''}<i style="height:${t.n?6+Math.round(40*t.n/mxd):2}px"></i><b>${t.d}-е</b></span>`).join('')}</div>`;
   }
-  const decs=[...new Set(ys.map(yy=>Math.floor(yy/10)*10+'-е'))];
-  const chips=`<div class="chips" style="margin:18px 0 4px"><span class="chip on" style="background:#1f1f1f;color:#fff" onclick="filterChrono(this,'all')">Все периоды</span>${decs.map(d=>`<span class="chip" onclick="filterChrono(this,'${d}')">${d}</span>`).join('')}</div>`;
   const wordN=n=>n===1?'событие':(n<5?'события':'событий');
-  let rows='';y=minY;
+  let rows='';let y=minY;
   while(y<=maxY){
     if(byY[y]){
-      const list=byY[y],dec=Math.floor(y/10)*10+'-е';
-      rows+=`<div class="chyear" id="y${y}" data-d="${dec}"><div><div class="ynum">${y}</div><div class="muted" style="font-size:12px">${list.length} ${wordN(list.length)}</div></div>
+      const list=byY[y];
+      rows+=`<div class="chyear" id="y${y}"><div><div class="ynum">${y}</div><div class="muted" style="font-size:12px">${list.length} ${wordN(list.length)}</div></div>
         <div class="grid g3">${list.map(tile).join('')}</div></div>`;
       y++;
     } else {
       let z=y;while(z<=maxY&&!byY[z])z++;
-      rows+=`<div class="chgap" data-d="${Math.floor(y/10)*10+'-е'}">${y===z-1?y:y+'–'+(z-1)} — событий в архиве нет</div>`;
+      rows+=`<div class="chgap">${y===z-1?y:y+'–'+(z-1)} — событий в архиве нет</div>`;
       y=z;
     }
   }
   return page('#/chrono',`<h1>Хронограф</h1>
     <div class="lead" style="font-size:17px">История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.</div>
+    ${selects}
     <div class="chr-sticky">${scale}${chips}</div>
     <div id="tl" style="margin-top:14px">${rows}</div>`);
 }
+window.chSet=(k,v)=>{
+  if(k==='chDec')chDec=v; else if(k==='chType')chType=v; else if(k==='chTheme')chTheme=v;
+  else if(k==='chPlace')chPlace=v; else if(k==='chPerson')chPerson=v; else if(k==='chProj')chProj=v;
+  render();
+};
+window.chReset=()=>{chDec=chType=chTheme=chPlace=chPerson=chProj='all';render();};
 window.jumpYear=y=>{
   document.querySelectorAll('.chrscale2 .ct.on').forEach(c=>c.classList.remove('on'));
   const t=document.getElementById('ct'+y); if(t)t.classList.add('on');
   const el=document.getElementById('y'+y); if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
-};
-window.filterChrono=(el,d)=>{
-  [...el.parentElement.children].forEach(c=>{c.classList.remove('on');c.removeAttribute('style');});
-  el.classList.add('on');el.style.background='#1f1f1f';el.style.color='#fff';
-  document.querySelectorAll('#tl .chyear').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
-  document.querySelectorAll('#tl .chgap').forEach(r=>{r.style.display=(d==='all'||r.dataset.d===d)?'':'none';});
 };
 // шкала закреплена при скролле; подсветка года, который сейчас на экране
 function chronoSpy(){
@@ -621,39 +650,62 @@ function chronoSpy(){
 }
 window.addEventListener('scroll',()=>{if(document.getElementById('tl'))requestAnimationFrame(chronoSpy);},{passive:true});
 
-// ===== Карта: Яндекс.Карты JS API 2.1 (точки-сущности, фильтры страна/город/тип) =====
-let mpCountry='all', mpCity='all', mpType='all', mapObj=null, mapMarks={}, markLayout=null;
+// ===== Карта: Яндекс.Карты JS API 2.1 (фильтры по ТЗ разд. 18: тип, период, тема, событие, выставка, статус) =====
+let mpCountry='all', mpCity='all', mpType='all', mpStatus='all', mpDecade='all', mpTheme='all', mpEvent='all', mpProj='all';
+let mapObj=null, mapMarks={}, markLayout=null;
 const mpPass=p=>{
   const t=(p.placeType||'Место').split('·')[0].trim();
+  const L=DB[p.id].links||[];
   return (mpCountry==='all'||p.country===mpCountry)
     &&(mpCity==='all'||p.city===mpCity)
-    &&(mpType==='all'||t===mpType);
+    &&(mpType==='all'||t===mpType)
+    &&(mpStatus==='all'||p.status===mpStatus)
+    &&(mpTheme==='all'||L.includes(mpTheme))
+    &&(mpEvent==='all'||L.includes(mpEvent))
+    &&(mpProj==='all'||L.includes(mpProj))
+    &&(mpDecade==='all'||L.some(id=>DB[id]&&DB[id].date&&decadeOf(DB[id].date)===mpDecade));
 };
+const mpActive=()=>[mpCountry,mpCity,mpType,mpStatus,mpDecade,mpTheme,mpEvent,mpProj].some(v=>v!=='all');
 function map(){
   const places=all('place').filter(p=>p.coord);
   const countries=[...new Set(places.map(p=>p.country).filter(Boolean))];
   const inCountry=places.filter(p=>mpCountry==='all'||p.country===mpCountry);
   const cities=[...new Set(inCountry.map(p=>p.city).filter(Boolean))];
   const types=[...new Set(inCountry.map(p=>(p.placeType||'Место').split('·')[0].trim()))];
-  const row=(label,dim,vals,cur,extra)=>`<div style="display:flex;gap:10px;align-items:baseline;margin-top:10px"><span class="muted" style="font-size:12px;width:64px;flex:none;text-transform:uppercase;letter-spacing:.5px">${label}</span><div class="chips" style="margin:0">
-    <span class="chip${cur==='all'?' on':''}" ${cur==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','all',this)">Все</span>
-    ${vals.map(v=>`<span class="chip" ${extra?extra(v):''} ${cur===v?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','${esc(v)}',this)">${esc(v)}</span>`).join('')}</div></div>`;
-  const cardHtml=p=>`<a class="card" data-t="${esc((p.placeType||'Место').split('·')[0].trim())}" data-city="${esc(p.city||'')}" data-c="${esc(p.country||'')}" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
+  const statuses=[...new Set(places.map(p=>p.status).filter(Boolean))];
+  const decades=[...new Set([...all('event'),...all('material')].filter(o=>o.date).map(o=>decadeOf(o.date)).filter(Boolean))].sort();
+  const row=(label,dim,vals,cur)=>`<div style="display:flex;gap:10px;align-items:baseline;margin-top:8px"><span class="muted" style="font-size:12px;width:64px;flex:none;text-transform:uppercase;letter-spacing:.5px">${label}</span><div class="chips" style="margin:0">
+    <span class="chip${cur==='all'?' on':''}" ${cur==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','all')">Все</span>
+    ${vals.map(v=>`<span class="chip" ${cur===v?'style="background:#1f1f1f;color:#fff"':''} onclick="mapSet('${dim}','${esc(v)}')">${esc(v)}</span>`).join('')}</div></div>`;
+  const sel=(label,dim,opts,cur)=>`<select class="sel" onchange="mapSet('${dim}',this.value)" title="${label}">
+    <option value="all">${label}: все</option>
+    ${opts.map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  const cardHtml=p=>`<a class="card" href="#/e/${p.id}" style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
       <span style="width:40px;height:40px;background:var(--img);border-radius:6px;flex:none"></span>
       <span style="min-width:1px"><span class="t" style="display:block;font-weight:600">${esc(p.title)}</span>
       <span class="muted" style="font-size:13px">${esc(p.city||'')}${p.country&&p.country!=='Россия'?', '+esc(p.country):''} · ${esc((p.placeType||'Место').split('·')[0].trim())} · ${(DB[p.id].links||[]).length} связей</span>
       <span class="lnk muted" style="display:inline-block;font-size:12px;margin-top:4px" onclick="event.preventDefault();mapFocus('${p.id}')">Показать на карте</span></span></a>`;
+  const shown=places.filter(mpPass).sort((a,b)=>(DB[b.id].links||[]).length-(DB[a.id].links||[]).length);
   return page('#/map',`<h1>Карта</h1>
     <div class="muted" style="font-size:15px">Конструктивистские адреса на карте: здания, клубы, инженерные сооружения.</div>
     <div style="margin-top:8px">
       ${row('Страна','mpCountry',countries,mpCountry)}
       ${mpCountry!=='all'?row('Город','mpCity',cities,mpCity):''}
       ${row('Тип','mpType',types,mpType)}
+      ${row('Статус','mpStatus',statuses,mpStatus)}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center">
+        ${sel('Период','mpDecade',decades.map(d=>[d,d]),mpDecade)}
+        ${sel('Тема','mpTheme',all('theme').map(o=>[o.id,o.title]),mpTheme)}
+        ${sel('Событие','mpEvent',all('event').map(o=>[o.id,o.title]),mpEvent)}
+        ${sel('Выставка','mpProj',all('project').map(o=>[o.id,o.title]),mpProj)}
+        ${mpActive()?`<span class="lnk muted" style="font-size:13px" onclick="mapReset()">Сбросить фильтры ✕</span>`:''}
+      </div>
     </div>
     ${sectionSearch('Поиск по местам')}
-    <div class="maprow" style="margin-top:14px"><div id="catgrid">${places.filter(mpPass).sort((a,b)=>(DB[b.id].links||[]).length-(DB[a.id].links||[]).length).map(cardHtml).join('')||'<p class="muted">Нет мест по выбранным фильтрам.</p>'}</div>
+    <div class="maprow" style="margin-top:14px"><div id="catgrid" class="maplist">${shown.map(cardHtml).join('')||'<p class="muted">Нет мест по выбранным фильтрам.</p>'}</div>
     <div id="livemap" class="mapbox" style="height:620px;position:relative;z-index:0"></div></div>`);
 }
+window.mapReset=()=>{mpCountry=mpCity=mpType=mpStatus=mpDecade=mpTheme=mpEvent=mpProj='all';render();};
 function redrawMarkers(){
   if(!mapObj||typeof ymaps==='undefined')return;
   mapObj.geoObjects.removeAll(); mapMarks={};
@@ -693,11 +745,16 @@ function initLiveMap(){
     }catch(e){el.innerHTML='<div class="muted" style="padding:40px">Карта не загрузилась: '+esc(e.message||'ошибка API')+'</div>';}
   });
 }
-window.mapSet=(dim,v,el)=>{
-  if(dim==='mpCountry'){mpCountry=v;mpCity='all';mpType='all';}
+window.mapSet=(dim,v)=>{
+  if(dim==='mpCountry'){mpCountry=v;mpCity='all';}
   else if(dim==='mpCity')mpCity=v;
-  else mpType=v;
-  render(); // страница перерисуется с актуальными чипами, картой и списком
+  else if(dim==='mpType')mpType=v;
+  else if(dim==='mpStatus')mpStatus=v;
+  else if(dim==='mpDecade')mpDecade=v;
+  else if(dim==='mpTheme')mpTheme=v;
+  else if(dim==='mpEvent')mpEvent=v;
+  else if(dim==='mpProj')mpProj=v;
+  render();
 };
 window.mapFocus=id=>{
   const m=mapMarks[id]; if(!m||!mapObj)return;
