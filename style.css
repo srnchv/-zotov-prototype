@@ -128,7 +128,7 @@ a.chip:hover{background:#ececec}
 
 /* карта: фикс карты и фильтров, скролл только списка мест */
 .maprow .maplist{max-height:620px;overflow-y:auto;padding-right:8px}
-.maprow #livemap{position:sticky;top:86px}
+.maprow{align-items:start}
 
 /* карта: серая стилизация подложки (тайлы Яндекса обесцвечиваются CSS-фильтром; метки и балуны не трогаем) */
 #livemap [class*="ground-pane"]{filter:grayscale(1) brightness(1.06) contrast(.9)}
