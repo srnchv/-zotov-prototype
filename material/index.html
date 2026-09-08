@@ -56,7 +56,7 @@
   /* ============ правая колонка (скролл) ============ */
   #restWrap{position:relative;z-index:10;pointer-events:none}
   #rest{width:1740px;transform-origin:0 0;pointer-events:none}
-  #rest #rightcol,#rest #similar{pointer-events:auto}
+  #rest #rightcol,#rest #similar,#rest #matfoot{pointer-events:auto}
   #rightcol{margin-left:864px;width:876px;background:#fff;padding:12px 12px 0 12px;display:flex;flex-direction:column;gap:8px}
 
   .embed .imgbox{background:var(--grey5);height:560px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
@@ -106,6 +106,14 @@
   .sim.small .im{height:460px}
   .sim .im img{width:100%;height:100%;object-fit:cover}
   .sim:hover h3{color:var(--red)}
+
+  /* футер с главной: большой баркод + строка ссылок */
+  #matfoot{width:1740px;background:#fff;padding:80px 12px 4px 12px}
+  #matfoot img{width:1716px;height:auto;display:block}
+  #matfoot .flinks{display:flex;align-items:center;padding:12px 0 8px;font-size:13px;line-height:16px;font-weight:500;letter-spacing:0}
+  #matfoot .flinks a{margin-right:32px}
+  #matfoot .flinks a:hover{color:var(--red)}
+  #matfoot .flinks .cop{margin-left:auto;margin-right:0}
 </style>
 </head>
 <body>
@@ -264,6 +272,16 @@
         </div>
       </div>
     </section>
+
+    <div id="matfoot">
+      <img src="../main-page/assets/footer.png" alt="">
+      <div class="flinks">
+        <a href="#">Политика конфиденциальности</a>
+        <a href="#">Обработка персональных данных</a>
+        <a href="#">Публичная оферта</a>
+        <a href="#" class="cop">© Центр Зотов, 2022–2026</a>
+      </div>
+    </div>
   </div>
 </div>
 
