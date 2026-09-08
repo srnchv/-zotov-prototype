@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ЗОТОВ — Материал</title>
+<style>
+  @font-face{font-family:'PT Root UI';src:url('../main-page/assets/fonts/pt-root-ui.woff2') format('woff2');font-weight:300 700;font-display:swap}
+  @font-face{font-family:'Zotov Bold';src:url('../main-page/assets/fonts/zotov-bold.woff2') format('woff2');font-weight:400;font-display:swap}
+  :root{
+    --ink:#262626; --grey2:#8c8c8c; --grey4:#ebebeb; --grey5:#e5e5e5; --red:#F43C3A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#fff}
+  body{font-family:'PT Root UI',system-ui,sans-serif;color:var(--ink);overflow-x:hidden;
+       font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
+  img,svg{display:block}
+  a{color:inherit;text-decoration:none}
+  .caps{text-transform:uppercase}
+  .grey{color:var(--grey2)}
+  .tsm{font-weight:700;font-size:14.3px;line-height:16px;letter-spacing:.143px;text-transform:uppercase}
+  .div8{height:8px;background:var(--ink)}
+
+  /* ============ фикс-сцена: меню + левая колонка ============ */
+  #stage{position:fixed;top:0;left:0;width:1920px;transform-origin:0 0;z-index:5}
+
+  /* меню 180 */
+  #menu{position:absolute;left:0;top:0;width:180px;height:100%;background:#fff;border-right:8px solid var(--grey4)}
+  #menu .logo{position:absolute;left:12px;top:11px;width:148px}
+  #menu .logo img{width:148px;height:auto}
+  #menu .ubar{position:absolute;left:12px;top:120px;width:148px;height:20px;overflow:hidden}
+  #menu .ubar img{width:148px;height:20px}
+  #menu nav{position:absolute;left:0;top:50%;transform:translateY(calc(-50% - 222px + 222px));margin-top:-222px;width:172px;background:var(--grey4);padding:4px 0;display:flex;flex-direction:column;gap:4px}
+  #menu nav a{display:block;background:#fff;width:172px;padding:8px 12px;text-align:center;font-size:14.3px;letter-spacing:.143px;text-transform:uppercase}
+  #menu nav a:hover{color:var(--red)}
+
+  /* левая колонка COVER */
+  #cover{position:absolute;left:180px;top:0;width:864px;height:100%;background:#fff}
+  #cover .top{position:absolute;left:12px;top:12px;width:852px;display:flex;flex-direction:column;gap:8px}
+  #cover .crumbs{display:flex;gap:4px;align-items:center}
+  #cover h1{font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase}
+  #cover .info .row{display:flex}
+  #cover .info .row .h{width:144px;color:var(--grey2)}
+  #secmenu{position:absolute;right:0;bottom:12px;width:276px;display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey4);padding-bottom:12px}
+  #secmenu a{display:flex;gap:4px;align-items:flex-start;border-top:4px solid var(--grey4);padding-top:12px;width:100%}
+  #secmenu a:hover{color:var(--red)}
+  #secmenu .num{color:var(--grey2);font-size:14.3px;letter-spacing:.143px}
+  #secmenu .sp{flex:1 1 auto}
+  #saveBtn{position:absolute;left:12px;bottom:12px;background:var(--grey4);display:flex;gap:8px;align-items:center;justify-content:center;padding:12px 16px 12px 12px;cursor:pointer}
+  #saveBtn:hover{color:var(--red)}
+
+  /* ============ правая колонка (скролл) ============ */
+  #restWrap{position:relative;z-index:10;pointer-events:none}
+  #rest{width:1740px;transform-origin:0 0;pointer-events:none}
+  #rest #rightcol,#rest #similar{pointer-events:auto}
+  #rightcol{margin-left:864px;width:876px;background:#fff;padding:12px 12px 0 12px;display:flex;flex-direction:column;gap:8px}
+
+  .embed .imgbox{background:var(--grey5);height:560px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+  .embed .imgbox img{max-height:100%;max-width:100%}
+  .embed .ph{color:var(--grey2)}
+
+  .sec{border-left:4px solid var(--ink);padding:0 0 24px 144px}
+  .sec .para{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px}
+  .sec .para + .para{margin-top:20px;text-indent:48px}
+  .cut{border-top:4px solid var(--grey4);margin-top:20px;padding-top:12px;display:flex;gap:8px;justify-content:center;cursor:pointer}
+  .cut:hover{color:var(--red)}
+
+  .doc{background:var(--grey4);display:flex;gap:8px;padding:8px;cursor:pointer}
+  .doc:hover{color:var(--red)}
+  .doc .t{flex:1 1 auto}
+  .sec .doc + .doc{margin-top:4px}
+
+  .src{display:flex}
+  .src .n{width:48px}
+
+  /* связанные материалы */
+  #relmats .subhead{display:flex;justify-content:center;gap:4px;padding:26px 0 14px}
+  .rel-item{position:relative;border-top:4px solid var(--ink);height:136px;cursor:pointer}
+  .rel-item + .rel-item{margin-top:8px}
+  .rel-item h3{padding-top:10px;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.2px;text-transform:uppercase;max-width:640px}
+  .rel-item .sub{margin-top:2px;color:var(--grey2)}
+  .rel-item .im{position:absolute;right:0;top:12px;width:168px;height:112px;background:var(--grey5);overflow:hidden}
+  .rel-item .im img{width:100%;height:100%;object-fit:cover;filter:grayscale(0)}
+  .rel-item:hover h3{color:var(--red)}
+
+  /* похожее */
+  #similar{width:1740px;background:#fff;padding:80px 12px 40px 12px}
+  .sim-title{display:flex;align-items:flex-start;justify-content:space-between;height:116px;width:1716px}
+  .sim-title .ch{font-family:'Zotov Bold',sans-serif;font-weight:400;font-size:114.3px;line-height:114.3px;margin-top:-.154em;text-transform:uppercase;color:var(--ink)}
+  #similar .cards{display:flex;gap:12px}
+  .sim{cursor:pointer;display:flex;flex-direction:column}
+  .sim.big{width:852px}
+  .sim.small{width:420px}
+  .sim h3{border-top:4px solid var(--ink);padding-top:10px;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.2px;text-transform:uppercase}
+  .sim .year{margin-top:2px}
+  .sim .vbar{width:4px;background:var(--ink);flex:1 1 auto;min-height:40px;margin:8px 0}
+  .sim .type{font-weight:700;font-size:14.3px;letter-spacing:.143px;text-transform:none}
+  .sim .cat{color:var(--grey2)}
+  .sim .im{margin-top:8px;overflow:hidden}
+  .sim.big .im{height:560px}
+  .sim.small .im{height:460px}
+  .sim .im img{width:100%;height:100%;object-fit:cover}
+  .sim:hover h3{color:var(--red)}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <aside id="menu">
+    <div class="logo"><img src="../main-page/assets/logo-zotov.svg" alt="Зотов"></div>
+    <div class="ubar"><img src="../main-page/assets/union.svg" alt=""></div>
+    <nav>
+      <a href="#">поиск</a><a href="#">темы</a><a href="#">хронограф</a><a href="#">карта</a><a href="#">личности</a><a href="#">коллекции</a><a href="#">проекты центра</a><a href="#">тексты</a><a href="#">войти</a>
+    </nav>
+  </aside>
+
+  <section id="cover">
+    <div class="top">
+      <div class="div8"></div>
+      <div class="crumbs">
+        <span>Коллекции</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626"/></svg>
+        <span>Материалы</span>
+      </div>
+      <h1>Обложка книги «Маяковский улыбается, смеется, издевается»</h1>
+      <div class="info">
+        <div class="row"><div class="h">Тип, подтип</div><div>Графика, Обложки</div></div>
+        <div class="row"><div class="h">Авторы</div><div>Александр Родченко</div></div>
+        <div class="row"><div class="h">Дата/период</div><div>1931</div></div>
+        <div class="row"><div class="h">Коллекция</div><div>Коллекция №1, Выставочный фонд</div></div>
+        <div class="row"><div class="h">Права и доступ</div><div>Открытый доступ</div></div>
+      </div>
+    </div>
+    <nav id="secmenu">
+      <a data-target="a-desc">Описание</a>
+      <a data-target="a-docs">Документы</a>
+      <a data-target="a-src">Источники</a>
+      <a data-target="a-rel"><span>Связанные материалы</span><span class="num">(24)</span><span class="sp"></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="#262626"/></svg>
+      </a>
+      <a data-target="a-sim">Похожее</a>
+    </nav>
+    <div id="saveBtn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" stroke-width="1.6" fill="none"/></svg>
+      <span>Сохранить</span>
+    </div>
+  </section>
+</div>
+
+<div id="restWrap">
+  <div id="rest">
+    <div id="rightcol">
+      <!-- герой -->
+      <div class="embed">
+        <div class="imgbox" id="posterBox"><span class="ph">Изображение материала</span></div>
+        <div>Обложка книги «Маяковский улыбается, смеется, издевается»</div>
+        <div class="grey">Александр Родченко, 1918</div>
+      </div>
+
+      <!-- описание -->
+      <div class="div8" id="a-desc"></div>
+      <div class="tsm">Описание</div>
+      <div class="sec">
+        <div class="para">Первое/Прижизненное издание Маяковский, В.В. Маяковский улыбается. Маяковский смеется. Маяковский издевается</div>
+        <div class="para">В книгу вошли произведения в основном политической направленности, печатавшиеся в «Новом Сатириконе», «Известиях», «Крокодиле» и других печатных изданиях.</div>
+        <div class="para">Артель писателей «Круг» (1922–1927), при которой работало одноименное издательство, призвано было объединить разрозненные группы поэтов и писателей: имажинистов, «Серапионовых братьев», сменовеховцев, пролетарских писателей, а также футуристов — Маяковского, Асеева, Боброва и других. В этом же 1923 году у Маяковского здесь вышел сборник «Лирика».</div>
+        <div class="cut">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="#262626"/></svg>
+          <span>Раскрыть</span>
+        </div>
+      </div>
+
+      <!-- документы -->
+      <div class="div8" id="a-docs"></div>
+      <div class="tsm">Документы</div>
+      <div class="sec">
+        <div class="doc"><div class="t">Иванов М. С. История графического дизайна. М., 2010.</div><div>PDF.</div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626"/></svg></div>
+        <div class="doc"><div class="t">Иванов М. С. История графического дизайна. М., 2010.</div><div>PDF.</div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626"/></svg></div>
+        <div class="doc"><div class="t">Иванов М. С. История графического дизайна. М., 2010.</div><div>PDF.</div>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626"/></svg></div>
+      </div>
+
+      <!-- источники -->
+      <div class="div8" id="a-src"></div>
+      <div class="tsm">Источники</div>
+      <div class="sec">
+        <div class="src"><div class="n">01.</div><div>Иванов М. С. История графического дизайна. М., 2010.</div></div>
+        <div class="src"><div class="n">02.</div><div>Родченко А. М. Опыты для будущего. М., 1996.</div></div>
+        <div class="src"><div class="n">03.</div><div>Хан-Магомедов С. О. Родченко. М., 1989.</div></div>
+        <div class="src"><div class="n">04.</div><div>Петрова И. В. Искусство авангарда. СПб., 1995.</div></div>
+        <div class="src"><div class="n">05.</div><div>Смирнов А. Н. Современная живопись России. М., 2001.</div></div>
+        <div class="src"><div class="n">06.</div><div>Кузнецова Е. П. Архитектура XX века. СПб., 1987.</div></div>
+        <div class="src"><div class="n">07.</div><div>Васильев Д. Г. Теория цвета и композиции. М., 1999.</div></div>
+        <div class="src"><div class="n">08.</div><div>Николаева Т. Ю. Русская скульптура. СПб., 2003.</div></div>
+        <div class="src"><div class="n">09.</div><div>Иванов М. С. История графического дизайна. М., 2010.</div></div>
+      </div>
+
+      <!-- связанные материалы -->
+      <div class="div8" id="a-rel"></div>
+      <div class="tsm">Связанные материалы</div>
+      <div id="relmats">
+        <div class="subhead"><span class="tsm">Темы</span><span class="tsm grey">(2)</span></div>
+        <div class="rel-item"><h3>Расцвет конструктивизма</h3><div class="sub">12 материалов</div><div class="im"><img src="../main-page/assets/th1.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>Дзига Вертов</h3><div class="sub">30 материалов</div><div class="im"><img src="../main-page/assets/th2.jpg" alt=""></div></div>
+
+        <div class="subhead"><span class="tsm">Личности</span><span class="tsm grey">(2)</span></div>
+        <div class="rel-item"><h3>Александр Родченко</h3><div class="sub">1891–1956</div><div class="im"><img src="../main-page/assets/p3.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>Дзига Вертов</h3><div class="sub">1896–1954</div><div class="im"><img src="../main-page/assets/p10.jpg" alt=""></div></div>
+
+        <div class="subhead"><span class="tsm">События</span><span class="tsm grey">(3)</span></div>
+        <div class="rel-item"><h3>Умер Владимир Маяковский</h3><div class="sub">1930</div><div class="im"><img src="../main-page/assets/ch1960.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>Закрытие ВХУТЕМАС</h3><div class="sub">1930</div><div class="im"><img src="../main-page/assets/ch1947.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>Выставка «Квартира №&nbsp;5. К&nbsp;истории петроградского авангарда 1915–1925 годов»</h3><div class="sub">ГРМ, 2016</div><div class="im"><img src="../main-page/assets/ch1933.jpg" alt=""></div></div>
+
+        <div class="subhead"><span class="tsm">Места</span><span class="tsm grey">(3)</span></div>
+        <div class="rel-item"><h3>Наркомфин</h3><div class="sub">Москва, 1928–1930</div><div class="im"><img src="../main-page/assets/th4.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>ВХУТЕМАС</h3><div class="sub">Москва, 1920</div><div class="im"><img src="../main-page/assets/th3.jpg" alt=""></div></div>
+        <div class="rel-item"><h3>Дом Мельникова</h3><div class="sub">Москва, 1927–1929</div><div class="im"><img src="../main-page/assets/th5.jpg" alt=""></div></div>
+
+        <div class="subhead"><span class="tsm">Проекты Центра</span><span class="tsm grey">(1)</span></div>
+        <div class="rel-item"><h3>Выставка «Хлеб»</h3><div class="sub">03.09.26 – 17.01.27</div><div class="im"><img src="../main-page/assets/proj-kino.jpg" alt=""></div></div>
+
+        <div class="subhead"><span class="tsm">Коллекции</span><span class="tsm grey">(1)</span></div>
+        <div class="rel-item"><h3>Архив Стригалева</h3><div class="sub">300 материалов</div><div class="im"><img src="../main-page/assets/coll1.jpg" alt=""></div></div>
+      </div>
+    </div>
+
+    <!-- похожее -->
+    <section id="similar">
+      <div class="sim-title" data-title="похожее" id="a-sim-title"></div>
+      <div class="cards" id="a-sim-cards">
+        <div class="sim big">
+          <h3>Любовь в авангарде</h3><div class="year">1824</div>
+          <div class="vbar"></div>
+          <div class="type">Exhibition</div><div class="cat">Graphics, Photography</div>
+          <div class="im"><img src="../main-page/assets/coll1.jpg" alt=""></div>
+        </div>
+        <div class="sim small">
+          <h3>Русский конструктивизм</h3><div class="year">1824</div>
+          <div class="vbar"></div>
+          <div class="type">Exhibition</div><div class="cat">Graphics, Photography</div>
+          <div class="im"><img src="../main-page/assets/proj-mayak.jpg" alt=""></div>
+        </div>
+        <div class="sim small">
+          <h3>Архив Стригалева</h3><div class="year">1824</div>
+          <div class="vbar"></div>
+          <div class="type">Exhibition</div><div class="cat">Graphics, Photography</div>
+          <div class="im"><img src="../main-page/assets/coll2.jpg" alt=""></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DESIGN_W = 1920;
+  const stage = document.getElementById('stage');
+  const rest  = document.getElementById('rest');
+  const restWrap = document.getElementById('restWrap');
+  let k = 1;
+
+  // леттеринг ПОХОЖЕЕ
+  const st = document.getElementById('a-sim-title');
+  for (const ch of 'похожее'){
+    const s = document.createElement('span');
+    s.className = 'ch'; s.textContent = ch;
+    st.appendChild(s);
+  }
+
+  function layout(){
+    k = window.innerWidth / DESIGN_W;
+    const stageH = Math.max(900, window.innerHeight / k);
+    stage.style.height = stageH + 'px';
+    stage.style.transform = 'scale(' + k + ')';
+    rest.style.transform = 'translateX(' + (180 * k) + 'px) scale(' + k + ')';
+    restWrap.style.height = (rest.offsetHeight * k) + 'px';
+  }
+
+  // кнопки навигации подскроливают правую колонку
+  document.querySelectorAll('#secmenu a[data-target]').forEach(a => {
+    a.addEventListener('click', () => {
+      const id = a.dataset.target;
+      const el = id === 'a-sim' ? document.getElementById('similar') : document.getElementById(id);
+      if (!el) return;
+      const y = (el.getBoundingClientRect().top + window.scrollY) - 12 * k;
+      window.scrollTo({top: y, behavior: 'smooth'});
+    });
+  });
+
+  window.addEventListener('resize', layout);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(layout);
+  window.addEventListener('load', layout);
+  layout();
+})();
+</script>
+</body>
+</html>
