@@ -46,6 +46,10 @@
   #secmenu a:hover{color:var(--red)}
   #secmenu .num{color:var(--grey2);font-size:14.3px;letter-spacing:.143px}
   #secmenu .sp{flex:1 1 auto}
+  #tert{display:none;border-left:4px solid var(--grey4);margin:4px 0 4px 0;padding-left:44px;flex-direction:column;gap:12px}
+  #tert.open{display:flex}
+  #tert a{border:0;padding:0;display:block;width:auto}
+  #relNav.open .pv{display:none}
   #saveBtn{position:absolute;left:12px;bottom:12px;background:var(--grey4);display:flex;gap:8px;align-items:center;justify-content:center;padding:12px 16px 12px 12px;cursor:pointer}
   #saveBtn:hover{color:var(--red)}
 
@@ -73,14 +77,8 @@
   .src{display:flex}
   .src .n{width:48px}
 
-  /* связанные материалы: раскрывашка */
-  #relToggle{display:flex;gap:4px;align-items:flex-start;cursor:pointer;user-select:none}
-  #relToggle .sp{flex:1 1 auto}
-  #relToggle svg{transition:transform .25s ease}
-  #relToggle.open svg{transform:rotate(45deg)}
-  #relToggle:hover{color:var(--red)}
-  #relmats{display:none;padding-bottom:12px}
-  #relmats.open{display:block}
+  /* связанные материалы */
+  #relmats{padding-bottom:12px}
   #relmats .subhead{display:flex;justify-content:center;gap:4px;padding:26px 0 14px}
   .rel-item{position:relative;border-top:4px solid var(--ink);height:136px;cursor:pointer}
   .rel-item + .rel-item{margin-top:8px}
@@ -142,9 +140,17 @@
       <a data-target="a-desc">Описание</a>
       <a data-target="a-docs">Документы</a>
       <a data-target="a-src">Источники</a>
-      <a data-target="a-rel"><span>Связанные материалы</span><span class="num">(24)</span><span class="sp"></span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="#262626"/></svg>
+      <a id="relNav"><span>Связанные материалы</span><span class="num">(24)</span><span class="sp"></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path class="pv" d="M7.2 2h1.6v12H7.2V2Z" fill="#262626"/><path d="M2 7.2h12v1.6H2V7.2Z" fill="#262626"/></svg>
       </a>
+      <div id="tert">
+        <a data-g="g-temy">Темы <span class="num">(2)</span></a>
+        <a data-g="g-lichnosti">Личности <span class="num">(2)</span></a>
+        <a data-g="g-sobytiya">События <span class="num">(3)</span></a>
+        <a data-g="g-mesta">Места <span class="num">(3)</span></a>
+        <a data-g="g-proekty">Проекты Центра <span class="num">(1)</span></a>
+        <a data-g="g-kollekcii">Коллекции <span class="num">(1)</span></a>
+      </div>
       <a data-target="a-sim">Похожее</a>
     </nav>
     <div id="saveBtn">
@@ -206,33 +212,30 @@
 
       <!-- связанные материалы -->
       <div class="div8" id="a-rel"></div>
-      <div class="tsm" id="relToggle">
-        <span>Связанные материалы</span><span class="grey">(24)</span><span class="sp"></span>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="currentColor"/></svg>
-      </div>
+      <div class="tsm"><span>Связанные материалы</span> <span class="grey">(24)</span></div>
       <div id="relmats">
-        <div class="subhead"><span class="tsm">Темы</span><span class="tsm grey">(2)</span></div>
+        <div class="subhead"><span class="tsm" id="g-temy">Темы</span><span class="tsm grey">(2)</span></div>
         <div class="rel-item"><h3>Расцвет конструктивизма</h3><div class="sub">12 материалов</div><div class="im"><img src="../main-page/assets/th1.jpg" alt=""></div></div>
         <div class="rel-item"><h3>Дзига Вертов</h3><div class="sub">30 материалов</div><div class="im"><img src="../main-page/assets/th2.jpg" alt=""></div></div>
 
-        <div class="subhead"><span class="tsm">Личности</span><span class="tsm grey">(2)</span></div>
+        <div class="subhead"><span class="tsm" id="g-lichnosti">Личности</span><span class="tsm grey">(2)</span></div>
         <div class="rel-item"><h3>Александр Родченко</h3><div class="sub">1891–1956</div><div class="im"><img src="../main-page/assets/p3.jpg" alt=""></div></div>
         <div class="rel-item"><h3>Дзига Вертов</h3><div class="sub">1896–1954</div><div class="im"><img src="../main-page/assets/p10.jpg" alt=""></div></div>
 
-        <div class="subhead"><span class="tsm">События</span><span class="tsm grey">(3)</span></div>
+        <div class="subhead"><span class="tsm" id="g-sobytiya">События</span><span class="tsm grey">(3)</span></div>
         <div class="rel-item"><h3>Умер Владимир Маяковский</h3><div class="sub">1930</div><div class="im"><img src="../main-page/assets/ch1960.jpg" alt=""></div></div>
         <div class="rel-item"><h3>Закрытие ВХУТЕМАС</h3><div class="sub">1930</div><div class="im"><img src="../main-page/assets/ch1947.jpg" alt=""></div></div>
         <div class="rel-item"><h3>Выставка «Квартира №&nbsp;5. К&nbsp;истории петроградского авангарда 1915–1925 годов»</h3><div class="sub">ГРМ, 2016</div><div class="im"><img src="../main-page/assets/ch1933.jpg" alt=""></div></div>
 
-        <div class="subhead"><span class="tsm">Места</span><span class="tsm grey">(3)</span></div>
+        <div class="subhead"><span class="tsm" id="g-mesta">Места</span><span class="tsm grey">(3)</span></div>
         <div class="rel-item"><h3>Наркомфин</h3><div class="sub">Москва, 1928–1930</div><div class="im"><img src="../main-page/assets/th4.jpg" alt=""></div></div>
         <div class="rel-item"><h3>ВХУТЕМАС</h3><div class="sub">Москва, 1920</div><div class="im"><img src="../main-page/assets/th3.jpg" alt=""></div></div>
         <div class="rel-item"><h3>Дом Мельникова</h3><div class="sub">Москва, 1927–1929</div><div class="im"><img src="../main-page/assets/th5.jpg" alt=""></div></div>
 
-        <div class="subhead"><span class="tsm">Проекты Центра</span><span class="tsm grey">(1)</span></div>
+        <div class="subhead"><span class="tsm" id="g-proekty">Проекты Центра</span><span class="tsm grey">(1)</span></div>
         <div class="rel-item"><h3>Выставка «Хлеб»</h3><div class="sub">03.09.26 – 17.01.27</div><div class="im"><img src="../main-page/assets/proj-kino.jpg" alt=""></div></div>
 
-        <div class="subhead"><span class="tsm">Коллекции</span><span class="tsm grey">(1)</span></div>
+        <div class="subhead"><span class="tsm" id="g-kollekcii">Коллекции</span><span class="tsm grey">(1)</span></div>
         <div class="rel-item"><h3>Архив Стригалева</h3><div class="sub">300 материалов</div><div class="im"><img src="../main-page/assets/coll1.jpg" alt=""></div></div>
       </div>
     </div>
@@ -289,21 +292,27 @@
     restWrap.style.height = (rest.offsetHeight * k) + 'px';
   }
 
-  // раскрывашка «Связанные материалы»
-  const relToggle = document.getElementById('relToggle');
-  const relmats = document.getElementById('relmats');
-  function setRel(open){
-    relmats.classList.toggle('open', open);
-    relToggle.classList.toggle('open', open);
-    layout();
-  }
-  relToggle.addEventListener('click', () => setRel(!relmats.classList.contains('open')));
+  // раскрывашка в левой навигации: подменю групп связанных материалов
+  const relNav = document.getElementById('relNav');
+  const tert = document.getElementById('tert');
+  relNav.addEventListener('click', () => {
+    const open = !tert.classList.contains('open');
+    tert.classList.toggle('open', open);
+    relNav.classList.toggle('open', open);
+  });
+  document.querySelectorAll('#tert a[data-g]').forEach(a => {
+    a.addEventListener('click', () => {
+      const el = document.getElementById(a.dataset.g);
+      if (!el) return;
+      const y = (el.getBoundingClientRect().top + window.scrollY) - 80 * k;
+      window.scrollTo({top: y, behavior: 'smooth'});
+    });
+  });
 
   // кнопки навигации подскроливают правую колонку
   document.querySelectorAll('#secmenu a[data-target]').forEach(a => {
     a.addEventListener('click', () => {
       const id = a.dataset.target;
-      if (id === 'a-rel' && !relmats.classList.contains('open')) setRel(true);
       const el = id === 'a-sim' ? document.getElementById('similar') : document.getElementById(id);
       if (!el) return;
       const y = (el.getBoundingClientRect().top + window.scrollY) - 12 * k;
