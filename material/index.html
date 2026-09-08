@@ -73,7 +73,14 @@
   .src{display:flex}
   .src .n{width:48px}
 
-  /* связанные материалы */
+  /* связанные материалы: раскрывашка */
+  #relToggle{display:flex;gap:4px;align-items:flex-start;cursor:pointer;user-select:none}
+  #relToggle .sp{flex:1 1 auto}
+  #relToggle svg{transition:transform .25s ease}
+  #relToggle.open svg{transform:rotate(45deg)}
+  #relToggle:hover{color:var(--red)}
+  #relmats{display:none;padding-bottom:12px}
+  #relmats.open{display:block}
   #relmats .subhead{display:flex;justify-content:center;gap:4px;padding:26px 0 14px}
   .rel-item{position:relative;border-top:4px solid var(--ink);height:136px;cursor:pointer}
   .rel-item + .rel-item{margin-top:8px}
@@ -199,7 +206,10 @@
 
       <!-- связанные материалы -->
       <div class="div8" id="a-rel"></div>
-      <div class="tsm">Связанные материалы</div>
+      <div class="tsm" id="relToggle">
+        <span>Связанные материалы</span><span class="grey">(24)</span><span class="sp"></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="currentColor"/></svg>
+      </div>
       <div id="relmats">
         <div class="subhead"><span class="tsm">Темы</span><span class="tsm grey">(2)</span></div>
         <div class="rel-item"><h3>Расцвет конструктивизма</h3><div class="sub">12 материалов</div><div class="im"><img src="../main-page/assets/th1.jpg" alt=""></div></div>
@@ -279,10 +289,21 @@
     restWrap.style.height = (rest.offsetHeight * k) + 'px';
   }
 
+  // раскрывашка «Связанные материалы»
+  const relToggle = document.getElementById('relToggle');
+  const relmats = document.getElementById('relmats');
+  function setRel(open){
+    relmats.classList.toggle('open', open);
+    relToggle.classList.toggle('open', open);
+    layout();
+  }
+  relToggle.addEventListener('click', () => setRel(!relmats.classList.contains('open')));
+
   // кнопки навигации подскроливают правую колонку
   document.querySelectorAll('#secmenu a[data-target]').forEach(a => {
     a.addEventListener('click', () => {
       const id = a.dataset.target;
+      if (id === 'a-rel' && !relmats.classList.contains('open')) setRel(true);
       const el = id === 'a-sim' ? document.getElementById('similar') : document.getElementById(id);
       if (!el) return;
       const y = (el.getBoundingClientRect().top + window.scrollY) - 12 * k;
