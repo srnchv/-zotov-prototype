@@ -163,7 +163,7 @@ const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
 // меню 27.08.2026; «Тексты» = материалы типа «Текст» отдельным разделом (заменил «Библиотеку»)
-const NAV=[['Каталог','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Публикации','#/texts']];
+const NAV=[['Поиск','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Тексты','#/texts']];
 function header(active){
   return `<header class="top"><div class="row">
     <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
@@ -173,7 +173,7 @@ function header(active){
 }
 function footer(){return `<footer><div class="cols">
   <div><h4>Архив</h4><a href="#/chrono">Хронограф</a><a href="#/map">Карта</a><a href="#/cat/person">Личности</a><a href="#/cat/theme">Темы</a></div>
-  <div><h4>Коллекции</h4><a href="#/cat/collection">Коллекции и фонды</a><a href="#/texts">Публикации</a><a href="#/archive">Каталог</a></div>
+  <div><h4>Коллекции</h4><a href="#/cat/collection">Коллекции и фонды</a><a href="#/texts">Тексты</a><a href="#/archive">Поиск</a></div>
   <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a></div>
   <div><h4>Центр «Зотов»</h4><a href="#/">О центре</a><a href="#/">Контакты</a><a href="#/">hello@zotov.ru</a></div>
 </div></footer>`;}
@@ -508,8 +508,8 @@ function archive(qs){
     }).join('');
   }
   const head=browse
-    ?`<div class="crumbs">Каталог</div><h1>Каталог</h1><div class="muted">Каталог материалов архива. Введите запрос или выберите фильтры — результаты обновятся.</div>`
-    :`<div class="crumbs"><a href="#/archive">Каталог</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
+    ?`<div class="crumbs">Поиск</div><h1>Поиск</h1><div class="muted">Каталог материалов архива. Введите запрос или выберите фильтры — результаты обновятся.</div>`
+    :`<div class="crumbs"><a href="#/archive">Поиск</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
   return page('#/archive',`${head}
     ${searchInput(FILT.q)}
     ${filterBar()}
@@ -805,9 +805,9 @@ function catalog(type){
 }
 function texts(){
   const items=all('material').filter(m=>m.mtype==='Текст');
-  return page('#/texts',`<div class="crumbs">Публикации</div><h1>Публикации</h1>
+  return page('#/texts',`<div class="crumbs">Тексты</div><h1>Тексты</h1>
     <div class="muted">Текстовые материалы архива: статьи, манифесты, рецензии, публикации.</div>
-    ${sectionSearch('Поиск по публикациям')}
+    ${sectionSearch('Поиск по текстам')}
     <div class="grid g3" id="catgrid" style="margin-top:18px">${items.length?items.map(resultCard).join(''):'<p class="muted">Пока нет текстовых материалов.</p>'}</div>`);
 }
 
