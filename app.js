@@ -194,8 +194,20 @@ function relatedSections(o){
     const inner=CARD_TYPES.includes(t)
       ?`<div class="grid ${t==='person'?'g4':'g3'}">${items.map(tile).join('')}</div>`
       :`<div class="chips" style="margin-top:4px">${items.map(link).join('')}</div>`;
-    return `<h2>${REL_HEAD[t]}</h2>${inner}`;
+    return `<h2 id=\"rel-${t}\">${REL_HEAD[t]}</h2>${inner}`;
   }).join('');
+}
+// строчный список связей для страницы материала (схема из макета): группы, строки с мини-превью
+function relatedRows(o){
+  const by={}; (o.links||[]).forEach(id=>{const x=DB[id];if(x&&x.id!==o.id&&x.type!=='media'&&x.type!=='source'&&x.type!=='tag')(by[x.type]=by[x.type]||[]).push(x);});
+  const metaOf=x=>{
+    if(x.type==='theme')return ((x.links||[]).map(id=>DB[id]).filter(y=>y&&y.type==='material').length)+' материалов';
+    if(x.type==='collection')return ((x.links||[]).map(id=>DB[id]).filter(y=>y&&y.type==='material').length)+' материалов';
+    return tileMeta(x)||'';
+  };
+  return REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>
+    `<div class="kicker" id="rel-${t}" style="margin:22px 0 4px">${REL_HEAD[t]}</div>
+     <div>${by[t].map(x=>`<a class="relrow" href="#/e/${x.id}"><span class="t" style="font-weight:600">${esc(x.title)}</span><span class="muted" style="font-size:13px;margin-left:auto">${esc(metaOf(x))}</span><span class="thumbmini"></span></a>`).join('')}</div>`).join('');
 }
 // похожие материалы — по общим связям (темы/теги/личности), без дублей с прямыми связями
 function similarBlock(o){
@@ -825,6 +837,44 @@ window.mapFocus=id=>{
   m.balloon.open();
 };
 
+// ===== Личности — разводная страница (схема из макета persons_catalog) =====
+let psRole='all';
+function personsCatalog(){
+  const ps=all('person');
+  const roles=[...new Set(ps.flatMap(p=>(p.role||'').split(',').map(r=>r.trim()).filter(Boolean)))].sort();
+  const surname=p=>{const w=p.title.trim().split(' ');return w[w.length-1];};
+  const shown=ps.filter(p=>psRole==='all'||(p.role||'').includes(psRole))
+    .sort((a,b)=>surname(a).localeCompare(surname(b),'ru'));
+  const byL={}; shown.forEach(p=>{const l=surname(p)[0].toUpperCase();(byL[l]=byL[l]||[]).push(p);});
+  const AL='АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ'.split('');
+  const alpha=`<div class="alpharow">${AL.map(l=>`<span class="al${byL[l]?' has':''}" ${byL[l]?`onclick="document.getElementById('let-${l}').scrollIntoView({behavior:'smooth',block:'start'})"`:''}>${l}</span>`).join('')}</div>`;
+  const chips=`<div class="chips" style="margin:14px 0 4px">
+    <span class="chip" ${psRole==='all'?'style="background:#1f1f1f;color:#fff"':''} onclick="psSetRole('all')">Все роли</span>
+    ${roles.map(r=>`<span class="chip" ${psRole===r?'style="background:#1f1f1f;color:#fff"':''} onclick="psSetRole('${esc(r)}')">${esc(r)}</span>`).join('')}</div>`;
+  const card=p=>`<a class="card tile pscard" href="#/e/${p.id}"><div class="img" style="aspect-ratio:4/3"></div>
+    <div class="t">${esc(p.title)}</div><div class="muted" style="font-size:12px">${esc(p.life||'')}</div>
+    <div class="muted" style="font-size:13px;margin-top:4px">${esc(p.role||'')}</div></a>`;
+  const groups=Object.keys(byL).sort((a,b)=>a.localeCompare(b,'ru')).map(l=>
+    `<div id="let-${l}" style="scroll-margin-top:80px"><div class="letterhead">${l}</div>
+     <div class="grid g4">${byL[l].map(card).join('')}</div></div>`).join('');
+  return page('#/cat/person',`<div class="crumbs">Личности</div><h1>Личности</h1>
+    <div class="muted">Художники, архитекторы, режиссёры, теоретики конструктивизма — ${ps.length} человек в архиве.</div>
+    <input class="secsearch" style="max-width:520px" placeholder="Поиск по имени, псевдониму, роли…" oninput="psFilter(this.value)">
+    ${chips}
+    ${alpha}
+    <div class="muted" style="font-size:13px;margin:8px 0 4px">${shown.length} личностей</div>
+    <div id="psgrid">${groups||'<p class="muted">Никого не найдено.</p>'}</div>
+    <div style="text-align:center;margin:28px 0"><span class="btn" onclick="toast('Демо: подгрузка следующей страницы')">Загрузить ещё</span></div>`);
+}
+window.psSetRole=r=>{psRole=r;render();};
+window.psFilter=q=>{
+  const ql=q.trim().toLowerCase();
+  document.querySelectorAll('#psgrid .pscard').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(ql)?'':'none';});
+  document.querySelectorAll('#psgrid > div').forEach(g=>{
+    const any=[...g.querySelectorAll('.pscard')].some(el=>el.style.display!=='none');
+    g.style.display=any?'':'none';});
+};
+
 function catalog(type){
   const items=all(type); const T=TYPES[type];
   return page('#/cat/'+type,`<div class="crumbs">${T.pl}</div><h1>${T.pl}</h1>
@@ -850,14 +900,31 @@ function entity(o){
   if(o.type==='material'){
     const access=o.access==='request';
     const saved=lsGet('zotov_savedmat').includes(o.id);
-    hero=`${crumbs}<div class="two" style="margin-top:8px"><div><div class="media"></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
-      <div><div class="kicker">${esc(o.subtype||'Материал')}</div><h1 style="font-size:30px">${esc(o.title)}</h1>
-      <div class="metabox">${[['Тип и подтип',o.subtype],['Дата / период',o.date],['Авторы и участники',(o.authors||[]).map(id=>DB[id]&&DB[id].title).filter(Boolean).join(', ')||'—'],['Права и условия доступа',access?'По запросу · просмотр':'Открытый доступ']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1]||'—')}</span></div>`).join('')}</div>
-      <div style="margin-top:12px"><span class="btn" onclick="toggleSaveMat('${o.id}')">${saved?'✓ В сохранённых':'＋ Сохранить материал'}</span></div>
-      ${access?`<div class="access"><b>Материал доступен по запросу</b><div class="muted" style="margin:6px 0 12px">Зарегистрированные исследователи могут запросить доступ.</div><a class="btn dark" href="#/request/${o.id}">Запросить доступ</a></div>`:''}
-      <h3>Описание</h3><div class="muted">Происхождение, контекст создания, связанные обстоятельства — редакторское описание с научным аппаратом.</div>
-      ${(o.links.filter(id=>DB[id]&&DB[id].type==='media')).map(id=>`<div style="margin-top:10px"><a href="#/e/${id}">▶ ${esc(DB[id].title)} →</a></div>`).join('')}
+    const ln=(o.links||[]).map(id=>DB[id]).filter(Boolean);
+    const srcs=ln.filter(x=>x.type==='source');
+    const docs=ln.filter(x=>x.type==='media');
+    const coll=ln.find(x=>x.type==='collection');
+    const authors=(o.authors||[]).map(id=>DB[id]&&DB[id].title).filter(Boolean).join(', ')||'—';
+    hero=`${crumbs}<div class="two" style="grid-template-columns:1fr 620px;gap:48px;margin-top:8px">
+      <div>
+        <div class="kicker">${esc(o.mtype||'Материал')}${o.subtype?' · '+esc(o.subtype):''}</div>
+        <h1 style="font-size:30px">${esc(o.title)}</h1>
+        <div class="metabox" style="margin-top:14px">${[['Тип и подтип',(o.mtype?o.mtype+' · ':'')+(o.subtype||'—')],['Авторы',authors],['Дата / период',o.date||'—'],['Коллекция',coll?coll.title:'—'],['Права и доступ',access?'По запросу · просмотр':(o.access==='restricted'?'Ограниченный':'Открытый доступ')]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><span class="btn" onclick="toggleSaveMat('${o.id}')">${saved?'✓ В сохранённых':'＋ Сохранить'}</span>${access?`<a class="btn dark" href="#/request/${o.id}">Запросить доступ</a>`:''}</div>
+        ${access?`<div class="access" style="margin-top:14px"><b>Материал доступен по запросу</b><div class="muted" style="margin-top:6px">Зарегистрированные исследователи могут запросить доступ к просмотру.</div></div>`:''}
+      </div>
+      <div>
+        <div class="media" style="aspect-ratio:4/3"></div>
+        <div class="muted" style="font-size:12px;margin-top:8px">${esc(o.title)}. ${esc(authors!=='—'?authors:'')}${o.date?', '+esc(o.date):''}</div>
+        <h3>Описание</h3>
+        <div class="muted">Происхождение, контекст создания и связанные обстоятельства — редакторское описание с научным аппаратом.</div>
+        <div style="margin-top:8px"><span class="lnk muted" style="font-size:13px" onclick="toast('Демо: полное описание')">＋ Раскрыть</span></div>
+        <h3>Документы</h3>
+        ${docs.length?`<div class="metabox">${docs.map(d=>`<div class="r"><a href="#/e/${d.id}" class="lnk" style="text-decoration:none">${esc(d.title)}</a><span class="muted" style="font-size:12px">${esc(d.format||'PDF')} ⭳</span></div>`).join('')}</div>`:'<div class="muted" style="font-size:14px">—</div>'}
+        <h3>Источники</h3>
+        ${srcs.length?`<ol style="margin:6px 0 0 18px;padding:0;color:var(--muted);font-size:14px">${srcs.map(x=>`<li style="margin-bottom:4px"><a href="#/e/${x.id}" class="lnk">${esc(x.title)}</a>${x.year?', '+esc(x.year):''}</li>`).join('')}</ol>`:'<div class="muted" style="font-size:14px">—</div>'}
       </div></div>`;
+    return page('',hero+`<h2 style="margin-top:40px">Связанные материалы</h2>`+relatedRows(o)+similarBlock(o));
   } else if(o.type==='media'){
     const p=DB[o.parent];
     hero=`${crumbs}<div class="kicker">Медиафайл</div><h1 style="font-size:28px">${esc(o.title)}</h1>
@@ -872,9 +939,23 @@ function entity(o){
       <div><div class="kicker">Личность</div><h1>${esc(o.title)}</h1><div class="muted" style="font-size:18px">${esc(o.life)} · ${esc(o.role)}</div>
       <p class="muted" style="max-width:640px">Краткая биографическая справка: роль персоны в контексте архива, ключевые проекты и связи.</p></div></div>`;
   } else if(o.type==='theme'){
-    hero=`${crumbs}<div class="kicker">Тема</div><h1>${esc(o.title)}</h1><div class="lead">${esc(o.def)}</div>
-      <div class="media" style="aspect-ratio:auto;height:240px;margin:24px 0"></div>
-      ${o.sub&&o.sub.length?`<h3>Дочерние темы</h3><div class="chips">${o.sub.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}</div>`:''}`;
+    const srcs=(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='source');
+    const byT={};(o.links||[]).forEach(id=>{const x=DB[id];if(x)(byT[x.type]=byT[x.type]||[]).push(x);});
+    const TAB_LBL={material:'Все материалы',person:'Связанные личности',event:'Связанные события',place:'Связанные места',project:'Выставки и проекты',org:'Организации'};
+    const tabs=REL_ORDER.filter(t=>TAB_LBL[t]&&byT[t]&&byT[t].length)
+      .map(t=>`<span class="chip" onclick="document.getElementById('rel-${t}').scrollIntoView({behavior:'smooth',block:'start'})">${TAB_LBL[t]}</span>`).join('');
+    hero=`${crumbs}<div class="two" style="grid-template-columns:560px 1fr;margin-top:8px">
+      <div><div class="media" style="aspect-ratio:4/3"></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
+      <div><div class="kicker">Тема</div><h1>${esc(o.title)}</h1>
+        <div class="kicker" style="margin-top:14px">Краткое определение</div>
+        <div style="font-size:17px;line-height:1.5;margin-top:6px">${esc(o.def||'')}</div>
+        <div class="metabox" style="max-width:520px;margin-top:16px">${[['Родительская тема','—'],['Материалов',''+((byT.material||[]).length)]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+        <div style="margin-top:14px"><span class="btn" onclick="toast('Демо: тема сохранена в личном кабинете')">＋ Сохранить тему</span></div>
+        ${srcs.length?`<h3>Источники</h3><ol style="margin:6px 0 0 18px;padding:0;color:var(--muted);font-size:14px">${srcs.map(x=>`<li style="margin-bottom:4px"><a href="#/e/${x.id}" class="lnk">${esc(x.title)}</a>${x.year?', '+esc(x.year):''}</li>`).join('')}</ol>`:''}
+      </div></div>
+      <h3>Описание</h3><div class="muted" style="max-width:860px">Редакторское описание темы: контекст, хронология, ключевые сюжеты и научный аппарат.</div>
+      ${o.sub&&o.sub.length?`<h2>Дочерние темы</h2><div class="grid g4">${o.sub.map(sb=>`<span class="card"><span class="kicker">Тема</span><span class="t" style="display:block;font-weight:600;margin-top:4px">${esc(sb)}</span><span class="muted" style="font-size:12px">— материалов</span></span>`).join('')}</div>`:''}
+      ${tabs?`<div class="chips" style="margin:26px 0 4px;padding-top:18px;border-top:1px solid var(--line)">${tabs}</div>`:''}`;
   } else if(o.type==='project'){
     const v=DB[o.venue];
     hero=`${crumbs}<div class="media" style="aspect-ratio:auto;height:340px;margin-top:8px"></div>
@@ -1011,7 +1092,7 @@ function render(hash){
   else if(seg[0]==='texts') html=texts();
   else if(seg[0]==='library'){location.hash='#/texts';return;} // legacy
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
-  else if(seg[0]==='cat') html=catalog(seg[1]);
+  else if(seg[0]==='cat') html=(seg[1]==='person'?personsCatalog():catalog(seg[1]));
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
   else if(seg[0]==='request'){ html=null; }
   else html=home();
