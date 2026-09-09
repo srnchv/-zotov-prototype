@@ -189,6 +189,10 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .fopt:hover{color:var(--ink)}
 .fopt.on{color:var(--ink);font-weight:600}
 .fopt.on:before{content:'✓ '}
+.fgroup{column-span:all;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:12px 0 4px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.fmodal-list .fgroup:first-child{margin-top:0}
+.fcat.chk .bx{width:15px;height:15px;border:1px solid #bbb;border-radius:4px;background:#fff;display:inline-block;margin-right:2px;vertical-align:-2px}
+.fcat.chk .bx.on{background:var(--ink);border-color:var(--ink)}
 .fitem{break-inside:avoid}
 .fsubs{margin:2px 0 8px 10px;border-left:1px solid var(--line);padding-left:12px}
 .fopt.sub{font-size:13px;padding:4px 0}

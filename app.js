@@ -22,9 +22,9 @@ const RAW = [
   {id:'m4',type:'material',title:'Запись лекции об архитектуре',subtype:'Аудио',date:'1928',access:'request',
    links:['p1','e2','t1','pr1','md2']},
 
-  {id:'p1',type:'person',title:'Александр Родченко',life:'1891–1956',role:'художник, фотограф, дизайнер',links:['e1','t1','t2','pr1','o1','o2','pl1','s1']},
-  {id:'p2',type:'person',title:'Варвара Степанова',life:'1894–1958',role:'художница, дизайнер',links:['pr1','t1','o1']},
-  {id:'p3',type:'person',title:'Эль Лисицкий',life:'1890–1941',role:'архитектор, типограф',links:['t1','t2','o1','pl1']},
+  {id:'p1',type:'person',title:'Александр Родченко',group:'Конструктивисты',life:'1891–1956',role:'художник, фотограф, дизайнер',links:['e1','t1','t2','pr1','o1','o2','pl1','s1']},
+  {id:'p2',type:'person',title:'Варвара Степанова',group:'Конструктивисты',life:'1894–1958',role:'художница, дизайнер',links:['pr1','t1','o1']},
+  {id:'p3',type:'person',title:'Эль Лисицкий',group:'Конструктивисты',life:'1890–1941',role:'архитектор, типограф',links:['t1','t2','o1','pl1']},
 
   {id:'pl1',type:'place',title:'Хлебозавод №5',placeType:'Здание · промышленная архитектура',city:'Москва',country:'Россия',address:'Москва, ул. Ходынская, 2',status:'Существует',coord:'55.79, 37.59',links:['e1','o1','pr1','s1']},
   {id:'pl2',type:'place',title:'ВХУТЕМАС (Мясницкая, 21)',placeType:'Учебное заведение',city:'Москва',country:'Россия',address:'Москва, Мясницкая, 21',status:'Существует',coord:'55.76, 37.63',links:['o1','e2']},
@@ -35,7 +35,7 @@ const RAW = [
   {id:'t1',type:'theme',title:'Конструктивизм',def:'Смысловой узел: направление, объединяющее материалы, личности, события и выставки.',sub:['Производственное искусство','Фотомонтаж','Типографика','Агитпроп'],links:['o1','o2']},
   {id:'t2',type:'theme',title:'Фотомонтаж',def:'Приём и тема в искусстве авангарда.',sub:[],links:[]},
 
-  {id:'pr1',type:'project',title:'Выставка «1927»',dates:'12.03 — 30.06.1927',curators:'И. Иванов, П. Петров',venue:'pl1',prType:'Выставочный проект',links:['o1','o2','t1','s1']},
+  {id:'pr1',type:'project',title:'Выставка «1927»',center:false,dates:'12.03 — 30.06.1927',curators:'И. Иванов, П. Петров',venue:'pl1',prType:'Выставочный проект',links:['o1','o2','t1','s1']},
 
   {id:'o1',type:'org',title:'ВХУТЕМАС',orgType:'Учебно-производственные мастерские',period:'1920 — 1930',links:['pl2','s1']},
   {id:'o2',type:'org',title:'Госиздат',orgType:'Издательство',period:'1919 — 1930',links:[]},
@@ -52,9 +52,14 @@ const RAW = [
 
 // --- расширение данных для демонстрации фильтрации ---
 RAW.push(
-  {id:'p4',type:'person',title:'Дзига Вертов',life:'1896–1954',role:'кинорежиссёр, теоретик кино',links:['pr2','t1']},
+  {id:'p4',type:'person',title:'Дзига Вертов',group:'Конструктивисты',life:'1896–1954',role:'кинорежиссёр, теоретик кино',links:['pr2','t1']},
   {id:'pl3',type:'place',title:'Дом Моссельпрома',placeType:'Здание · административное',city:'Москва',country:'Россия',address:'Москва, Калашный пер., 2/10',status:'Существует',coord:'55.7527, 37.5960',links:['t1','p1']},
-  {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
+  {id:'pr2',type:'project',title:'Выставка «Дзига Вертов. Киноглаз»',center:true,dates:'2023',curators:'Центр «Зотов»',venue:'pl3',prType:'Выставочный проект',links:['t1','p4']},
+  {id:'p5',type:'person',title:'Владимир Маяковский',group:'Связанные личности',life:'1893–1930',role:'поэт',links:['t1','o2']},
+  {id:'p6',type:'person',title:'Моисей Гинзбург',group:'Конструктивисты',life:'1892–1946',role:'архитектор',links:['t1','pl4','m4']},
+  {id:'p7',type:'person',title:'Анатолий Луначарский',group:'Связанные личности',life:'1875–1933',role:'нарком просвещения',links:['o1']},
+  {id:'s3',type:'source',title:'Рукопись лекции о фотомонтаже',author:'А. Родченко',year:'1928',srcType:'Рукопись',publisher:'—',pubplace:'Москва',links:['p1','t2']},
+  {id:'s4',type:'source',title:'Рецензия на «Киноглаз»',author:'—',year:'1924',srcType:'Рецензия',publisher:'—',pubplace:'Москва',links:['p4','pr2']},
   {id:'s2',type:'source',title:'Каталог «Киноглаз»',author:'—',year:'1924',srcType:'Каталог',publisher:'Госиздат',pubplace:'Москва',links:[]},
   {id:'c2',type:'collection',title:'Коллекция 2',colType:'Личный фонд',period:'1920-е',sub:['Фотографии','Письма'],links:['p3','t2','m3']},
   // темы для главной v2 (сетка тем — 4 карточки)
@@ -277,7 +282,7 @@ const A11Y=['РЖЯ','субтитры','расшифровка','аудиооп
 const SORTS={rel:'По релевантности',new:'Сначала новые',old:'Сначала старые',az:'По алфавиту',type:'По типу материала'};
 const ENT=[['person','Личность'],['place','Место'],['event','Событие'],['theme','Тема'],['tag','Тег'],['project','Выставка / проект'],['org','Организация'],['collection','Коллекция / фонд'],['source','Источник']];
 const ENTKEYS=ENT.map(e=>e[0]);
-const DIMS=['type','subtype','decade','access','media','a11y','lang',...ENTKEYS];
+const DIMS=['type','subtype','decade','access','media','a11y','lang','evtype','srctype','centerproj',...ENTKEYS];
 
 let openDim=null; // раскрытая категория фильтров (паттерн RAAN)
 let FILT=blankFilt();
@@ -314,16 +319,19 @@ function textMatch(o,ql){
   return ['title','alt','desc','role','def','author','subtype','mtype','date','placeType','orgType','srcType','prType','life']
     .some(k=>typeof o[k]==='string'&&o[k].toLowerCase().includes(ql));
 }
-const matAttrActive=()=>['type','subtype','decade','access','media','a11y','lang'].some(d=>FILT[d].size);
+const matAttrActive=()=>['type','subtype','access','media','a11y','lang'].some(d=>FILT[d].size);
 function passes(o){
   if(matAttrActive()&&o.type!=='material') return false;
   if(FILT.type.size&&!FILT.type.has(o.mtype)) return false;
   if(FILT.subtype.size&&![...FILT.subtype].some(s=>(o.subtype||'').includes(s))) return false;
-  if(FILT.decade.size&&!FILT.decade.has(decadeOf(o.date))) return false;
+  if(FILT.decade.size&&![...FILT.decade].some(v=>v.includes('-е')?decadeOf(o.date)===v:''+yearOf(o.date)===v)) return false;
   if(FILT.access.size&&!FILT.access.has(o.access)) return false;
   if(FILT.media.size&&!(o.media||[]).some(m=>FILT.media.has(m))) return false;
   if(FILT.a11y.size&&!(o.a11y||[]).some(a=>FILT.a11y.has(a))) return false;
   if(FILT.lang.size&&!FILT.lang.has(o.lang)) return false;
+  if(FILT.evtype.size){const ok=(o.type==='event'&&FILT.evtype.has(o.evType))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='event'&&FILT.evtype.has(x.evType);});if(!ok)return false;}
+  if(FILT.srctype.size){const ok=(o.type==='source'&&FILT.srctype.has(o.srcType))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='source'&&FILT.srctype.has(x.srcType);});if(!ok)return false;}
+  if(FILT.centerproj.size){const ok=(o.type==='project'&&o.center)||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='project'&&x.center;});if(!ok)return false;}
   for(const k of ENTKEYS){ if(FILT[k].size){ const ok=FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)); if(!ok) return false; } }
   return true;
 }
@@ -383,6 +391,9 @@ function activeChips(){
   FILT.media.forEach(v=>c.push(['Медиа: '+MEDIA[v],'media',v]));
   FILT.a11y.forEach(v=>c.push(['Доступность: '+v,'a11y',v]));
   FILT.lang.forEach(v=>c.push(['Язык: '+v,'lang',v]));
+  FILT.evtype.forEach(v=>c.push(['Событие: '+v,'evtype',v]));
+  FILT.srctype.forEach(v=>c.push(['Источник: '+v,'srctype',v]));
+  FILT.centerproj.forEach(v=>c.push(['Проект Центра','centerproj',v]));
   ENT.forEach(([k,lbl])=>FILT[k].forEach(id=>c.push([lbl+': '+(DB[id]?DB[id].title:id),k,id])));
   if(!c.length) return '';
   return `<div class="achips">${c.map(([t,d,v])=>`<span class="achip" onclick="rmFilter('${d}','${esc(v)}')">${esc(t)} ✕</span>`).join('')}<span class="achip clear" onclick="resetAll()">Сбросить всё</span></div>`;
@@ -401,25 +412,26 @@ function toolbar(count){
 // --- фильтр-бар (паттерн RAAN: категории раскрываются «плюсом», выбор из любого раздела) ---
 const subtypesOf=t=>[...new Set(all('material').filter(m=>m.mtype===t).map(m=>(m.subtype||'').split('·')[0].trim()).filter(Boolean))];
 const FCATS=()=>[
-  ['decade','Период',decadesAll().map(d=>[d,d])],
+  ['decade','Период',[...decadesAll().map(d=>[d,d]),...[...new Set([...all('event'),...all('material')].filter(o=>o.date&&yearOf(o.date)).map(o=>''+yearOf(o.date)))].sort().map(y=>[y,y])]],
   ['person','Личности',all('person').map(o=>[o.id,o.title])],
   ['place','Места',all('place').map(o=>[o.id,o.title])],
   ['theme','Темы',all('theme').map(o=>[o.id,o.title])],
-  ['event','События',all('event').map(o=>[o.id,o.title])],
-  ['project','Проекты Центра',all('project').map(o=>[o.id,o.title])],
+  ['evtype','События',[...new Set(all('event').map(e=>e.evType).filter(Boolean))].sort().map(t=>[t,t])],
   ['collection','Коллекции',all('collection').map(o=>[o.id,o.title])],
   ['type','Тип материала',TYPELIST.map(t=>[t,t])], // подтипы и медиа — внутри
   ['org','Организации',all('org').map(o=>[o.id,o.title])],
-  ['source','Источники',all('source').map(o=>[o.id,o.title])],
+  ['srctype','Источники',[...new Set(all('source').map(o=>o.srcType).filter(Boolean))].sort().map(t=>[t,t])],
   ['access','Доступ',Object.entries(ACCESS)],
   ['lang','Язык',langsAll().map(l=>[l,l])]
 ];
 // две строки фильтров (раскладка 26.08.2026)
-const FROWS=[['decade','person','place','theme','event','project','collection'],['type','org','source','access','lang']];
+const FROWS=[['decade','person','place','theme','evtype','collection','centerproj'],['type','org','srctype','access','lang']];
 const typeCnt=()=>FILT.type.size+FILT.subtype.size+FILT.media.size;
 function filterBar(){
   const byDim={}; FCATS().forEach(c=>byDim[c[0]]=c);
   const row=dims=>dims.map(d=>{
+    if(d==='centerproj'){const on=FILT.centerproj.size;
+      return `<span class="fcat chk${on?' has':''}" onclick="tf('centerproj','1')"><span class="bx${on?' on':''}"></span>Проект Центра</span>`;}
     const c=byDim[d]; if(!c||!c[2].length) return '';
     const [dim,label]=c;
     const n=dim==='type'?typeCnt():FILT[dim].size, open=openDim===dim;
@@ -436,12 +448,25 @@ function drawFmodal(){
   const cur=FCATS().find(c=>c[0]===openDim); if(!cur) return;
   const [dim,label,opts]=cur;
   // тип материала: подтипы раскрываются внутри выбранного типа
-  const list=(dim==='type'
-    ?opts.map(([v,l])=>{
+  const fopt=([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`;
+  let list;
+  if(dim==='type'){
+    list=opts.map(([v,l])=>{
       const on=FILT.type.has(''+v), subs=on?subtypesOf(''+v):[];
       return `<div class="fitem"><span class="fopt${on?' on':''}" onclick="tf('type','${esc(''+v)}')">${esc(l)}</span>${subs.length?`<div class="fsubs">${subs.map(s=>`<span class="fopt sub${FILT.subtype.has(s)?' on':''}" onclick="tf('subtype','${esc(s)}')">${esc(s)}</span>`).join('')}</div>`:''}</div>`;
-    }).join('')
-    :opts.map(([v,l])=>`<span class="fopt${FILT[dim].has(''+v)?' on':''}" onclick="tf('${dim}','${esc(''+v)}')">${esc(l)}</span>`).join(''));
+    }).join('');
+  } else if(dim==='decade'){
+    // период: сгруппированный выбор — десятилетие или конкретный год
+    const dec=opts.filter(([v])=>v.includes('-е')), yrs=opts.filter(([v])=>!v.includes('-е'));
+    list=`<div class="fgroup">Десятилетия</div>${dec.map(fopt).join('')}<div class="fgroup">Годы</div>${yrs.map(fopt).join('')}`;
+  } else if(dim==='person'){
+    // личности: конструктивисты и связанные личности
+    const gs=['Конструктивисты','Связанные личности'];
+    list=gs.map(g=>{
+      const items=all('person').filter(p=>(p.group||'Связанные личности')===g).map(p=>[p.id,p.title]);
+      return items.length?`<div class="fgroup">${g}</div>${items.map(fopt).join('')}`:'';
+    }).join('');
+  } else list=opts.map(fopt).join('');
   const selCnt=dim==='type'?typeCnt():FILT[dim].size;
   const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();FILT['media'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`;
   const mediaBlock=dim==='type'?`<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">Наличие медиафайла</div>${Object.entries(MEDIA).map(([v,l])=>`<span class="fopt${FILT.media.has(v)?' on':''}" style="display:inline-block;margin-right:18px" onclick="tf('media','${v}')">${l}</span>`).join('')}</div>`:'';
