@@ -855,13 +855,15 @@ function personsCatalog(){
     <div class="t">${esc(p.title)}</div><div class="muted" style="font-size:12px">${esc(p.life||'')}</div>
     <div class="muted" style="font-size:13px;margin-top:4px">${esc(p.role||'')}</div></a>`;
   const groups=Object.keys(byL).sort((a,b)=>a.localeCompare(b,'ru')).map(l=>
-    `<div id="let-${l}" style="scroll-margin-top:80px"><div class="letterhead">${l}</div>
+    `<div id="let-${l}" style="scroll-margin-top:262px"><div class="letterhead">${l}</div>
      <div class="grid g4">${byL[l].map(card).join('')}</div></div>`).join('');
   return page('#/cat/person',`<div class="crumbs">Личности</div><h1>Личности</h1>
     <div class="muted">Художники, архитекторы, режиссёры, теоретики конструктивизма — ${ps.length} человек в архиве.</div>
-    <input class="secsearch" style="max-width:520px" placeholder="Поиск по имени, псевдониму, роли…" oninput="psFilter(this.value)">
-    ${chips}
-    ${alpha}
+    <div class="ps-sticky">
+      <input class="secsearch" style="max-width:520px;margin-top:4px" placeholder="Поиск по имени, псевдониму, роли…" oninput="psFilter(this.value)">
+      ${chips}
+      ${alpha}
+    </div>
     <div class="muted" style="font-size:13px;margin:8px 0 4px">${shown.length} личностей</div>
     <div id="psgrid">${groups||'<p class="muted">Никого не найдено.</p>'}</div>
     <div style="text-align:center;margin:28px 0"><span class="btn" onclick="toast('Демо: подгрузка следующей страницы')">Загрузить ещё</span></div>`);
