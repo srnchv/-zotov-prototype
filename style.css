@@ -185,6 +185,7 @@ footer a{display:block;font-size:14px;padding:3px 0;color:#bdbdbf}
 .fmodal{width:min(960px,94vw)}
 .fmodal-top{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:18px}
 .fmodal-list{columns:4 190px;column-gap:32px;margin-top:20px;max-height:56vh;overflow-y:auto}
+.fmodal-list.wide{columns:2 320px}
 .fopt{display:block;padding:6px 0;font-size:14px;color:var(--muted);cursor:pointer;break-inside:avoid}
 .fopt:hover{color:var(--ink)}
 .fopt.on{color:var(--ink);font-weight:600}

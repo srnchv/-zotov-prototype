@@ -282,7 +282,7 @@ const A11Y=['РЖЯ','субтитры','расшифровка','аудиооп
 const SORTS={rel:'По релевантности',new:'Сначала новые',old:'Сначала старые',az:'По алфавиту',type:'По типу материала'};
 const ENT=[['person','Личность'],['place','Место'],['event','Событие'],['theme','Тема'],['tag','Тег'],['project','Выставка / проект'],['org','Организация'],['collection','Коллекция / фонд'],['source','Источник']];
 const ENTKEYS=ENT.map(e=>e[0]);
-const DIMS=['type','subtype','decade','access','media','a11y','lang','evtype','srctype','centerproj','persongroup',...ENTKEYS];
+const DIMS=['type','subtype','decade','access','media','a11y','lang','evtype','srctype','centerproj','persongroup','placecountry','placecity',...ENTKEYS];
 
 let openDim=null; // раскрытая категория фильтров (паттерн RAAN)
 let FILT=blankFilt();
@@ -330,6 +330,8 @@ function passes(o){
   if(FILT.a11y.size&&!(o.a11y||[]).some(a=>FILT.a11y.has(a))) return false;
   if(FILT.lang.size&&!FILT.lang.has(o.lang)) return false;
   if(FILT.persongroup.size){const gof=x=>x.group||'Связанные личности';const ok=(o.type==='person'&&FILT.persongroup.has(gof(o)))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='person'&&FILT.persongroup.has(gof(x));});if(!ok)return false;}
+  if(FILT.placecountry.size){const ok=(o.type==='place'&&FILT.placecountry.has(o.country))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='place'&&FILT.placecountry.has(x.country);});if(!ok)return false;}
+  if(FILT.placecity.size){const ok=(o.type==='place'&&FILT.placecity.has(o.city))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='place'&&FILT.placecity.has(x.city);});if(!ok)return false;}
   if(FILT.evtype.size){const ok=(o.type==='event'&&FILT.evtype.has(o.evType))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='event'&&FILT.evtype.has(x.evType);});if(!ok)return false;}
   if(FILT.srctype.size){const ok=(o.type==='source'&&FILT.srctype.has(o.srcType))||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='source'&&FILT.srctype.has(x.srcType);});if(!ok)return false;}
   if(FILT.centerproj.size){const ok=(o.type==='project'&&o.center)||(o.links||[]).some(id=>{const x=DB[id];return x&&x.type==='project'&&x.center;});if(!ok)return false;}
@@ -393,6 +395,8 @@ function activeChips(){
   FILT.a11y.forEach(v=>c.push(['Доступность: '+v,'a11y',v]));
   FILT.lang.forEach(v=>c.push(['Язык: '+v,'lang',v]));
   FILT.persongroup.forEach(v=>c.push(['Личности: '+v,'persongroup',v]));
+  FILT.placecountry.forEach(v=>c.push(['Страна: '+v,'placecountry',v]));
+  FILT.placecity.forEach(v=>c.push(['Город: '+v,'placecity',v]));
   FILT.evtype.forEach(v=>c.push(['Событие: '+v,'evtype',v]));
   FILT.srctype.forEach(v=>c.push(['Источник: '+v,'srctype',v]));
   FILT.centerproj.forEach(v=>c.push(['Проект Центра','centerproj',v]));
@@ -436,7 +440,7 @@ function filterBar(){
       return `<span class="fcat chk${on?' has':''}" onclick="tf('centerproj','1')"><span class="bx${on?' on':''}"></span>Проект Центра</span>`;}
     const c=byDim[d]; if(!c||!c[2].length) return '';
     const [dim,label]=c;
-    const n=dim==='type'?typeCnt():(dim==='person'?FILT.person.size+FILT.persongroup.size:FILT[dim].size), open=openDim===dim;
+    const n=dim==='type'?typeCnt():(dim==='person'?FILT.person.size+FILT.persongroup.size:(dim==='place'?FILT.place.size+FILT.placecountry.size+FILT.placecity.size:FILT[dim].size)), open=openDim===dim;
     return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
   }).join('');
   return `<div class="fbar r1">${row(FROWS[0])}</div><div class="fbar r2">${row(FROWS[1])}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
@@ -470,9 +474,29 @@ function drawFmodal(){
         <span class="lnk muted" style="font-size:12px;display:inline-block;margin:2px 0 0" onclick="pgFlip('${g}')">${pgOpen[g]?'свернуть ▴':'выбрать конкретных ▾'}</span>
         ${pgOpen[g]?`<div class="fsubs">${items.map(fopt).join('')}</div>`:''}</div>`;
     }).join('');
+  } else if(dim==='place'){
+    // места: страна → города → конкретные места; любой уровень выбирается целиком
+    const places=all('place');
+    const countries=[...new Set(places.map(p=>p.country).filter(Boolean))];
+    list=countries.map(c=>{
+      const inC=places.filter(p=>p.country===c);
+      const cities=[...new Set(inC.map(p=>p.city).filter(Boolean))];
+      const cOn=FILT.placecountry.has(c), cKey='pc:'+c;
+      const cityHtml=ct=>{
+        const inCt=inC.filter(p=>p.city===ct);
+        const ctOn=FILT.placecity.has(ct), ctKey='pt:'+ct;
+        return `<div style="margin-bottom:6px"><span class="fopt${ctOn?' on':''}" onclick="tf('placecity','${esc(ct)}')">${esc(ct)} <span style="color:var(--muted)">(${inCt.length})</span></span>
+          <span class="lnk muted" style="font-size:12px;display:inline-block;margin-left:6px" onclick="pgFlip('${ctKey}')">${pgOpen[ctKey]?'свернуть ▴':'конкретные ▾'}</span>
+          ${pgOpen[ctKey]?`<div class="fsubs">${inCt.map(p=>fopt([p.id,p.title])).join('')}</div>`:''}</div>`;
+      };
+      return `<div class="fitem" style="margin-bottom:10px">
+        <span class="fopt${cOn?' on':''}" style="font-weight:600" onclick="tf('placecountry','${esc(c)}')">${esc(c)} <span style="font-weight:400;color:var(--muted)">(${inC.length})</span></span>
+        <span class="lnk muted" style="font-size:12px;display:inline-block;margin:2px 0 0" onclick="pgFlip('${cKey}')">${pgOpen[cKey]?'свернуть ▴':'по городам ▾'}</span>
+        ${pgOpen[cKey]?`<div class="fsubs">${cities.map(cityHtml).join('')}</div>`:''}</div>`;
+    }).join('');
   } else list=opts.map(fopt).join('');
-  const selCnt=dim==='type'?typeCnt():(dim==='person'?FILT.person.size+FILT.persongroup.size:FILT[dim].size);
-  const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();FILT['media'].clear();navFilt()":(dim==='person'?"FILT['person'].clear();FILT['persongroup'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`);
+  const selCnt=dim==='type'?typeCnt():(dim==='person'?FILT.person.size+FILT.persongroup.size:(dim==='place'?FILT.place.size+FILT.placecountry.size+FILT.placecity.size:FILT[dim].size));
+  const resetJs=dim==='type'?"FILT['type'].clear();FILT['subtype'].clear();FILT['media'].clear();navFilt()":(dim==='person'?"FILT['person'].clear();FILT['persongroup'].clear();navFilt()":(dim==='place'?"FILT['place'].clear();FILT['placecountry'].clear();FILT['placecity'].clear();navFilt()":`FILT['${dim}'].clear();navFilt()`));
   const mediaBlock=dim==='type'?`<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">Наличие медиафайла</div>${Object.entries(MEDIA).map(([v,l])=>`<span class="fopt${FILT.media.has(v)?' on':''}" style="display:inline-block;margin-right:18px" onclick="tf('media','${v}')">${l}</span>`).join('')}</div>`:'';
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)closeFmodal()"><div class="modal fmodal">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:16px"><h2 style="margin:0">${label}</h2><span style="font-size:22px;cursor:pointer;line-height:1" onclick="closeFmodal()">✕</span></div>
@@ -482,7 +506,7 @@ function drawFmodal(){
       ${selCnt?`<span class="muted lnk" style="font-size:13px" onclick="${resetJs}">Сбросить (${selCnt})</span>`:''}
     </div>
     ${dim==='decade'?'<div class="muted" style="font-size:13px;margin-top:12px">Точная дата, диапазон и «около» — в полной версии.</div>':''}
-    <div class="fmodal-list">${list||'<span class="muted">Пусто</span>'}</div>
+    <div class="fmodal-list${(dim==='place'||dim==='person')?' wide':''}">${list||'<span class="muted">Пусто</span>'}</div>
     ${mediaBlock}
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="closeFmodal()">Готово</span></div>
   </div></div>`;
@@ -688,7 +712,7 @@ function drawPicker(){
       <span class="opt${fOnly?' on':''}" onclick="fOnly=!fOnly;this.classList.toggle('on');fmFilter(fq)"><span class="bx"></span>Показать только выбранные</span>
       ${set.size?`<span class="muted lnk" style="font-size:13px" onclick="(function(){${pkPage==='map'?'MAP_CATS':'CH_CATS'}().find(c=>c[0]==='${dim}')[3].clear();render();})()">Сбросить (${set.size})</span>`:''}
     </div>
-    <div class="fmodal-list">${list||'<span class="muted">Пусто</span>'}</div>
+    <div class="fmodal-list${(dim==='place'||dim==='person')?' wide':''}">${list||'<span class="muted">Пусто</span>'}</div>
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="pkClose()">Готово</span></div>
   </div></div>`;
   if(fq||fOnly)fmFilter(fq);
