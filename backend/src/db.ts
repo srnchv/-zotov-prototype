@@ -53,6 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_links_b ON links(b);
 `;
 
 export let q: Q;
+export let trgmAvailable = false;
 
 if (isPg) {
   const { default: pg } = await import("pg");
@@ -74,7 +75,15 @@ if (isPg) {
   };
   // PG понимает TIMESTAMPTZ-дефолты лучше, но TEXT-даты сохраняем для 1:1 совместимости строк
   await pool.query(SCHEMA);
-  console.log("БД: PostgreSQL (managed)");
+  // Полнотекстовый поиск: русская морфология (tsvector) + опечатки (pg_trgm, если расширение доступно)
+  try { await pool.query("CREATE EXTENSION IF NOT EXISTS pg_trgm"); trgmAvailable = true; }
+  catch { console.log("pg_trgm недоступен — поиск без коррекции опечаток"); }
+  await pool.query(`ALTER TABLE entities ADD COLUMN IF NOT EXISTS tsv tsvector
+    GENERATED ALWAYS AS (to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(payload,''))) STORED`);
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_tsv ON entities USING GIN (tsv)");
+  if (trgmAvailable)
+    await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_title_trgm ON entities USING GIN (lower(title) gin_trgm_ops)");
+  console.log("БД: PostgreSQL (managed), FTS готов" + (trgmAvailable ? " + trgm" : ""));
 } else {
   const { DatabaseSync } = await import("node:sqlite");
   const DB_PATH = process.env.DB_PATH || "./data/zotov.db";

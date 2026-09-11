@@ -40,6 +40,10 @@ test("search finds direct and related (ТЗ 18)", async () => {
   assert.ok(r.directCount >= 1);
   assert.ok(r.totalCount > r.directCount, "связанные объекты добавлены к выдаче");
   assert.ok(r.groups.person?.some((p: any) => p.title.includes("Вертов")), "Вертов найден через связь");
+  // плоский ранжированный список: прямые с сниппетом, связанные с указанием «через кого»
+  assert.ok(Array.isArray(r.items) && r.items.length === r.totalCount);
+  assert.ok(r.items.filter((x: any) => x.direct).length === r.directCount);
+  assert.ok(r.items.some((x: any) => !x.direct && x.via), "у связанных указано, через что найдены");
 });
 
 test("login: верные креды дают токен, неверные — 401", async () => {

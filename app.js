@@ -185,7 +185,8 @@ const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.col
 // если у сущности есть загруженное фото — показываем его вместо серой заглушки
 const bgs=(o,big)=>{const u=big?(o.imgBig||o.img):(o.img||o.imgBig);return u?`background-image:url('${u}');background-size:cover;background-position:center`:'';};
 const bgimg=(o,big)=>{const s=bgs(o,big);return s?` style="${s}"`:'';};
-const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${bgimg(o)}></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
+const tileVia=o=>{if(!srvOrder||!SRV.map)return '';const sv=SRV.map[o.id];return sv&&!sv.direct&&sv.via?`<div class="muted" style="font-size:12px">Найдено через: ${esc(sv.via)}</div>`:'';};
+const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${bgimg(o)}></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div>${tileVia(o)}</a>`;
 
 // основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
 const CARD_TYPES=['material','person','place','event','theme','project','collection'];
@@ -355,23 +356,43 @@ function passes(o){
   for(const k of ENTKEYS){ if(FILT[k].size){ const ok=FILT[k].has(o.id)||(o.links||[]).some(id=>FILT[k].has(id)); if(!ok) return false; } }
   return true;
 }
+// серверный поиск: морфология, ранжирование и сниппеты считает база; кэш на текущий запрос
+let SRV={q:null,items:null,map:null,loading:false};
+async function srvSearch(qtext){
+  SRV={q:qtext,items:null,map:null,loading:true};
+  try{
+    const r=await api('/search?q='+encodeURIComponent(qtext));
+    if(SRV.q!==qtext)return; // запрос уже сменился
+    SRV.items=r.items||[];SRV.map={};SRV.items.forEach(x=>SRV.map[x.id]=x);SRV.loading=false;render();
+  }catch(e){SRV={q:'__fail__'+qtext,items:null,map:null,loading:false};render();}
+}
 function runSearch(){
-  let pool, direct=new Set();
+  let pool, direct=new Set(), server=false;
   if(FILT.q){
-    const ql=FILT.q.toLowerCase();
-    const hits=RAW.filter(o=>textMatch(o,ql));
-    hits.forEach(o=>direct.add(o.id));
-    const ids=new Set(direct);
-    hits.forEach(o=>(o.links||[]).forEach(id=>ids.add(id))); // + связанные данные (ТЗ)
-    pool=[...ids].map(id=>DB[id]).filter(Boolean);
+    if(apiLive&&SRV.q!=='__fail__'+FILT.q){ // живой API: поиск делает база
+      if(SRV.q!==FILT.q){srvSearch(FILT.q);return {res:null,direct,server:true};}
+      if(SRV.loading)return {res:null,direct,server:true};
+      server=true;
+      SRV.items.filter(x=>x.direct).forEach(x=>direct.add(x.id));
+      pool=SRV.items.map(x=>DB[x.id]).filter(Boolean);
+    }else{ // офлайн-фолбэк: локальный поиск по загруженным данным
+      const ql=FILT.q.toLowerCase();
+      const hits=RAW.filter(o=>textMatch(o,ql));
+      hits.forEach(o=>direct.add(o.id));
+      const ids=new Set(direct);
+      hits.forEach(o=>(o.links||[]).forEach(id=>ids.add(id))); // + связанные данные (ТЗ)
+      pool=[...ids].map(id=>DB[id]).filter(Boolean);
+    }
   } else if(hasFilters()){
     pool=RAW.slice();
   } else {
     pool=all('material'); // browse-каталог
   }
-  return {res:pool.filter(passes),direct};
+  return {res:pool.filter(passes),direct,server};
 }
+let srvOrder=false; // при серверном поиске «по релевантности» = порядок базы
 function sortItems(arr,direct){
+  if(srvOrder&&FILT.sort==='rel')return arr.slice();
   const cmp={
     new:(a,b)=>yearOf(b.date)-yearOf(a.date),
     old:(a,b)=>yearOf(a.date)-yearOf(b.date),
@@ -395,6 +416,9 @@ function resultCard(o){
     <div class="t">${esc(o.title)}</div>
     <div class="muted" style="font-size:13px">${esc(o.date||'')}</div>
     <div class="rmeta">${accessBadge(o.access)}${mediaIcons(o)}</div>
+    ${(()=>{const sv=SRV.map&&SRV.map[o.id];if(!sv)return '';
+      if(sv.direct&&sv.snippet)return `<div class="muted" style="font-size:12px;line-height:1.4">…${sv.snippet}…</div>`;
+      if(!sv.direct&&sv.via)return `<div class="muted" style="font-size:12px">Найдено через: ${esc(sv.via)}</div>`;return '';})()}
     ${(person||coll||proj)?`<div class="rlinks">${person?`<span>Личность: ${esc(person.title)}</span>`:''}${proj?`<span>Выставка: ${esc(proj.title)}</span>`:''}${coll?`<span>Коллекция: ${esc(coll.title)}</span>`:''}</div>`:''}
     ${tags.length?`<div class="rtags">${tags.map(t=>'#'+esc(t.title)).join(' ')}</div>`:''}
   </a>`;
@@ -533,7 +557,13 @@ function drawFmodal(){
 // --- страница архива / результатов ---
 function archive(qs){
   FILT=parseFilt(qs);
-  const {res,direct}=runSearch();
+  const {res,direct,server}=runSearch();
+  srvOrder=!!server;
+  if(res===null){ // серверный поиск ещё выполняется
+    return page('#/archive',`<div class="crumbs"><a href="#/archive">Поиск</a></div><h1 style="font-size:32px">Поиск</h1>
+      ${searchInput(FILT.q)}${filterBar()}
+      <div style="margin-top:40px" class="muted">Ищем «${esc(FILT.q)}»…</div>`);
+  }
   const browse=!FILT.q&&!hasFilters();
   // основные сущности (с изображением) — карточками, служебные — названиями ниже
   const order=['material','person','place','event','theme','project','collection','org','source','tag','media'];
@@ -1367,6 +1397,7 @@ refreshData().then(()=>render());
 // ---------- router ----------
 let lastPath='';
 function render(hash){
+  srvOrder=false; // контекст серверной выдачи включает только archive()
   document.getElementById('modal-root').innerHTML='';
   const raw=(hash||location.hash||'#/').replace(/^#/,'');
   const qi=raw.indexOf('?');

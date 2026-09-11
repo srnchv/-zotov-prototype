@@ -1,5 +1,5 @@
 // Репозиторий: вся работа с сущностями и связями. Async — работает и с PostgreSQL, и с SQLite.
-import { q, SQL, canonical } from "./db.js";
+import { q, SQL, canonical, isPg, trgmAvailable } from "./db.js";
 import { randomUUID } from "node:crypto";
 
 export type Entity = {
@@ -94,22 +94,54 @@ export async function removeLink(x: string, y: string) {
 }
 
 // Поиск по ТЗ (разд. 18): совпадения по названию и полям + связанные с ними объекты.
+// PostgreSQL: полнотекст с русской морфологией, ранжирование, сниппеты, опечатки (trgm).
+// SQLite (локальная разработка): простой LIKE-фолбэк.
 export async function search(query: string) {
-  const ql = `%${query.toLowerCase()}%`;
-  const direct = (await q.all(
-    `SELECT * FROM entities WHERE ${SQL.LC}(title) LIKE ? OR ${SQL.LC}(payload) LIKE ?`, [ql, ql],
-  )).map(rowToEntity);
+  let direct: (Entity & { _snippet?: string })[];
+  if (isPg) {
+    // значение полей payload без JSON-синтаксиса и имён ключей — источник сниппета
+    const PLAIN = `regexp_replace(regexp_replace(coalesce(payload,''), '"[a-zA-Z_0-9]+"\\s*:', ' ', 'g'), '[\\{\\}\\[\\]",]', ' ', 'g')`;
+    const TSQ = `websearch_to_tsquery('russian', ?)`;
+    const fuzzy = trgmAvailable ? `OR word_similarity(lower(?), lower(title)) > 0.45` : "";
+    const rows = await q.all(
+      `SELECT *,
+         ts_rank(tsv, ${TSQ}) rnk,
+         ts_headline('russian', ${PLAIN}, ${TSQ}, 'MaxWords=16, MinWords=6, MaxFragments=1') snippet
+       FROM entities
+       WHERE tsv @@ ${TSQ} OR lower(title) LIKE ? ${fuzzy}
+       ORDER BY rnk DESC, title
+       LIMIT 100`,
+      [query, query, query, `%${query.toLowerCase()}%`, ...(trgmAvailable ? [query] : [])],
+    );
+    direct = rows.map((r: any) => {
+      const e = rowToEntity(r) as Entity & { _snippet?: string };
+      // сниппет отдаём только если полнотекст реально совпал (иначе ts_headline вернёт просто начало текста)
+      e._snippet = Number(r.rnk) > 0 && /<b>/.test(r.snippet || "") ? String(r.snippet).trim() : "";
+      return e;
+    });
+  } else {
+    const ql = `%${query.toLowerCase()}%`;
+    direct = (await q.all(
+      `SELECT * FROM entities WHERE ${SQL.LC}(title) LIKE ? OR ${SQL.LC}(payload) LIKE ?`, [ql, ql],
+    )).map(rowToEntity);
+  }
+
   const ids = new Set(direct.map((e) => e.id));
-  const related: Entity[] = [];
+  const related: (Entity & { _via?: string })[] = [];
   for (const e of direct) {
     for (const r of await linkedOf(e.id)) {
-      const ent = rowToEntity(r);
-      if (!ids.has(ent.id)) { ids.add(ent.id); related.push(ent); }
+      const ent = rowToEntity(r) as Entity & { _via?: string };
+      if (!ids.has(ent.id)) { ids.add(ent.id); ent._via = e.title; related.push(ent); }
     }
   }
   const groups: Record<string, Entity[]> = {};
   for (const e of [...direct, ...related]) (groups[e.type] = groups[e.type] || []).push(e);
-  return { query, directCount: direct.length, totalCount: ids.size, groups };
+  // items — плоский список в порядке релевантности (прямые по рангу, затем связанные)
+  const items = [
+    ...direct.map((e) => ({ id: e.id, direct: true, snippet: e._snippet || "" })),
+    ...related.map((e) => ({ id: e.id, direct: false, via: e._via })),
+  ];
+  return { query, directCount: direct.length, totalCount: ids.size, groups, items };
 }
 
 export async function dicts() {
