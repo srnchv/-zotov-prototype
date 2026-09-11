@@ -183,7 +183,8 @@ const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+f
 const link=o=>`<a class="chip" href="#/e/${o.id}">${esc(o.title)}</a>`;
 const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.colType||o.prType||o.orgType||'';
 // если у сущности есть загруженное фото — показываем его вместо серой заглушки
-const bgimg=(o,big)=>{const u=big?(o.imgBig||o.img):(o.img||o.imgBig);return u?` style="background-image:url('${u}');background-size:cover;background-position:center"`:'';};
+const bgs=(o,big)=>{const u=big?(o.imgBig||o.img):(o.img||o.imgBig);return u?`background-image:url('${u}');background-size:cover;background-position:center`:'';};
+const bgimg=(o,big)=>{const s=bgs(o,big);return s?` style="${s}"`:'';};
 const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${bgimg(o)}></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
 
 // основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
@@ -920,7 +921,7 @@ function entity(o){
         ${access?`<div class="access" style="margin-top:14px"><b>Материал доступен по запросу</b><div class="muted" style="margin-top:6px">Зарегистрированные исследователи могут запросить доступ к просмотру.</div></div>`:''}
       </div>
       <div>
-        <div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div>
+        <div class="media" style="aspect-ratio:4/3;${bgs(o,true)}"></div>
         <div class="muted" style="font-size:12px;margin-top:8px">${esc(o.title)}.${esc(authors!=='—'?authors:'')}${o.date?', '+esc(o.date):''}</div>
         <h3>Описание</h3>
         <div class="muted">Происхождение, контекст создания и связанные обстоятельства — редакторское описание с научным аппаратом.</div>
@@ -943,7 +944,7 @@ function entity(o){
       <div class="muted" style="margin-top:16px">Медиафайл — техническая сущность: конкретный файл, прикреплённый к материалу.</div>`;
     return page('',hero);
   } else if(o.type==='person'){
-    hero=`${crumbs}<div class="two" style="grid-template-columns:240px 1fr"><div class="media" style="aspect-ratio:3/4"${bgimg(o,true)}></div>
+    hero=`${crumbs}<div class="two" style="grid-template-columns:240px 1fr"><div class="media" style="aspect-ratio:3/4;${bgs(o,true)}"></div>
       <div><div class="kicker">Личность</div><h1>${esc(o.title)}</h1><div class="muted" style="font-size:18px">${esc(o.life)} · ${esc(o.role)}</div>
       <p class="muted" style="max-width:640px">Краткая биографическая справка: роль персоны в контексте архива, ключевые проекты и связи.</p></div></div>`;
   } else if(o.type==='theme'){
@@ -953,7 +954,7 @@ function entity(o){
     const tabs=REL_ORDER.filter(t=>TAB_LBL[t]&&byT[t]&&byT[t].length)
       .map(t=>`<span class="chip" onclick="document.getElementById('rel-${t}').scrollIntoView({behavior:'smooth',block:'start'})">${TAB_LBL[t]}</span>`).join('');
     hero=`${crumbs}<div class="two" style="grid-template-columns:560px 1fr;margin-top:8px">
-      <div><div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
+      <div><div class="media" style="aspect-ratio:4/3;${bgs(o,true)}"></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
       <div><div class="kicker">Тема</div><h1>${esc(o.title)}</h1>
         <div class="kicker" style="margin-top:14px">Краткое определение</div>
         <div style="font-size:17px;line-height:1.5;margin-top:6px">${esc(o.def||'')}</div>
@@ -966,7 +967,7 @@ function entity(o){
       ${tabs?`<div class="chips" style="margin:26px 0 4px;padding-top:18px;border-top:1px solid var(--line)">${tabs}</div>`:''}`;
   } else if(o.type==='project'){
     const v=DB[o.venue];
-    hero=`${crumbs}<div class="media" style="aspect-ratio:auto;height:340px;margin-top:8px"${bgimg(o,true)}></div>
+    hero=`${crumbs}<div class="media" style="aspect-ratio:auto;height:340px;margin-top:8px;${bgs(o,true)}"></div>
       <div class="kicker">Выставка · завершённый проект</div><h1>${esc(o.title)}</h1>
       <div class="chips">${[['Даты',o.dates],['Кураторы',o.curators],['Место',v?v.title:'—'],['Тип',o.prType]].map(kv=>`<span class="muted">${kv[0]}: <b style="color:var(--ink);font-weight:500">${esc(kv[1])}</b></span>`).join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>
       <p>Кураторское описание проекта. Проект собирает вокруг себя материалы, события, личности, организации, места, темы и источники — через связи.</p>
@@ -1187,7 +1188,7 @@ function adminEdit(id){
       </div>
       <div>
         <h3 style="margin-top:0">Медиа</h3>
-        <div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div>
+        <div class="media" style="aspect-ratio:4/3;${bgs(o,true)}"></div>
         ${(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media').map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px">
           <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
           <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.title)}</span>
