@@ -89,7 +89,10 @@ export function createApp() {
         entityId, filename: req.file.originalname, mime: req.file.mimetype, buffer: req.file.buffer,
       });
       res.status(201).json(m);
-    } catch (e) { next(e); }
+    } catch (e: any) {
+      console.error("media upload failed:", e);
+      res.status(502).json({ error: "storage: " + (e?.message || "upload failed") });
+    }
   });
 
   app.get("/api/media/:id/original", async (req, res, next) => {

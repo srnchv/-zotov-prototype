@@ -18,6 +18,9 @@ const s3 = () =>
     endpoint: ENDPOINT,
     region: REGION,
     forcePathStyle: true,
+    // S3-совместимые хранилища (не AWS) не понимают новые контрольные суммы SDK
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     credentials: { accessKeyId: process.env.S3_ACCESS_KEY!, secretAccessKey: process.env.S3_SECRET_KEY! },
   });
 
