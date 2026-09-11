@@ -1,8 +1,8 @@
 import { createApp } from "./app.js";
-import { db } from "./db.js";
+import { q } from "./db.js";
 
 // автосид: пустая база наполняется данными прототипа при первом старте
-const count = (db.prepare("SELECT count(*) c FROM entities").get() as any).c;
+const count = Number((await q.get("SELECT count(*) c FROM entities")).c);
 if (!count) {
   console.log("База пуста — выполняю сид из данных прототипа…");
   await import("./seed.js");

@@ -67,19 +67,19 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
   }
   await put(origKey, buffer, mime);
 
-  const media = repo.createEntity({
+  const media = await repo.createEntity({
     id: `md-${id}`, type: "media", title: filename,
     payload, links: entityId ? [entityId] : [],
   });
   // родительская сущность получает картинку для карточек и страниц
   if (kind === "image" && entityId)
-    repo.updateEntity(entityId, { payload: { img: payload.thumb, imgBig: payload.med } });
+    await repo.updateEntity(entityId, { payload: { img: payload.thumb, imgBig: payload.med } });
   return media;
 }
 
 // Подписанная ссылка на оригинал (оригиналы напрямую не публикуются)
 export async function originalUrl(mediaId: string) {
-  const m = repo.getEntity(mediaId);
+  const m = await repo.getEntity(mediaId);
   if (!m || m.type !== "media" || !m.origKey) return null;
   return getSignedUrl(s3(), new GetObjectCommand({ Bucket: BUCKET, Key: String(m.origKey) }), { expiresIn: 600 });
 }
@@ -107,7 +107,7 @@ export async function selftest() {
 
 // При удалении media-сущности подчищаем файлы в хранилище
 export async function deleteMediaFiles(mediaId: string) {
-  const m = repo.getEntity(mediaId);
+  const m = await repo.getEntity(mediaId);
   if (!m || m.type !== "media") return;
   const keys = [m.origKey, ...["thumb", "med", "big"].filter((r) => m[r]).map((r) => `media/${mediaId.replace(/^md-/, "")}/${r}.webp`)].filter(Boolean) as string[];
   for (const Key of keys) await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key })).catch(() => {});
