@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
+import multer from "multer";
 import { z } from "zod";
 import * as repo from "./repo.js";
+import * as media from "./media.js";
 
 export function createApp() {
   const app = express();
@@ -68,9 +70,35 @@ export function createApp() {
     res.json(e);
   });
 
-  app.delete("/api/entities/:id", auth, (req, res) => {
-    if (!repo.deleteEntity(String(req.params.id))) return res.status(404).json({ error: "not found" });
+  app.delete("/api/entities/:id", auth, async (req, res) => {
+    const id = String(req.params.id);
+    if (media.mediaEnabled()) await media.deleteMediaFiles(id); // для media-сущностей подчищаем файлы
+    if (!repo.deleteEntity(id)) return res.status(404).json({ error: "not found" });
     res.status(204).end();
+  });
+
+  // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+  app.post("/api/media", auth, upload.single("file"), async (req, res, next) => {
+    try {
+      if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+      if (!req.file) return res.status(400).json({ error: "no file" });
+      const { entityId } = z.object({ entityId: z.string().optional() }).parse(req.body);
+      const m = await media.uploadMedia({
+        entityId, filename: req.file.originalname, mime: req.file.mimetype, buffer: req.file.buffer,
+      });
+      res.status(201).json(m);
+    } catch (e) { next(e); }
+  });
+
+  app.get("/api/media/:id/original", async (req, res, next) => {
+    try {
+      if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+      const url = await media.originalUrl(String(req.params.id));
+      if (!url) return res.status(404).json({ error: "not found" });
+      res.json({ url, expiresIn: 600 });
+    } catch (e) { next(e); }
   });
 
   app.post("/api/entities/:id/links", auth, (req, res) => {

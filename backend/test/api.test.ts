@@ -86,6 +86,27 @@ test("create → link → visible from both sides → delete", async () => {
   assert.ok(!rod2.links.some((l: any) => l.id === created.id), "связи удалены каскадно");
 });
 
+test("media: сжатие фото в три производных webp", async () => {
+  const sharp = (await import("sharp")).default;
+  const { processImage } = await import("../src/media.js");
+  const src = await sharp({ create: { width: 3000, height: 2000, channels: 3, background: { r: 200, g: 40, b: 40 } } })
+    .jpeg().toBuffer();
+  const { renditions, width } = await processImage(src);
+  assert.equal(width, 3000);
+  const w = async (b: Buffer) => (await sharp(b).metadata()).width;
+  assert.equal(await w(renditions.thumb), 400);
+  assert.equal(await w(renditions.med), 1200);
+  assert.equal(await w(renditions.big), 2560);
+  assert.ok(renditions.big.length < src.length, "производная легче исходника");
+});
+
+test("media: без настроенного S3 загрузка отвечает 503", async () => {
+  const form = new FormData();
+  form.append("file", new Blob([new Uint8Array([1, 2, 3])], { type: "image/jpeg" }), "x.jpg");
+  const r = await fetch(`${base}/api/media`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}` }, body: form });
+  assert.equal(r.status, 503);
+});
+
 test("dicts and stats", async () => {
   const d = await (await fetch(`${base}/api/dicts`)).json();
   assert.ok(d.materialTypes.includes("Видео"));

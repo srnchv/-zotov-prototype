@@ -182,7 +182,9 @@ function footer(){return `<footer><div class="cols">
 const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+footer();
 const link=o=>`<a class="chip" href="#/e/${o.id}">${esc(o.title)}</a>`;
 const tileMeta=o=>o.date||o.subtype||o.role||o.dates||o.life||o.placeType||o.colType||o.prType||o.orgType||'';
-const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
+// если у сущности есть загруженное фото — показываем его вместо серой заглушки
+const bgimg=(o,big)=>{const u=big?(o.imgBig||o.img):(o.img||o.imgBig);return u?` style="background-image:url('${u}');background-size:cover;background-position:center"`:'';};
+const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${bgimg(o)}></div><div class="kicker">${TYPES[o.type].l}${o.type==='event'&&o.evType?' · '+esc(o.evType):''}</div><div class="t">${esc(o.title)}</div><div class="muted" style="font-size:13px">${esc(tileMeta(o))}</div></a>`;
 
 // основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
 const CARD_TYPES=['material','person','place','event','theme','project','collection'];
@@ -387,7 +389,7 @@ function resultCard(o){
   const person=ln.find(x=>x.type==='person'), coll=ln.find(x=>x.type==='collection'), proj=ln.find(x=>x.type==='project');
   const tags=ln.filter(x=>x.type==='tag');
   return `<a class="card tile rcard" href="#/e/${o.id}">
-    <div class="img"></div>
+    <div class="img"${bgimg(o)}></div>
     <div class="kicker">${esc(o.mtype||TYPES[o.type].l)}${o.subtype?' · '+esc(o.subtype):''}</div>
     <div class="t">${esc(o.title)}</div>
     <div class="muted" style="font-size:13px">${esc(o.date||'')}</div>
@@ -918,8 +920,8 @@ function entity(o){
         ${access?`<div class="access" style="margin-top:14px"><b>Материал доступен по запросу</b><div class="muted" style="margin-top:6px">Зарегистрированные исследователи могут запросить доступ к просмотру.</div></div>`:''}
       </div>
       <div>
-        <div class="media" style="aspect-ratio:4/3"></div>
-        <div class="muted" style="font-size:12px;margin-top:8px">${esc(o.title)}. ${esc(authors!=='—'?authors:'')}${o.date?', '+esc(o.date):''}</div>
+        <div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div>
+        <div class="muted" style="font-size:12px;margin-top:8px">${esc(o.title)}.${esc(authors!=='—'?authors:'')}${o.date?', '+esc(o.date):''}</div>
         <h3>Описание</h3>
         <div class="muted">Происхождение, контекст создания и связанные обстоятельства — редакторское описание с научным аппаратом.</div>
         <div style="margin-top:8px"><span class="lnk muted" style="font-size:13px" onclick="toast('Демо: полное описание')">＋ Раскрыть</span></div>
@@ -932,14 +934,16 @@ function entity(o){
   } else if(o.type==='media'){
     const p=DB[o.parent];
     hero=`${crumbs}<div class="kicker">Медиафайл</div><h1 style="font-size:28px">${esc(o.title)}</h1>
-      <div class="two" style="grid-template-columns:1fr 380px"><div style="background:#222;border-radius:10px;height:440px;display:flex;align-items:center;justify-content:center"><span class="btn">▶ просмотр / проигрыватель</span></div>
-      <div><div class="metabox">${[['Формат',o.format],['Размер',o.size],['Разрешение',o.res],['Длительность',o.dur],['Права / доступ','По запросу']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
-      <a class="btn dark" style="display:block;text-align:center;margin-top:12px">Скачать файл</a>
+      <div class="two" style="grid-template-columns:1fr 380px">${o.kind==='image'&&(o.big||o.med)
+        ?`<div style="border-radius:10px;min-height:200px;max-height:560px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center"><img src="${o.big||o.med}" style="max-width:100%;max-height:560px;display:block" alt="${esc(o.title)}"></div>`
+        :`<div style="background:#222;border-radius:10px;height:440px;display:flex;align-items:center;justify-content:center"><span class="btn">▶ просмотр / проигрыватель</span></div>`}
+      <div><div class="metabox">${[['Формат',o.format],['Размер',fmtSize(o.size)],['Разрешение',o.width?o.width+'×'+o.height:o.res],['Длительность',o.dur],['Права / доступ','Открытый']].filter(r=>r[1]).map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(String(r[1]))}</span></div>`).join('')}</div>
+      <span class="btn dark" style="display:block;text-align:center;margin-top:12px" onclick="mediaOriginal('${o.id}')">Скачать оригинал</span>
       ${p?`<div class="note" style="margin-top:12px"><div class="kicker">Относится к материалу</div><b>${esc(p.title)}</b><div><a href="#/e/${p.id}">→ открыть карточку материала</a></div></div>`:''}</div></div>
       <div class="muted" style="margin-top:16px">Медиафайл — техническая сущность: конкретный файл, прикреплённый к материалу.</div>`;
     return page('',hero);
   } else if(o.type==='person'){
-    hero=`${crumbs}<div class="two" style="grid-template-columns:240px 1fr"><div class="media" style="aspect-ratio:3/4"></div>
+    hero=`${crumbs}<div class="two" style="grid-template-columns:240px 1fr"><div class="media" style="aspect-ratio:3/4"${bgimg(o,true)}></div>
       <div><div class="kicker">Личность</div><h1>${esc(o.title)}</h1><div class="muted" style="font-size:18px">${esc(o.life)} · ${esc(o.role)}</div>
       <p class="muted" style="max-width:640px">Краткая биографическая справка: роль персоны в контексте архива, ключевые проекты и связи.</p></div></div>`;
   } else if(o.type==='theme'){
@@ -949,7 +953,7 @@ function entity(o){
     const tabs=REL_ORDER.filter(t=>TAB_LBL[t]&&byT[t]&&byT[t].length)
       .map(t=>`<span class="chip" onclick="document.getElementById('rel-${t}').scrollIntoView({behavior:'smooth',block:'start'})">${TAB_LBL[t]}</span>`).join('');
     hero=`${crumbs}<div class="two" style="grid-template-columns:560px 1fr;margin-top:8px">
-      <div><div class="media" style="aspect-ratio:4/3"></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
+      <div><div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div><div class="thumbs"><div></div><div></div><div></div><div></div></div></div>
       <div><div class="kicker">Тема</div><h1>${esc(o.title)}</h1>
         <div class="kicker" style="margin-top:14px">Краткое определение</div>
         <div style="font-size:17px;line-height:1.5;margin-top:6px">${esc(o.def||'')}</div>
@@ -962,7 +966,7 @@ function entity(o){
       ${tabs?`<div class="chips" style="margin:26px 0 4px;padding-top:18px;border-top:1px solid var(--line)">${tabs}</div>`:''}`;
   } else if(o.type==='project'){
     const v=DB[o.venue];
-    hero=`${crumbs}<div class="media" style="aspect-ratio:auto;height:340px;margin-top:8px"></div>
+    hero=`${crumbs}<div class="media" style="aspect-ratio:auto;height:340px;margin-top:8px"${bgimg(o,true)}></div>
       <div class="kicker">Выставка · завершённый проект</div><h1>${esc(o.title)}</h1>
       <div class="chips">${[['Даты',o.dates],['Кураторы',o.curators],['Место',v?v.title:'—'],['Тип',o.prType]].map(kv=>`<span class="muted">${kv[0]}: <b style="color:var(--ink);font-weight:500">${esc(kv[1])}</b></span>`).join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>
       <p>Кураторское описание проекта. Проект собирает вокруг себя материалы, события, личности, организации, места, темы и источники — через связи.</p>
@@ -1183,8 +1187,17 @@ function adminEdit(id){
       </div>
       <div>
         <h3 style="margin-top:0">Медиа</h3>
-        <div class="media" style="aspect-ratio:4/3"></div>
-        <div style="margin-top:10px"><span class="btn sm" onclick="toast('Демо: загрузка файла в S3-хранилище')">＋ Загрузить файл</span></div>
+        <div class="media" style="aspect-ratio:4/3"${bgimg(o,true)}></div>
+        ${(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media').map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px">
+          <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
+          <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.title)}</span>
+          <span class="muted" style="margin-left:auto;white-space:nowrap">${esc(m.format||'')} · ${fmtSize(m.size)}</span>
+          <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>`).join('')}
+        <div style="margin-top:10px" id="upl-zone">
+          <input type="file" id="f-file" accept="image/*,.pdf" style="display:none" onchange="admUpload('${o.id}')">
+          <span class="btn sm" onclick="document.getElementById('f-file').click()">＋ Загрузить файл</span>
+          <span class="muted" id="upl-status" style="font-size:12px;margin-left:8px"></span>
+        </div>
         <h3>Служебное</h3>
         <div class="metabox">${[['ID',o.id],['Создан','12.08.2026'],['Изменён','вчера · ред. А.С.'],['Журнал','3 записи']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
       </div>
@@ -1232,10 +1245,31 @@ window.admPatch=async(id,patch)=>{
   try{await api('/entities/'+id,{method:'PATCH',body:JSON.stringify(patch)});await refreshData();toast('Сохранено');render();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-window.admDelete=async id=>{
-  if(!confirm('Удалить сущность и все её связи?'))return;
-  try{await api('/entities/'+id,{method:'DELETE'});await refreshData();toast('Удалено');location.hash='#/admin/entities';}
+window.admDelete=async(id,stayId)=>{
+  if(!confirm(stayId?'Удалить файл?':'Удалить сущность и все её связи?'))return;
+  try{await api('/entities/'+id,{method:'DELETE'});await refreshData();toast('Удалено');
+    if(stayId){location.hash='#/admin/edit/'+stayId;render();}else location.hash='#/admin/entities';}
   catch(e){toast('Ошибка: '+e.message);}
+};
+// байты → человекочитаемый размер
+const fmtSize=n=>{if(n==null||n==='')return '';if(typeof n!=='number')return n;
+  return n>1048576?(n/1048576).toFixed(1)+' МБ':n>1024?Math.round(n/1024)+' КБ':n+' Б';};
+// загрузка файла: сервер сожмёт фото и вернёт media-сущность, связанную с карточкой
+window.admUpload=async entityId=>{
+  const inp=document.getElementById('f-file'),st=document.getElementById('upl-status');
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  if(st)st.textContent='Загрузка…';
+  try{
+    const fd=new FormData();fd.append('file',f);fd.append('entityId',entityId);
+    const r=await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error==='storage not configured'?'хранилище ещё не настроено на стенде':(e.error||'HTTP '+r.status));}
+    await refreshData();toast('Файл загружен, фото сжато');render();
+  }catch(e){if(st)st.textContent='';toast('Ошибка: '+e.message);}
+};
+// подписанная ссылка на оригинал (живёт 10 минут)
+window.mediaOriginal=async id=>{
+  try{const {url}=await api('/media/'+id+'/original');window.open(url,'_blank');}
+  catch(e){toast('Оригинал недоступен: '+e.message);}
 };
 window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
