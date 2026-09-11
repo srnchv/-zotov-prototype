@@ -268,3 +268,10 @@ textarea.inp{font-family:inherit;min-height:88px;resize:vertical;color:var(--ink
 .relrow{display:flex;align-items:center;gap:16px;padding:11px 0;border-bottom:1px solid var(--line)}
 .relrow:hover .t{text-decoration:underline}
 .relrow .thumbmini{width:56px;height:40px;background:var(--img);border-radius:6px;flex:none}
+
+/* админ-панель (демо-контур) */
+.admbar{background:#fff8e1;border:1px solid #f0e6c0;border-radius:8px;padding:9px 14px;font-size:13px;color:#8a6d1a;margin-top:16px}
+.atable{width:100%;border-collapse:collapse;font-size:14px}
+.atable th{text-align:left;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+.atable td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.atable tr:hover td{background:#fafaf9}

@@ -174,7 +174,7 @@ function header(active){
 function footer(){return `<footer><div class="cols">
   <div><h4>Архив</h4><a href="#/chrono">Хронограф</a><a href="#/map">Карта</a><a href="#/cat/person">Личности</a><a href="#/cat/theme">Темы</a></div>
   <div><h4>Коллекции</h4><a href="#/cat/collection">Коллекции и фонды</a><a href="#/texts">Тексты</a><a href="#/archive">Поиск</a></div>
-  <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a></div>
+  <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a><a href="#/admin">Админ-панель (демо)</a></div>
   <div><h4>Центр «Зотов»</h4><a href="#/">О центре</a><a href="#/">Контакты</a><a href="#/">hello@zotov.ru</a></div>
 </div></footer>`;}
 const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+footer();
@@ -1076,6 +1076,118 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
     <div class="right" style="justify-content:center"><a class="btn dark" href="#/cabinet" onclick="closeModal()">Перейти к заявкам</a><span class="btn" onclick="closeModal()">Закрыть</span></div>
   </div></div>`;};
 
+
+// ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['roles','Права и роли']];
+let admType='all', admQ='';
+const PUBSTAT=o=>['m13','ev47','p7'].includes(o.id)?'Черновик':'Опубликовано';
+function adminLayout(tab,inner){
+  const side=`<div class="side">
+    <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">демо · роль: редактор</div></div>
+    ${ADMIN_TABS.map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
+    <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="#/" style="font-size:13px">← На публичный сайт</a></div>
+  </div>`;
+  return page('',`<div class="admbar">Служебный контур · изменения не сохраняются (прототип)</div>
+    <div class="cab" style="margin-top:18px">${side}<div>${inner}</div></div>`);
+}
+function adminDash(){
+  const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[TYPES[t].pl,all(t).length]);
+  return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
+    <div class="grid g4" style="margin-top:16px">${counts.map(([l,n])=>`<div class="card" style="padding:16px"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l}</div></div>`).join('')}</div>
+    <div class="grid g2" style="margin-top:24px">
+      <div class="card"><b>Очередь модерации</b><div class="muted" style="font-size:13px;margin:6px 0 10px">4 заявки на доступ ждут решения</div><a class="btn sm" href="#/admin/moderation">К модерации →</a></div>
+      <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${[['Выставка «1927»: подготовка','ред. А.С. · сегодня'],['Дом Наркомфина','ред. М.К. · вчера'],['Манифест конструктивистов','создан · 2 дня назад']].map(r=>`<div class="r" style="padding:8px 0"><span style="font-size:14px">${r[0]}</span><span class="muted" style="font-size:12px">${r[1]}</span></div>`).join('')}</div></div>
+    </div>`);
+}
+function adminEntities(){
+  const types=[['all','Все'],...Object.keys(TYPES).filter(t=>t!=='media'&&t!=='tag').map(t=>[t,TYPES[t].pl])];
+  const rows=RAW.filter(o=>o.type!=='media'&&o.type!=='tag')
+    .filter(o=>admType==='all'||o.type===admType)
+    .filter(o=>!admQ||o.title.toLowerCase().includes(admQ.toLowerCase()));
+  return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><span class="btn dark" onclick="toast('Демо: форма создания — как редактор, но пустая')">＋ Создать сущность</span></div>
+    <input class="secsearch" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQ=this.value;admRefresh()">
+    <div class="chips" style="margin:12px 0">${types.map(([v,l])=>`<span class="chip" ${admType===v?'style="background:#1f1f1f;color:#fff"':''} onclick="admType='${v}';admRefresh()">${l}</span>`).join('')}</div>
+    <div class="muted" style="font-size:13px;margin:4px 0 10px">${rows.length} записей</div>
+    <table class="atable"><thead><tr><th>Название</th><th>Тип</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
+    <tbody>${rows.map(o=>`<tr>
+      <td><a class="lnk" style="text-decoration:none;font-weight:500" href="#/admin/edit/${o.id}">${esc(o.title)}</a></td>
+      <td class="muted">${TYPES[o.type].l}</td>
+      <td class="muted">${esc(o.date||o.dates||o.life||o.year||'—')}</td>
+      <td><span class="statbadge" ${PUBSTAT(o)==='Черновик'?'style="background:#fdf2e3"':''}>${PUBSTAT(o)}</span></td>
+      <td style="text-align:right;white-space:nowrap"><a class="btn sm" href="#/admin/edit/${o.id}">Редактировать</a> <a class="btn sm" href="#/e/${o.id}">Открыть на сайте</a></td>
+    </tr>`).join('')}</tbody></table>`);
+}
+window.admRefresh=()=>render();
+function adminEdit(id){
+  const o=DB[id];
+  if(!o) return adminLayout('entities','<h1>Не найдено</h1>');
+  const F=(label,val,ph)=>`<div class="field"><label>${label}</label><input class="inp" style="width:100%;color:var(--ink)" value="${esc(val||'')}" placeholder="${ph||''}"></div>`;
+  const isMat=o.type==='material';
+  const by={};(o.links||[]).forEach(lid=>{const x=DB[lid];if(x)(by[x.type]=by[x.type]||[]).push(x);});
+  const relBlocks=REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" onclick="toast('Демо: связь удалена (двусторонне)')">✕</span></span>`).join('')}<span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="toast('Демо: пикер сущностей — как фильтр каталога, связь появится у обеих сторон')">＋ добавить</span></div></div>`).join('');
+  return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / ${esc(o.title)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
+    <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px">
+      <div>
+        <h3 style="margin-top:0">Карточка</h3>
+        ${F('Название',o.title)}
+        ${F('Тип сущности',TYPES[o.type].l)}
+        ${isMat?F('Тип материала',o.mtype)+F('Подтип',o.subtype):''}
+        ${F('Дата / период',o.date||o.dates||o.life||o.year)}
+        ${isMat?`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${o.access===v?' on':''}" onclick="toast('Демо: уровень доступа изменён')">${l}</span>`).join('')}</div></div>`:''}
+        <div class="field"><label>Описание</label><textarea class="inp" style="width:100%" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
+        <h3>Связи <span class="muted" style="font-size:13px;font-weight:400">— двусторонние: появятся на карточках обеих сущностей</span></h3>
+        ${relBlocks||'<div class="muted">Связей пока нет.</div>'}
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <span class="btn dark" onclick="toast('Демо: сохранено. Объект обновится во всех связанных разделах')">Сохранить</span>
+          <span class="btn" onclick="toast('Демо: отправлено на модерацию')">На модерацию</span>
+          <a class="btn" href="#/admin/entities">Отмена</a>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">Медиа</h3>
+        <div class="media" style="aspect-ratio:4/3"></div>
+        <div style="margin-top:10px"><span class="btn sm" onclick="toast('Демо: загрузка файла в S3-хранилище')">＋ Загрузить файл</span></div>
+        <h3>Служебное</h3>
+        <div class="metabox">${[['ID',o.id],['Создан','12.08.2026'],['Изменён','вчера · ред. А.С.'],['Журнал','3 записи']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+      </div>
+    </div>`);
+}
+function adminModeration(){
+  const rows=[['Фотография экспозиции, 1927','Анна Исследователь','сегодня','исследование для диссертации','Новая'],['Документ фонда №14','П. Смирнов','вчера','публикация в журнале','На рассмотрении'],['Аудиозапись лекции','НИУ ВШЭ, семинар','2 дня','учебный курс','Требует уточнения'],['Протокол заседания ВХУТЕМАС','М. Ким','3 дня','выставочный проект','Новая']];
+  return adminLayout('moderation',`<h1 style="font-size:30px">Модерация</h1>
+    <div class="muted" style="font-size:14px;margin-bottom:14px">Заявки исследователей на доступ к материалам «по запросу».</div>
+    <table class="atable"><thead><tr><th>Материал</th><th>Заявитель</th><th>Дата</th><th>Цель</th><th>Статус</th><th></th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td style="font-weight:500">${r[0]}</td><td class="muted">${r[1]}</td><td class="muted">${r[2]}</td><td class="muted" style="max-width:220px">${r[3]}</td><td><span class="statbadge">${r[4]}</span></td>
+      <td style="text-align:right;white-space:nowrap"><span class="btn sm" onclick="toast('Демо: доступ предоставлен на 30 дней, заявителю уйдёт уведомление')">Одобрить</span> <span class="btn sm" onclick="toast('Демо: запрошено уточнение')">Уточнить</span> <span class="btn sm" onclick="toast('Демо: отклонено')">Отклонить</span></td></tr>`).join('')}</tbody></table>`);
+}
+function adminDict(){
+  const dicts=[['Типы материалов',TYPELIST],['Уровни доступа',Object.values(ACCESS).concat(['… (в ТЗ 9 уровней — полный справочник)'])],['Типы событий',[...new Set(all('event').map(e=>e.evType).filter(Boolean))].sort()],['Типы источников',[...new Set(all('source').map(x=>x.srcType).filter(Boolean))]],['Типы мест',[...new Set(all('place').map(p=>(p.placeType||'').split('·')[0].trim()).filter(Boolean))]],['Доступность',A11Y]];
+  return adminLayout('dict',`<h1 style="font-size:30px">Справочники</h1>
+    <div class="muted" style="font-size:14px;margin-bottom:6px">Управляемые списки значений — используются в карточках и фильтрах.</div>
+    <div class="grid g2" style="margin-top:14px">${dicts.map(([l,vals])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
+      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}<span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="toast('Демо: значение добавлено в справочник')">＋</span></div></div>`).join('')}</div>`);
+}
+function adminMedia(){
+  const files=[...all('media'),{title:'plakat_1931.tif',format:'TIFF',size:'82 МБ'},{title:'chertezh_1925.pdf',format:'PDF',size:'12 МБ'},{title:'hronika_1924.mp4',format:'MP4',size:'1.2 ГБ'},{title:'manifest_1922.pdf',format:'PDF',size:'3 МБ'}];
+  return adminLayout('media',`<div style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="font-size:30px">Медиатека</h1><span class="btn dark" onclick="toast('Демо: загрузка в S3-совместимое хранилище')">＋ Загрузить</span></div>
+    <div class="grid g4" style="margin-top:16px">${files.map(f=>`<div class="card" style="padding:14px"><div class="media" style="aspect-ratio:4/3;margin-bottom:10px"></div><div style="font-size:13px;font-weight:500;word-break:break-all">${esc(f.title)}</div><div class="muted" style="font-size:12px">${esc(f.format||'')} · ${esc(f.size||'')}</div></div>`).join('')}</div>`);
+}
+function adminRoles(){
+  const roles=['Администратор','Редактор','Модератор','Исследователь'];
+  const perms=['Создание и правка сущностей','Публикация','Модерация заявок','Справочники','Пользователи и роли','Просмотр закрытых материалов'];
+  const has={'Администратор':[1,1,1,1,1,1],'Редактор':[1,1,0,0,0,1],'Модератор':[0,0,1,0,0,1],'Исследователь':[0,0,0,0,0,0]};
+  return adminLayout('roles',`<h1 style="font-size:30px">Права и роли</h1>
+    <table class="atable" style="margin-top:14px"><thead><tr><th>Право</th>${roles.map(r=>`<th style="text-align:center">${r}</th>`).join('')}</tr></thead>
+    <tbody>${perms.map((p,i)=>`<tr><td>${p}</td>${roles.map(r=>`<td style="text-align:center"><span class="opt${has[r][i]?' on':''}" style="display:inline-flex;padding:0" onclick="toast('Демо: право переключено')"><span class="bx"></span></span></td>`).join('')}</tr>`).join('')}</tbody></table>
+    <div class="muted" style="font-size:13px;margin-top:12px">Роль назначается пользователю; исследователь — публичная роль из личного кабинета.</div>`);
+}
+function admin(seg){
+  const tab=seg[1]||'dash';
+  if(tab==='edit') return adminEdit(seg[2]);
+  return {dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]?{dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]():adminDash();
+}
+
 // ---------- router ----------
 let lastPath='';
 function render(hash){
@@ -1096,6 +1208,7 @@ function render(hash){
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=(seg[1]==='person'?personsCatalog():catalog(seg[1]));
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
+  else if(seg[0]==='admin') html=admin(seg);
   else if(seg[0]==='request'){ html=null; }
   else html=home();
   if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
