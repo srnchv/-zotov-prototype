@@ -15,6 +15,16 @@ export function createApp() {
     res.status(401).json({ error: "unauthorized" });
   };
 
+  // Вход в админку: логин/пароль → ключ редактора (тестовый стенд; в проде — сессии и роли).
+  const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "zotov2026";
+  app.post("/api/login", (req, res) => {
+    const { login, password } = z.object({ login: z.string(), password: z.string() }).parse(req.body);
+    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD)
+      return res.json({ token: ADMIN_TOKEN, name: "Тестовый администратор", role: "editor" });
+    res.status(401).json({ error: "bad credentials" });
+  });
+
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.1.0" }));
   app.get("/api/stats", (_req, res) => res.json(repo.stats()));
   app.get("/api/dicts", (_req, res) => res.json(repo.dicts()));

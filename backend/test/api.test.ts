@@ -42,6 +42,20 @@ test("search finds direct and related (ТЗ 18)", async () => {
   assert.ok(r.groups.person?.some((p: any) => p.title.includes("Вертов")), "Вертов найден через связь");
 });
 
+test("login: верные креды дают токен, неверные — 401", async () => {
+  const ok = await fetch(`${base}/api/login`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ login: "admin", password: "zotov2026" }),
+  });
+  assert.equal(ok.status, 200);
+  assert.equal((await ok.json()).token, TOKEN);
+  const bad = await fetch(`${base}/api/login`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ login: "admin", password: "нет" }),
+  });
+  assert.equal(bad.status, 401);
+});
+
 test("mutations require token", async () => {
   const r = await fetch(`${base}/api/entities`, {
     method: "POST",

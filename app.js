@@ -162,6 +162,8 @@ const all = t => RAW.filter(o=>o.type===t);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 
 // ---------- shared chrome ----------
+// admin.html подключает этот же app.js с флагом window.ADMIN_APP — тогда работает только служебный контур
+const ADMIN_APP=typeof window!=='undefined'&&window.ADMIN_APP===true;
 // меню 27.08.2026; «Тексты» = материалы типа «Текст» отдельным разделом (заменил «Библиотеку»)
 const NAV=[['Поиск','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Тексты','#/texts']];
 function header(active){
@@ -174,7 +176,7 @@ function header(active){
 function footer(){return `<footer><div class="cols">
   <div><h4>Архив</h4><a href="#/chrono">Хронограф</a><a href="#/map">Карта</a><a href="#/cat/person">Личности</a><a href="#/cat/theme">Темы</a></div>
   <div><h4>Коллекции</h4><a href="#/cat/collection">Коллекции и фонды</a><a href="#/texts">Тексты</a><a href="#/archive">Поиск</a></div>
-  <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a><a href="#/admin">Админ-панель (демо)</a></div>
+  <div><h4>Исследователям</h4><a href="#/cabinet">Регистрация</a><a href="#/cabinet">Заявки на доступ</a><a href="#/cabinet">Личный кабинет</a></div>
   <div><h4>Центр «Зотов»</h4><a href="#/">О центре</a><a href="#/">Контакты</a><a href="#/">hello@zotov.ru</a></div>
 </div></footer>`;}
 const page=(active,inner)=>header(active)+`<main class="wrap">${inner}</main>`+footer();
@@ -1083,16 +1085,46 @@ let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
 function adminLayout(tab,inner){
   const side=`<div class="side">
-    <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">демо · роль: редактор</div></div>
+    <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">роль: редактор</div></div>
     ${ADMIN_TABS.map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
-    <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="#/" style="font-size:13px">← На публичный сайт</a></div>
+    <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="index.html#/" style="font-size:13px">← На публичный сайт</a></div>
   </div>`;
-  const tokBar=admToken()
-    ?`Ключ редактора задан ✓ <span class="lnk" onclick="admSetToken('')">удалить</span>`
-    :`<input class="inp" id="admtok" placeholder="Ключ редактора (ADMIN_TOKEN)" style="padding:5px 10px;font-size:12px;width:280px"> <span class="btn sm" onclick="admSetToken(document.getElementById('admtok').value)">Сохранить</span>`;
-  return page('',`<div class="admbar" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><span>Служебный контур${apiLive?' · подключён живой API':' · стенд недоступен, изменения не сохранятся'}</span><span style="display:flex;align-items:center;gap:8px">${tokBar}</span></div>
-    <div class="cab" style="margin-top:18px">${side}<div>${inner}</div></div>`);
+  const top=`<header class="top"><div class="row">
+    <a class="logo" href="#/dash">ЗОТОВ · АРХИВ <span style="font-weight:400;color:var(--muted)">/ админ</span></a>${apiLive===true?'<span class="apilive on" title="Живые данные с тестового стенда">API</span>':apiLive===false?'<span class="apilive off" title="Стенд недоступен — изменения не сохранятся">офлайн</span>':''}
+    <nav class="main"><span style="font-size:13px;color:var(--muted)">${esc(localStorage.getItem('zotov_admname')||'Администратор')}</span>
+    <span class="btn sm" onclick="admLogout()">Выйти</span></nav>
+  </div></header>`;
+  return top+`<main class="wrap"><div class="admbar">Служебный контур${apiLive?' · подключён живой API':' · стенд недоступен, изменения не сохранятся'}</div>
+    <div class="cab" style="margin-top:18px">${side}<div>${inner}</div></div></main>`;
 }
+function adminLogin(){
+  return `<main class="wrap" style="min-height:80vh;display:flex;align-items:center;justify-content:center">
+    <div class="card" style="width:380px;padding:30px;box-sizing:border-box">
+      <div class="kicker">Цифровой архив Центра «Зотов»</div>
+      <h1 style="font-size:24px;margin:4px 0 20px">Вход в админ-панель</h1>
+      <div class="field"><label>Логин</label><input class="inp" id="lg-login" style="width:100%;box-sizing:border-box" autocomplete="username"></div>
+      <div class="field"><label>Пароль</label><input class="inp" id="lg-pass" type="password" style="width:100%;box-sizing:border-box" autocomplete="current-password" onkeydown="if(event.key==='Enter')admLogin()"></div>
+      <div id="lg-err" style="color:#9a2e2e;font-size:13px;min-height:18px;margin-bottom:6px"></div>
+      <span class="btn dark" style="display:block;text-align:center" onclick="admLogin()">Войти</span>
+      <div class="muted" style="font-size:12px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px">Тестовый доступ: логин <b>admin</b> · пароль <b>zotov2026</b></div>
+    </div></main>`;
+}
+window.admLogin=async()=>{
+  const l=document.getElementById('lg-login').value.trim(),p=document.getElementById('lg-pass').value;
+  const err=m=>{const e=document.getElementById('lg-err');if(e)e.textContent=m;};
+  try{
+    const r=await fetch(API+'/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({login:l,password:p}),signal:AbortSignal.timeout(8000)});
+    if(!r.ok){err('Неверный логин или пароль');return;}
+    const d=await r.json();
+    localStorage.setItem('zotov_admtoken',d.token);localStorage.setItem('zotov_admname',d.name||l);
+    toast('Вы вошли');render();
+  }catch(e){ // стенд недоступен — демо-вход по тестовому доступу, без сохранения изменений
+    if(l==='admin'&&p==='zotov2026'){localStorage.setItem('zotov_admdemo','1');localStorage.setItem('zotov_admname','Тестовый администратор');toast('Стенд недоступен — демо-режим');render();}
+    else err('Стенд недоступен. Попробуйте тестовый доступ.');
+  }
+};
+window.admLogout=()=>{['zotov_admtoken','zotov_admname','zotov_admdemo'].forEach(k=>localStorage.removeItem(k));toast('Вы вышли');render();};
+const admLogged=()=>!!(admToken()||localStorage.getItem('zotov_admdemo'));
 function adminDash(){
   const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[TYPES[t].pl,all(t).length]);
   return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
@@ -1117,7 +1149,7 @@ function adminEntities(){
       <td class="muted">${TYPES[o.type].l}</td>
       <td class="muted">${esc(o.date||o.dates||o.life||o.year||'—')}</td>
       <td><span class="statbadge" ${PUBSTAT(o)==='Черновик'?'style="background:#fdf2e3"':''}>${PUBSTAT(o)}</span></td>
-      <td style="text-align:right;white-space:nowrap"><a class="btn sm" href="#/admin/edit/${o.id}">Редактировать</a> <a class="btn sm" href="#/e/${o.id}">Открыть на сайте</a></td>
+      <td style="text-align:right;white-space:nowrap"><a class="btn sm" href="#/admin/edit/${o.id}">Редактировать</a> <a class="btn sm" href="index.html#/e/${o.id}">Открыть на сайте</a></td>
     </tr>`).join('')}</tbody></table>`);
 }
 window.admRefresh=()=>render();
@@ -1261,11 +1293,10 @@ function admin(seg){
 
 // ===== ЖИВОЙ API (тестовый стенд Timeweb) =====
 // Чтение: при старте прототип подтягивает все сущности и связи со стенда;
-// если стенд недоступен — остаёмся на статических данных (フолбэк).
+// если стенд недоступен — остаёмся на статических данных (фолбэк).
 const API='https://srnchv-zotov-prototype-27ea.twc1.net/api';
 let apiLive=null; // null: загрузка · true: живые данные · false: офлайн
 const admToken=()=>localStorage.getItem('zotov_admtoken')||'';
-window.admSetToken=v=>{localStorage.setItem('zotov_admtoken',v.trim());toast(v.trim()?'Ключ редактора сохранён':'Ключ удалён');render();};
 async function api(path,opts={}){
   const r=await fetch(API+path,{...opts,headers:{'content-type':'application/json',...(admToken()?{authorization:'Bearer '+admToken()}:{}),...(opts.headers||{})}});
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error==='unauthorized'?'нет прав — проверьте ключ редактора':(e.error||('HTTP '+r.status)));}
@@ -1293,6 +1324,13 @@ function render(hash){
   const path=qi<0?raw:raw.slice(0,qi);
   const qs=qi<0?'':raw.slice(qi+1);
   const seg=path.split('/').filter(Boolean); // e.g. ['e','m1']
+  if(ADMIN_APP){ // отдельное приложение админки: сначала вход, дальше только служебный контур
+    if(!admLogged()){document.getElementById('app').innerHTML=adminLogin();return;}
+    if(seg[0]==='admin')seg.shift(); // ссылки вида #/admin/… и #/… равнозначны
+    document.getElementById('app').innerHTML=admin(['admin',...seg]);
+    window.scrollTo(0,0);
+    return;
+  }
   let html;
   if(seg.length===0) html=home();
   else if(seg[0]==='archive') html=archive(seg[1]?'q='+seg[1]:qs); // legacy #/archive/<text> → ?q=
@@ -1304,7 +1342,7 @@ function render(hash){
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=(seg[1]==='person'?personsCatalog():catalog(seg[1]));
   else if(seg[0]==='e') html=entity(DB[seg[1]]);
-  else if(seg[0]==='admin') html=admin(seg);
+  else if(seg[0]==='admin'){location.href='admin.html';return;} // админка живёт отдельно
   else if(seg[0]==='request'){ html=null; }
   else html=home();
   if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
