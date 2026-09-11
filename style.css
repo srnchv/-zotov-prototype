@@ -278,3 +278,37 @@ textarea.inp{font-family:inherit;min-height:88px;resize:vertical;color:var(--ink
 .atable th{text-align:left;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
 .atable td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
 .atable tr:hover td{background:#fafaf9}
+
+/* ===== Тема Зотова — только админ-панель (body.zadm). Токены из Design Concept SHOW:
+   PT Root UI, чёрный #262626 на белом, серые #f2f2f2/#ebebeb/#8c8c8c, красный #f43c3a.
+   Фирменные Algorytm/Zotov (комм. лицензии) заменены капсом с разрядкой. ===== */
+.zadm{--ink:#262626;--muted:#8c8c8c;--line:#ebebeb;--fill:#f2f2f2;--red:#f43c3a;
+  font-family:'PT Root UI',Inter,-apple-system,sans-serif;color:var(--ink)}
+.zadm .top{background:var(--ink);border-bottom:none}
+.zadm .logo{color:#fff;text-transform:uppercase;letter-spacing:5px;font-weight:700}
+.zadm .logo span{color:#8c8c8c}
+.zadm .top nav.main span{color:#bfbfbf}
+.zadm .top .btn.sm{background:transparent;color:#fff;border-color:#555;border-radius:2px}
+.zadm .top .btn.sm:hover{background:var(--red);border-color:var(--red)}
+.zadm .apilive.on{background:var(--red);color:#fff;border:none}
+.zadm .apilive.off{background:#4d4d4d;color:#bfbfbf;border:none}
+.zadm h1,.zadm h2{text-transform:uppercase;letter-spacing:5px;font-weight:700}
+.zadm h3{text-transform:uppercase;letter-spacing:2px;font-size:14px;font-weight:700}
+.zadm .kicker{letter-spacing:2px;text-transform:uppercase;font-size:11px}
+.zadm .btn{border-radius:2px;border-color:var(--ink);font-weight:500}
+.zadm .btn:hover{background:var(--fill)}
+.zadm .btn.dark{background:var(--ink);border-color:var(--ink)}
+.zadm .btn.dark:hover{background:var(--red);border-color:var(--red);color:#fff}
+.zadm .inp{border-radius:2px;border-color:#bfbfbf;color:var(--ink)}
+.zadm .inp:focus{outline:none;border-color:var(--ink)}
+.zadm .card,.zadm .chip,.zadm .fchip,.zadm .toast,.zadm .media,.zadm .img,.zadm .thumbmini,.zadm .statbadge{border-radius:2px}
+.zadm .side{background:var(--fill);padding:10px;border-radius:2px}
+.zadm .side a{border-radius:0;color:var(--ink);border-left:3px solid transparent;font-size:14px}
+.zadm .side a.active{background:#fff;border-left-color:var(--red);font-weight:700}
+.zadm .admbar{background:#fff;border:1px solid var(--line);border-left:3px solid var(--red);border-radius:0;color:var(--muted)}
+.zadm .statbadge{background:var(--fill);text-transform:uppercase;font-size:11px;letter-spacing:1px;font-weight:700}
+.zadm .atable th{letter-spacing:1.5px}
+.zadm .atable tr:hover td{background:#fafafa}
+.zadm .fchip.on{background:var(--ink);border-color:var(--ink)}
+.zadm .lnk{color:var(--red)}
+.zadm .toast{background:var(--ink)}
