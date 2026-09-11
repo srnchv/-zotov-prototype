@@ -363,7 +363,12 @@ async function srvSearch(qtext){
   try{
     const r=await api('/search?q='+encodeURIComponent(qtext));
     if(SRV.q!==qtext)return; // запрос уже сменился
-    SRV.items=r.items||[];SRV.map={};SRV.items.forEach(x=>SRV.map[x.id]=x);SRV.loading=false;render();
+    SRV.items=r.items||[];SRV.map={};
+    SRV.items.forEach(x=>{ // чистим сниппет от служебных значений данных
+      if(x.snippet)x.snippet=x.snippet.replace(/\b(true|false|null)\b/g,'').replace(/\s{2,}/g,' ').trim();
+      SRV.map[x.id]=x;
+    });
+    SRV.loading=false;render();
   }catch(e){SRV={q:'__fail__'+qtext,items:null,map:null,loading:false};render();}
 }
 function runSearch(){
