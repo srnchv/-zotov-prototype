@@ -1,0 +1,92 @@
+import express from "express";
+import cors from "cors";
+import { z } from "zod";
+import * as repo from "./repo.js";
+
+export function createApp() {
+  const app = express();
+  app.use(cors());
+  app.use(express.json({ limit: "1mb" }));
+
+  // Мутации — только с токеном (тестовый стенд; в проде — полноценная авторизация и роли).
+  const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
+  const auth: express.RequestHandler = (req, res, next) => {
+    if (req.headers.authorization === `Bearer ${ADMIN_TOKEN}`) return next();
+    res.status(401).json({ error: "unauthorized" });
+  };
+
+  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.1.0" }));
+  app.get("/api/stats", (_req, res) => res.json(repo.stats()));
+  app.get("/api/dicts", (_req, res) => res.json(repo.dicts()));
+
+  app.get("/api/entities", (req, res) => {
+    const q = z.object({
+      type: z.string().optional(),
+      q: z.string().optional(),
+      status: z.string().optional(),
+      limit: z.coerce.number().int().min(1).max(200).optional(),
+      offset: z.coerce.number().int().min(0).optional(),
+    }).parse(req.query);
+    res.json(repo.listEntities(q));
+  });
+
+  app.get("/api/entities/:id", (req, res) => {
+    const e = repo.getEntity(String(req.params.id));
+    if (!e) return res.status(404).json({ error: "not found" });
+    res.json(e);
+  });
+
+  const entityBody = z.object({
+    id: z.string().min(1).max(64).optional(),
+    type: z.enum(["material","person","place","event","theme","project","org","collection","source","media","tag"]),
+    title: z.string().min(1).max(500),
+    status: z.enum(["draft","moderation","published"]).optional(),
+    payload: z.record(z.unknown()).optional(),
+    links: z.array(z.string()).optional(),
+  });
+
+  app.post("/api/entities", auth, (req, res) => {
+    const body = entityBody.parse(req.body);
+    res.status(201).json(repo.createEntity(body));
+  });
+
+  app.patch("/api/entities/:id", auth, (req, res) => {
+    const body = entityBody.partial().parse(req.body);
+    const e = repo.updateEntity(String(req.params.id), body);
+    if (!e) return res.status(404).json({ error: "not found" });
+    res.json(e);
+  });
+
+  app.delete("/api/entities/:id", auth, (req, res) => {
+    if (!repo.deleteEntity(String(req.params.id))) return res.status(404).json({ error: "not found" });
+    res.status(204).end();
+  });
+
+  app.post("/api/entities/:id/links", auth, (req, res) => {
+    const { targetId } = z.object({ targetId: z.string() }).parse(req.body);
+    if (!repo.getEntity(String(req.params.id)) || !repo.getEntity(targetId))
+      return res.status(404).json({ error: "entity not found" });
+    repo.addLink(String(req.params.id), targetId);
+    res.status(201).json(repo.getEntity(String(req.params.id)));
+  });
+
+  app.delete("/api/entities/:id/links/:targetId", auth, (req, res) => {
+    if (!repo.removeLink(String(req.params.id), String(req.params.targetId)))
+      return res.status(404).json({ error: "link not found" });
+    res.status(204).end();
+  });
+
+  app.get("/api/search", (req, res) => {
+    const { q } = z.object({ q: z.string().min(1) }).parse(req.query);
+    res.json(repo.search(q));
+  });
+
+  // единый обработчик ошибок (в т.ч. zod)
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err?.name === "ZodError") return res.status(400).json({ error: "validation", issues: err.issues });
+    console.error(err);
+    res.status(500).json({ error: "internal" });
+  });
+
+  return app;
+}
