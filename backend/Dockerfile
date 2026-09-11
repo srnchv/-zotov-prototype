@@ -14,5 +14,4 @@ COPY --from=build /app/dist ./dist
 COPY seed ./seed
 VOLUME /data
 EXPOSE 3000
-# первый запуск: если БД пустая — сидим данными прототипа
-CMD ["sh", "-c", "node -e \"const {db}=await import('./dist/db.js');const c=db.prepare('SELECT count(*) c FROM entities').get().c;if(!c){await import('./dist/seed.js')}\" --input-type=module && node dist/index.js"]
+CMD ["node", "dist/index.js"]
