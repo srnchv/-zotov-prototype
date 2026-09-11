@@ -84,6 +84,27 @@ export async function originalUrl(mediaId: string) {
   return getSignedUrl(s3(), new GetObjectCommand({ Bucket: BUCKET, Key: String(m.origKey) }), { expiresIn: 600 });
 }
 
+// Самопроверка хранилища: пробуем записать и удалить один байт, возвращаем детали ошибки
+export async function selftest() {
+  const info = {
+    endpoint: ENDPOINT, region: REGION, bucket: BUCKET, publicUrl: PUBLIC_URL,
+    accessKeyLen: (process.env.S3_ACCESS_KEY || "").length,
+    secretKeyLen: (process.env.S3_SECRET_KEY || "").length,
+  };
+  try {
+    await put("selftest/ping.txt", Buffer.from("ok"), "text/plain");
+    await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: "selftest/ping.txt" }));
+    return { ...info, ok: true };
+  } catch (e: any) {
+    return {
+      ...info, ok: false,
+      errName: e?.name, errMessage: e?.message, errCode: e?.Code || e?.code,
+      httpStatus: e?.$metadata?.httpStatusCode,
+      raw: String(e).slice(0, 300),
+    };
+  }
+}
+
 // При удалении media-сущности подчищаем файлы в хранилище
 export async function deleteMediaFiles(mediaId: string) {
   const m = repo.getEntity(mediaId);

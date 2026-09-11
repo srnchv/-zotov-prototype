@@ -95,6 +95,11 @@ export function createApp() {
     }
   });
 
+  app.get("/api/media-selftest", auth, async (_req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    res.json(await media.selftest());
+  });
+
   app.get("/api/media/:id/original", async (req, res, next) => {
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
