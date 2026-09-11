@@ -166,7 +166,7 @@ const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const NAV=[['Поиск','#/archive'],['Темы','#/cat/theme'],['Хронограф','#/chrono'],['Карта','#/map'],['Личности','#/cat/person'],['Коллекции','#/cat/collection'],['Проекты Центра','#/cat/project'],['Тексты','#/texts']];
 function header(active){
   return `<header class="top"><div class="row">
-    <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>
+    <a class="logo" href="#/">ЗОТОВ · АРХИВ</a>${apiLive===true?'<span class="apilive on" title="Живые данные с тестового стенда">API</span>':apiLive===false?'<span class="apilive off" title="Стенд недоступен — статические данные">офлайн</span>':''}
     <nav class="main">${NAV.map(([t,h])=>`<a href="${h}" class="${active===h?'active':''}">${t}</a>`).join('')}
     <a class="btn dark" href="#/cabinet">Войти</a></nav>
   </div></header>`;
@@ -1080,14 +1080,17 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
 const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['roles','Права и роли']];
 let admType='all', admQ='';
-const PUBSTAT=o=>['m13','ev47','p7'].includes(o.id)?'Черновик':'Опубликовано';
+const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
 function adminLayout(tab,inner){
   const side=`<div class="side">
     <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">демо · роль: редактор</div></div>
     ${ADMIN_TABS.map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
     <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="#/" style="font-size:13px">← На публичный сайт</a></div>
   </div>`;
-  return page('',`<div class="admbar">Служебный контур · изменения не сохраняются (прототип)</div>
+  const tokBar=admToken()
+    ?`Ключ редактора задан ✓ <span class="lnk" onclick="admSetToken('')">удалить</span>`
+    :`<input class="inp" id="admtok" placeholder="Ключ редактора (ADMIN_TOKEN)" style="padding:5px 10px;font-size:12px;width:280px"> <span class="btn sm" onclick="admSetToken(document.getElementById('admtok').value)">Сохранить</span>`;
+  return page('',`<div class="admbar" style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap"><span>Служебный контур${apiLive?' · подключён живой API':' · стенд недоступен, изменения не сохранятся'}</span><span style="display:flex;align-items:center;gap:8px">${tokBar}</span></div>
     <div class="cab" style="margin-top:18px">${side}<div>${inner}</div></div>`);
 }
 function adminDash(){
@@ -1104,7 +1107,7 @@ function adminEntities(){
   const rows=RAW.filter(o=>o.type!=='media'&&o.type!=='tag')
     .filter(o=>admType==='all'||o.type===admType)
     .filter(o=>!admQ||o.title.toLowerCase().includes(admQ.toLowerCase()));
-  return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><span class="btn dark" onclick="toast('Демо: форма создания — как редактор, но пустая')">＋ Создать сущность</span></div>
+  return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><a class="btn dark" href="#/admin/new">＋ Создать сущность</a></div>
     <input class="secsearch" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQ=this.value;admRefresh()">
     <div class="chips" style="margin:12px 0">${types.map(([v,l])=>`<span class="chip" ${admType===v?'style="background:#1f1f1f;color:#fff"':''} onclick="admType='${v}';admRefresh()">${l}</span>`).join('')}</div>
     <div class="muted" style="font-size:13px;margin:4px 0 10px">${rows.length} записей</div>
@@ -1121,27 +1124,29 @@ window.admRefresh=()=>render();
 function adminEdit(id){
   const o=DB[id];
   if(!o) return adminLayout('entities','<h1>Не найдено</h1>');
-  const F=(label,val,ph)=>`<div class="field"><label>${label}</label><input class="inp" style="width:100%;color:var(--ink)" value="${esc(val||'')}" placeholder="${ph||''}"></div>`;
+  const F=(label,val,fid)=>`<div class="field"><label>${label}</label><input class="inp" ${fid?`id="${fid}"`:''} style="width:100%;color:var(--ink)" value="${esc(val||'')}"></div>`;
   const isMat=o.type==='material';
   const by={};(o.links||[]).forEach(lid=>{const x=DB[lid];if(x)(by[x.type]=by[x.type]||[]).push(x);});
-  const relBlocks=REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" onclick="toast('Демо: связь удалена (двусторонне)')">✕</span></span>`).join('')}<span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="toast('Демо: пикер сущностей — как фильтр каталога, связь появится у обеих сторон')">＋ добавить</span></div></div>`).join('');
+  const relBlocks=REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}</div></div>`).join('')
+    +`<div style="margin-top:6px"><span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('${o.id}')">＋ добавить связь</span></div>`;
   return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / ${esc(o.title)}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
     <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px">
       <div>
         <h3 style="margin-top:0">Карточка</h3>
-        ${F('Название',o.title)}
+        ${F('Название',o.title,'f-title')}
         ${F('Тип сущности',TYPES[o.type].l)}
-        ${isMat?F('Тип материала',o.mtype)+F('Подтип',o.subtype):''}
-        ${F('Дата / период',o.date||o.dates||o.life||o.year)}
-        ${isMat?`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${o.access===v?' on':''}" onclick="toast('Демо: уровень доступа изменён')">${l}</span>`).join('')}</div></div>`:''}
-        <div class="field"><label>Описание</label><textarea class="inp" style="width:100%" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
+        ${isMat?F('Тип материала',o.mtype,'f-mtype')+F('Подтип',o.subtype,'f-subtype'):''}
+        ${F('Дата / период',o.date||o.dates||o.life||o.year,'f-date')}
+        ${isMat?`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${o.access===v?' on':''}" onclick="admPatch('${o.id}',{payload:{access:'${v}'}})">${l}</span>`).join('')}</div></div>`:''}
+        <div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>
         <h3>Связи <span class="muted" style="font-size:13px;font-weight:400">— двусторонние: появятся на карточках обеих сущностей</span></h3>
         ${relBlocks||'<div class="muted">Связей пока нет.</div>'}
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <span class="btn dark" onclick="toast('Демо: сохранено. Объект обновится во всех связанных разделах')">Сохранить</span>
-          <span class="btn" onclick="toast('Демо: отправлено на модерацию')">На модерацию</span>
-          <a class="btn" href="#/admin/entities">Отмена</a>
+        <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+          <span class="btn dark" onclick="admSave('${o.id}')">Сохранить</span>
+          ${o.status==='published'?`<span class="btn" onclick="admPatch('${o.id}',{status:'draft'})">В черновики</span>`:`<span class="btn" onclick="admPatch('${o.id}',{status:'published'})">Опубликовать</span>`}
+          <a class="btn" href="#/admin/entities">Назад</a>
+          <span class="btn" style="color:#9a2e2e;margin-left:auto" onclick="admDelete('${o.id}')">Удалить</span>
         </div>
       </div>
       <div>
@@ -1182,11 +1187,102 @@ function adminRoles(){
     <tbody>${perms.map((p,i)=>`<tr><td>${p}</td>${roles.map(r=>`<td style="text-align:center"><span class="opt${has[r][i]?' on':''}" style="display:inline-flex;padding:0" onclick="toast('Демо: право переключено')"><span class="bx"></span></span></td>`).join('')}</tr>`).join('')}</tbody></table>
     <div class="muted" style="font-size:13px;margin-top:12px">Роль назначается пользователю; исследователь — публичная роль из личного кабинета.</div>`);
 }
+// --- живые мутации админки ---
+window.admSave=async id=>{
+  try{
+    const g=x=>document.getElementById(x)?document.getElementById(x).value:undefined;
+    const payload={};['mtype','subtype','date','desc'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
+    await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({title:g('f-title'),payload})});
+    await refreshData();toast('Сохранено — объект обновлён во всех разделах');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
+window.admPatch=async(id,patch)=>{
+  try{await api('/entities/'+id,{method:'PATCH',body:JSON.stringify(patch)});await refreshData();toast('Сохранено');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+window.admDelete=async id=>{
+  if(!confirm('Удалить сущность и все её связи?'))return;
+  try{await api('/entities/'+id,{method:'DELETE'});await refreshData();toast('Удалено');location.hash='#/admin/entities';}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+window.admUnlink=async(id,tid)=>{
+  try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+let lpFor=null;
+window.admPickLink=id=>{lpFor=id;fq='';drawLinkPicker();};
+window.admCloseLp=()=>{lpFor=null;document.getElementById('modal-root').innerHTML='';};
+window.admDoLink=async tid=>{
+  try{await api(`/entities/${lpFor}/links`,{method:'POST',body:JSON.stringify({targetId:tid})});await refreshData();toast('Связь создана — видна с обеих сторон');render();drawLinkPicker();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+function drawLinkPicker(){
+  if(!lpFor||!DB[lpFor])return;
+  const cur=new Set(DB[lpFor].links||[]);
+  const opts=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&x.type!=='media');
+  document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Добавить связь</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск по всем сущностям…" value="${esc(fq)}" oninput="fq=this.value;fmFilter(this.value)" autofocus></div>
+    <div class="fmodal-list">${opts.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join('')}</div>
+    <div class="right" style="margin-top:18px"><span class="btn dark" onclick="admCloseLp()">Готово</span></div>
+  </div></div>`;
+  if(fq)fmFilter(fq);
+}
+function adminNew(){
+  return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / Новая</div>
+    <h1 style="font-size:26px">Создать сущность</h1>
+    <div style="max-width:520px">
+      <div class="field"><label>Тип</label><select class="sel" id="n-type" style="width:100%">${Object.keys(TYPES).filter(t=>t!=='media').map(t=>`<option value="${t}">${TYPES[t].l}</option>`).join('')}</select></div>
+      <div class="field"><label>Название</label><input class="inp" id="n-title" style="width:100%;color:var(--ink)" placeholder="Название сущности"></div>
+      <div class="field"><label>Дата / период (необязательно)</label><input class="inp" id="n-date" style="width:100%;color:var(--ink)" placeholder="например 1927"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <span class="btn dark" onclick="admCreate()">Создать</span>
+        <a class="btn" href="#/admin/entities">Отмена</a>
+      </div>
+      <div class="muted" style="font-size:13px;margin-top:14px">После создания откроется редактор — там добавляются связи, и объект сразу появится во всех связанных разделах публичной части.</div>
+    </div>`);
+}
+window.admCreate=async()=>{
+  try{
+    const g=x=>document.getElementById(x).value;
+    const payload={};if(g('n-date'))payload.date=g('n-date');
+    const e=await api('/entities',{method:'POST',body:JSON.stringify({type:g('n-type'),title:g('n-title'),payload})});
+    await refreshData();toast('Создано');location.hash='#/admin/edit/'+e.id;
+  }catch(e){toast('Ошибка: '+e.message);}
+};
+
 function admin(seg){
   const tab=seg[1]||'dash';
   if(tab==='edit') return adminEdit(seg[2]);
+  if(tab==='new') return adminNew();
   return {dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]?{dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]():adminDash();
 }
+
+
+// ===== ЖИВОЙ API (тестовый стенд Timeweb) =====
+// Чтение: при старте прототип подтягивает все сущности и связи со стенда;
+// если стенд недоступен — остаёмся на статических данных (フолбэк).
+const API='https://srnchv-zotov-prototype-27ea.twc1.net/api';
+let apiLive=null; // null: загрузка · true: живые данные · false: офлайн
+const admToken=()=>localStorage.getItem('zotov_admtoken')||'';
+window.admSetToken=v=>{localStorage.setItem('zotov_admtoken',v.trim());toast(v.trim()?'Ключ редактора сохранён':'Ключ удалён');render();};
+async function api(path,opts={}){
+  const r=await fetch(API+path,{...opts,headers:{'content-type':'application/json',...(admToken()?{authorization:'Bearer '+admToken()}:{}),...(opts.headers||{})}});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error==='unauthorized'?'нет прав — проверьте ключ редактора':(e.error||('HTTP '+r.status)));}
+  return r.status===204?null:r.json();
+}
+async function loadFromApi(){
+  const r=await fetch(API+'/export',{signal:AbortSignal.timeout(8000)});
+  if(!r.ok)throw new Error('export failed');
+  const {entities,links}=await r.json();
+  RAW.length=0;
+  for(const e of entities){const{created_at,updated_at,...rest}=e;RAW.push({...rest,links:[]});}
+  for(const k of Object.keys(DB))delete DB[k];
+  RAW.forEach(o=>DB[o.id]=o);
+  for(const [a,b] of links){if(DB[a]&&DB[b]){DB[a].links.push(b);DB[b].links.push(a);}}
+}
+async function refreshData(){try{await loadFromApi();apiLive=true;}catch(e){apiLive=false;}}
+refreshData().then(()=>render());
 
 // ---------- router ----------
 let lastPath='';

@@ -13,6 +13,9 @@ a{color:inherit;text-decoration:none;cursor:pointer}
 header.top{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:10}
 .top .row{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;max-width:var(--maxw);margin:0 auto}
 .logo{font-weight:600;letter-spacing:.5px}
+.apilive{font-size:10px;font-weight:600;letter-spacing:.5px;padding:2px 8px;border-radius:9px;margin-left:8px;vertical-align:2px}
+.apilive.on{background:#e8f4ea;color:#2e7d4f}
+.apilive.off{background:#eee;color:#8a8a8c}
 nav.main{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
 nav.main a{color:var(--muted);font-size:14px}
 nav.main a:hover,nav.main a.active{color:var(--ink)}

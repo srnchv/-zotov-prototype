@@ -131,6 +131,13 @@ export function dicts() {
   };
 }
 
+// полный экспорт для клик-прототипа: все сущности + пары связей одним запросом
+export function exportAll() {
+  const entities = db.prepare("SELECT * FROM entities").all().map(rowToEntity);
+  const links = (db.prepare("SELECT a, b FROM links").all() as any[]).map((x) => [x.a, x.b]);
+  return { entities, links };
+}
+
 export function stats() {
   const rows = db.prepare("SELECT type, count(*) c FROM entities GROUP BY type").all() as any[];
   const links = (db.prepare("SELECT count(*) c FROM links").get() as any).c;

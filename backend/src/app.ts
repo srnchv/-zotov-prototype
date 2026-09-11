@@ -18,6 +18,7 @@ export function createApp() {
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.1.0" }));
   app.get("/api/stats", (_req, res) => res.json(repo.stats()));
   app.get("/api/dicts", (_req, res) => res.json(repo.dicts()));
+  app.get("/api/export", (_req, res) => res.json(repo.exportAll()));
 
   app.get("/api/entities", (req, res) => {
     const q = z.object({
