@@ -937,7 +937,11 @@ function entity(o){
     hero=`${crumbs}<div class="kicker">Медиафайл</div><h1 style="font-size:28px">${esc(o.title)}</h1>
       <div class="two" style="grid-template-columns:1fr 380px">${o.kind==='image'&&(o.big||o.med)
         ?`<div style="border-radius:10px;min-height:200px;max-height:560px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center"><img src="${o.big||o.med}" style="max-width:100%;max-height:560px;display:block" alt="${esc(o.title)}"></div>`
-        :`<div style="background:#222;border-radius:10px;height:440px;display:flex;align-items:center;justify-content:center"><span class="btn">▶ просмотр / проигрыватель</span></div>`}
+        :o.kind==='video'||o.kind==='audio'
+        ?`<div id="player-box" style="background:#111;border-radius:10px;min-height:340px;display:flex;align-items:center;justify-content:center"><span class="btn" onclick="mediaPlay('${o.id}','${o.kind}')">▶ ${o.kind==='audio'?'Слушать':'Смотреть'}</span></div>`
+        :o.kind==='pdf'
+        ?`<div style="background:#f4f4f4;border:1px solid var(--line);border-radius:10px;height:340px;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center"><div style="font-size:40px">📄</div><span class="btn" onclick="mediaOriginal('${o.id}')">Открыть документ (PDF)</span></div>`
+        :`<div style="background:#222;border-radius:10px;height:340px;display:flex;align-items:center;justify-content:center"><span class="btn" onclick="mediaOriginal('${o.id}')">Открыть файл</span></div>`}
       <div><div class="metabox">${[['Формат',o.format],['Размер',fmtSize(o.size)],['Разрешение',o.width?o.width+'×'+o.height:o.res],['Длительность',o.dur],['Права / доступ','Открытый']].filter(r=>r[1]).map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(String(r[1]))}</span></div>`).join('')}</div>
       <span class="btn dark" style="display:block;text-align:center;margin-top:12px" onclick="mediaOriginal('${o.id}')">Скачать оригинал</span>
       ${p?`<div class="note" style="margin-top:12px"><div class="kicker">Относится к материалу</div><b>${esc(p.title)}</b><div><a href="#/e/${p.id}">→ открыть карточку материала</a></div></div>`:''}</div></div>
@@ -1195,7 +1199,7 @@ function adminEdit(id){
           <span class="muted" style="margin-left:auto;white-space:nowrap">${esc(m.format||'')} · ${fmtSize(m.size)}</span>
           <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>`).join('')}
         <div style="margin-top:10px" id="upl-zone">
-          <input type="file" id="f-file" accept="image/*,.pdf" style="display:none" onchange="admUpload('${o.id}')">
+          <input type="file" id="f-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="admUpload('${o.id}')">
           <span class="btn sm" onclick="document.getElementById('f-file').click()">＋ Загрузить файл</span>
           <span class="muted" id="upl-status" style="font-size:12px;margin-left:8px"></span>
         </div>
@@ -1271,6 +1275,16 @@ window.admUpload=async entityId=>{
 window.mediaOriginal=async id=>{
   try{const {url}=await api('/media/'+id+'/original');window.open(url,'_blank');}
   catch(e){toast('Оригинал недоступен: '+e.message);}
+};
+// встроенный проигрыватель: видео/аудио играют прямо из хранилища по подписанной ссылке
+window.mediaPlay=async(id,kind)=>{
+  try{
+    const {url}=await api('/media/'+id+'/original');
+    const box=document.getElementById('player-box'); if(!box)return;
+    box.innerHTML=kind==='audio'
+      ?`<audio controls autoplay src="${url}" style="width:90%"></audio>`
+      :`<video controls autoplay src="${url}" style="width:100%;max-height:560px;border-radius:10px"></video>`;
+  }catch(e){toast('Файл недоступен: '+e.message);}
 };
 window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
