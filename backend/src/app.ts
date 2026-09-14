@@ -31,7 +31,12 @@ export function createApp() {
     res.status(401).json({ error: "bad credentials" });
   });
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.2.0" }));
+  // имя редактора для журнала: фронт шлёт в заголовке (uri-encoded, т.к. кириллица)
+  const actor = (req: express.Request) => {
+    try { return decodeURIComponent(String(req.headers["x-editor"] || "")); } catch { return ""; }
+  };
+
+  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.3.0" }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
   app.get("/api/export", ah(async (_req, res) => res.json(await repo.exportAll())));
@@ -64,35 +69,59 @@ export function createApp() {
 
   app.post("/api/entities", auth, ah(async (req, res) => {
     const body = entityBody.parse(req.body);
-    res.status(201).json(await repo.createEntity(body));
+    const e = await repo.createEntity(body);
+    await repo.logAct("create", e.id, e.title, actor(req));
+    res.status(201).json(e);
   }));
 
   app.patch("/api/entities/:id", auth, ah(async (req, res) => {
     const body = entityBody.partial().parse(req.body);
     const e = await repo.updateEntity(String(req.params.id), body);
     if (!e) return res.status(404).json({ error: "not found" });
+    await repo.logAct("update", e.id, e.title, actor(req));
     res.json(e);
   }));
 
   app.delete("/api/entities/:id", auth, ah(async (req, res) => {
     const id = String(req.params.id);
+    const e = await repo.getEntity(id);
     if (media.mediaEnabled()) await media.deleteMediaFiles(id); // для media-сущностей подчищаем файлы
     if (!(await repo.deleteEntity(id))) return res.status(404).json({ error: "not found" });
+    await repo.logAct("delete", id, e?.title || "", actor(req));
     res.status(204).end();
   }));
 
   app.post("/api/entities/:id/links", auth, ah(async (req, res) => {
     const { targetId } = z.object({ targetId: z.string() }).parse(req.body);
-    if (!(await repo.getEntity(String(req.params.id))) || !(await repo.getEntity(targetId)))
+    const e = await repo.getEntity(String(req.params.id));
+    if (!e || !(await repo.getEntity(targetId)))
       return res.status(404).json({ error: "entity not found" });
     await repo.addLink(String(req.params.id), targetId);
+    await repo.logAct("link", e.id, e.title, actor(req));
     res.status(201).json(await repo.getEntity(String(req.params.id)));
   }));
 
   app.delete("/api/entities/:id/links/:targetId", auth, ah(async (req, res) => {
     if (!(await repo.removeLink(String(req.params.id), String(req.params.targetId))))
       return res.status(404).json({ error: "link not found" });
+    const e = await repo.getEntity(String(req.params.id));
+    await repo.logAct("unlink", String(req.params.id), e?.title || "", actor(req));
     res.status(204).end();
+  }));
+
+  // просмотр публичной страницы: считаем популярность, updated_at не меняется
+  app.post("/api/entities/:id/view", ah(async (req, res) => {
+    if (!(await repo.bumpViews(String(req.params.id)))) return res.status(404).json({ error: "not found" });
+    res.status(204).end();
+  }));
+
+  // журнал: последние действия + сводка по сущностям (кто менял последним, сколько правок)
+  app.get("/api/audit", auth, ah(async (_req, res) => {
+    res.json({ recent: await repo.auditRecent(100), summary: await repo.auditSummary() });
+  }));
+
+  app.get("/api/entities/:id/audit", auth, ah(async (req, res) => {
+    res.json(await repo.auditFor(String(req.params.id)));
   }));
 
   app.get("/api/search", ah(async (req, res) => {
@@ -111,6 +140,7 @@ export function createApp() {
       const m = await media.uploadMedia({
         entityId, filename: req.file.originalname, mime: req.file.mimetype, buffer: req.file.buffer,
       });
+      await repo.logAct("media", entityId || m.id, m.title, actor(req));
       res.status(201).json(m);
     } catch (e: any) {
       console.error("media upload failed:", e);

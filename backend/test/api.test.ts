@@ -111,6 +111,30 @@ test("media: без настроенного S3 загрузка отвечае�
   assert.equal(r.status, 503);
 });
 
+test("аудит: кто создал/правил, просмотры без изменения updated_at", async () => {
+  const authedNamed = { ...authed, "x-editor": encodeURIComponent("Анна Смирнова") };
+  const created = await (await fetch(`${base}/api/entities`, {
+    method: "POST", headers: authedNamed, body: JSON.stringify({ type: "tag", title: "Аудит-тест" }),
+  })).json();
+  await fetch(`${base}/api/entities/${created.id}`, {
+    method: "PATCH", headers: authedNamed, body: JSON.stringify({ title: "Аудит-тест 2" }),
+  });
+  const audit = await (await fetch(`${base}/api/audit`, { headers: authed })).json();
+  const mine = audit.recent.filter((a: any) => a.entity_id === created.id);
+  assert.ok(mine.some((a: any) => a.action === "create" && a.actor === "Анна Смирнова"));
+  assert.ok(mine.some((a: any) => a.action === "update"));
+  assert.equal(audit.summary[created.id].edits, 2);
+  assert.equal(audit.summary[created.id].lastActor, "Анна Смирнова");
+  // просмотры: счётчик растёт, updated_at не трогается
+  const before = await (await fetch(`${base}/api/entities/${created.id}`)).json();
+  await fetch(`${base}/api/entities/${created.id}/view`, { method: "POST" });
+  await fetch(`${base}/api/entities/${created.id}/view`, { method: "POST" });
+  const after = await (await fetch(`${base}/api/entities/${created.id}`)).json();
+  assert.equal(after.views, 2);
+  assert.equal(after.updated_at, before.updated_at, "просмотр — не правка");
+  await fetch(`${base}/api/entities/${created.id}`, { method: "DELETE", headers: authed });
+});
+
 test("dicts and stats", async () => {
   const d = await (await fetch(`${base}/api/dicts`)).json();
   assert.ok(d.materialTypes.includes("Видео"));

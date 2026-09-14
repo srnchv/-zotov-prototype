@@ -1170,34 +1170,65 @@ window.admLogin=async()=>{
 window.admLogout=()=>{['zotov_admtoken','zotov_admname','zotov_admdemo'].forEach(k=>localStorage.removeItem(k));toast('Вы вышли');render();};
 const admLogged=()=>!!(admToken()||localStorage.getItem('zotov_admdemo'));
 function adminDash(){
+  loadAuds();
   const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[t,TYPES[t].pl,all(t).length]);
   return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
     <div class="grid g4" style="margin-top:16px">${counts.map(([t,l,n])=>`<div class="card" style="padding:16px;cursor:pointer" onclick="admType='${t}';location.hash='#/admin/entities'"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l} →</div></div>`).join('')}</div>
-    <div class="grid g2" style="margin-top:24px">
+    <div class="grid g3" style="margin-top:24px">
       <div class="card"><b>Очередь модерации</b><div class="muted" style="font-size:13px;margin:6px 0 10px">4 заявки на доступ ждут решения</div><a class="btn sm" href="#/admin/moderation">К модерации →</a></div>
-      <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${[['Выставка «1927»: подготовка','ред. А.С. · сегодня'],['Дом Наркомфина','ред. М.К. · вчера'],['Манифест конструктивистов','создан · 2 дня назад']].map(r=>`<div class="r" style="padding:8px 0"><span style="font-size:14px">${r[0]}</span><span class="muted" style="font-size:12px">${r[1]}</span></div>`).join('')}</div></div>
+      <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${
+        (AUDS&&AUDS.recent&&AUDS.recent.length)
+          ?AUDS.recent.slice(0,4).map(a=>`<div class="r" style="padding:8px 0"><span style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${a.entity_id}">${esc(a.entity_title||a.entity_id)}</a><br><span class="muted" style="font-size:11px">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span></span><span class="muted" style="font-size:11px;white-space:nowrap">${fmtAt(a.at)}</span></div>`).join('')
+          :`<div class="muted" style="font-size:13px;padding:8px 0">${AUDSloading?'Загружаем журнал…':'Изменений пока не было.'}</div>`}</div></div>
+      <div class="card"><b>Самые просматриваемые</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${
+        (()=>{const top=RAW.filter(o=>Number(o.views)>0).sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,4);
+          return top.length?top.map(o=>`<div class="r" style="padding:8px 0"><a class="lnk" style="font-size:13px;text-decoration:none" href="#/admin/edit/${o.id}">${esc(o.title)}</a><span class="muted" style="font-size:12px">${o.views}</span></div>`).join('')
+          :'<div class="muted" style="font-size:13px;padding:8px 0">Просмотры начнут считаться с публичных страниц.</div>';})()}</div></div>
     </div>`);
 }
+// журнал с сервера (кто/что/когда) — кэш на сессию админки
+let AUDS=null,AUDSloading=false;
+async function loadAuds(){
+  if(AUDS||AUDSloading||apiLive!==true)return;
+  AUDSloading=true;
+  try{AUDS=await api('/audit');}catch(e){AUDS={recent:[],summary:{}};}
+  AUDSloading=false;render();
+}
+const fmtAt=s=>s?String(s).slice(0,16).replace('T',' '):'';
+const ACTL={create:'создание',update:'правка',delete:'удаление',link:'связь',unlink:'связь снята',media:'файл'};
+let admSortKey='title',admSortDir=1;
+window.admSort=k=>{if(admSortKey===k)admSortDir=-admSortDir;else{admSortKey=k;admSortDir=1;}render();};
 function adminEntities(){
+  loadAuds();
+  const sum=(AUDS&&AUDS.summary)||{};
   const types=[['all','Все'],...Object.keys(TYPES).filter(t=>t!=='media'&&t!=='tag').map(t=>[t,TYPES[t].pl])];
+  const yearNum=o=>yearOf(o.date||o.dates||o.life||o.year)||0;
+  const val={title:o=>o.title,type:o=>TYPES[o.type].l,date:yearNum,status:o=>o.status||'published',
+    views:o=>Number(o.views)||0,edits:o=>(sum[o.id]&&sum[o.id].edits)||0,changed:o=>(sum[o.id]&&sum[o.id].lastAt)||''}[admSortKey]||(o=>o.title);
   const rows=RAW.filter(o=>o.type!=='media'&&o.type!=='tag')
     .filter(o=>admType==='all'||o.type===admType)
-    .filter(o=>!admQ||o.title.toLowerCase().includes(admQ.toLowerCase()));
+    .filter(o=>!admQ||o.title.toLowerCase().includes(admQ.toLowerCase()))
+    .sort((a,b)=>{const x=val(a),y=val(b);return (typeof x==='number'?x-y:String(x).localeCompare(String(y),'ru'))*admSortDir;});
+  const th=(k,l,align)=>`<th style="cursor:pointer;white-space:nowrap;${align?'text-align:'+align:''}" onclick="admSort('${k}')">${l}${admSortKey===k?(admSortDir>0?' ↑':' ↓'):''}</th>`;
   return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><a class="btn dark" href="#/admin/new">＋ Создать сущность</a></div>
     <input class="secsearch" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQ=this.value;admRefresh()">
     <div class="chips" style="margin:12px 0">${types.map(([v,l])=>`<span class="chip" ${admType===v?'style="background:#1f1f1f;color:#fff"':''} onclick="admType='${v}';admRefresh()">${l}</span>`).join('')}</div>
-    <div class="muted" style="font-size:13px;margin:4px 0 10px">${rows.length} записей</div>
-    <table class="atable"><thead><tr><th>Название</th><th>Тип</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
-    <tbody>${rows.map(o=>`<tr>
+    <div class="muted" style="font-size:13px;margin:4px 0 10px">${rows.length} записей · сортировка по клику на заголовок колонки</div>
+    <table class="atable"><thead><tr>${th('title','Название')}${th('type','Тип')}${th('date','Дата')}${th('status','Статус')}${th('views','Просмотры','right')}${th('edits','Правки','right')}${th('changed','Изменён')}<th></th></tr></thead>
+    <tbody>${rows.map(o=>{const s=sum[o.id];return `<tr>
       <td><a class="lnk" style="text-decoration:none;font-weight:500" href="#/admin/edit/${o.id}">${esc(o.title)}</a></td>
       <td class="muted">${TYPES[o.type].l}</td>
       <td class="muted">${esc(o.date||o.dates||o.life||o.year||'—')}</td>
       <td><span class="statbadge" ${PUBSTAT(o)==='Черновик'?'style="background:#fdf2e3"':''}>${PUBSTAT(o)}</span></td>
+      <td class="muted" style="text-align:right">${Number(o.views)||0}</td>
+      <td class="muted" style="text-align:right">${s?s.edits:0}</td>
+      <td class="muted" style="font-size:12px;white-space:nowrap">${s?`${fmtAt(s.lastAt)}<br>${esc(s.lastActor)}`:'—'}</td>
       <td style="text-align:right;white-space:nowrap"><a class="btn sm" href="#/admin/edit/${o.id}">Редактировать</a> <a class="btn sm" href="index.html#/e/${o.id}">Открыть на сайте</a></td>
-    </tr>`).join('')}</tbody></table>`);
+    </tr>`;}).join('')}</tbody></table>`);
 }
 window.admRefresh=()=>render();
 function adminEdit(id){
+  loadAuds();
   const o=DB[id];
   if(!o) return adminLayout('entities','<h1>Не найдено</h1>');
   const F=(label,val,fid)=>`<div class="field"><label>${label}</label><input class="inp" ${fid?`id="${fid}"`:''} style="width:100%;color:var(--ink)" value="${esc(val||'')}"></div>`;
@@ -1240,7 +1271,10 @@ function adminEdit(id){
           <span class="muted" id="upl-status" style="font-size:12px;margin-left:8px"></span>
         </div>
         <h3>Служебное</h3>
-        <div class="metabox">${[['ID',o.id],['Создан','12.08.2026'],['Изменён','вчера · ред. А.С.'],['Журнал','3 записи']].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+        ${(()=>{const s=AUDS&&AUDS.summary&&AUDS.summary[o.id];
+          const hist=AUDS&&AUDS.recent?AUDS.recent.filter(a=>a.entity_id===o.id).slice(0,5):[];
+          return `<div class="metabox">${[['ID',o.id],['Просмотры',String(o.views||0)],['Создан',fmtAt(o.created_at)||'—'],['Изменён',s?fmtAt(s.lastAt)+' · '+s.lastActor:'—'],['Правок',String(s?s.edits:0)]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
+          ${hist.length?`<div class="kicker" style="margin-top:14px">Журнал</div><div class="metabox" style="margin-top:6px">${hist.map(a=>`<div class="r"><span class="k">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span><span class="v" style="font-size:12px">${fmtAt(a.at)}</span></div>`).join('')}</div>`:''}`;})()}
       </div>
     </div>`);
 }
@@ -1494,8 +1528,16 @@ function admin(seg){
 const API='https://srnchv-zotov-prototype-27ea.twc1.net/api';
 let apiLive=null; // null: загрузка · true: живые данные · false: офлайн
 const admToken=()=>localStorage.getItem('zotov_admtoken')||'';
+// счётчик просмотров публичных страниц: раз за визит на сущность
+const VIEWED=new Set();
+function trackView(id){
+  if(ADMIN_APP||apiLive!==true||!DB[id]||VIEWED.has(id))return;
+  VIEWED.add(id);
+  fetch(API+'/entities/'+id+'/view',{method:'POST'}).catch(()=>{});
+}
+const editorHdr=()=>admToken()?{authorization:'Bearer '+admToken(),'x-editor':encodeURIComponent(localStorage.getItem('zotov_admname')||'')}:{};
 async function api(path,opts={}){
-  const r=await fetch(API+path,{...opts,headers:{'content-type':'application/json',...(admToken()?{authorization:'Bearer '+admToken()}:{}),...(opts.headers||{})}});
+  const r=await fetch(API+path,{...opts,headers:{'content-type':'application/json',...editorHdr(),...(opts.headers||{})}});
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error==='unauthorized'?'нет прав — проверьте ключ редактора':(e.error||('HTTP '+r.status)));}
   return r.status===204?null:r.json();
 }
@@ -1509,7 +1551,7 @@ async function loadFromApi(){
   RAW.forEach(o=>DB[o.id]=o);
   for(const [a,b] of links){if(DB[a]&&DB[b]){DB[a].links.push(b);DB[b].links.push(a);}}
 }
-async function refreshData(){try{await loadFromApi();apiLive=true;}catch(e){apiLive=false;}}
+async function refreshData(){try{await loadFromApi();apiLive=true;if(ADMIN_APP)AUDS=null;}catch(e){apiLive=false;}}
 refreshData().then(()=>render());
 
 // ---------- router ----------
@@ -1539,7 +1581,7 @@ function render(hash){
   else if(seg[0]==='library'){location.hash='#/texts';return;} // legacy
   else if(seg[0]==='cabinet') html=cabinet(seg[1]);
   else if(seg[0]==='cat') html=(seg[1]==='person'?personsCatalog():catalog(seg[1]));
-  else if(seg[0]==='e') html=entity(DB[seg[1]]);
+  else if(seg[0]==='e'){html=entity(DB[seg[1]]);trackView(seg[1]);}
   else if(seg[0]==='admin'){location.href='admin.html';return;} // админка живёт отдельно
   else if(seg[0]==='request'){ html=null; }
   else html=home();

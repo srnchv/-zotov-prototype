@@ -167,6 +167,42 @@ export async function exportAll() {
   return { entities, links };
 }
 
+// ---- Журнал действий и статистика ----
+export async function logAct(action: string, entityId: string, entityTitle: string, actor: string) {
+  await q.run("INSERT INTO audit (entity_id, entity_title, action, actor) VALUES (?,?,?,?)",
+    [entityId, entityTitle, action, actor || "неизвестно"]);
+}
+
+// просмотр публичной страницы: счётчик в payload, updated_at НЕ трогаем (это не правка)
+export async function bumpViews(id: string) {
+  const cur = await q.get("SELECT payload FROM entities WHERE id = ?", [id]);
+  if (!cur) return false;
+  const payload = JSON.parse(cur.payload || "{}");
+  payload.views = (Number(payload.views) || 0) + 1;
+  await q.run("UPDATE entities SET payload = ? WHERE id = ?", [JSON.stringify(payload), id]);
+  return true;
+}
+
+export async function auditRecent(limit = 100) {
+  return q.all("SELECT * FROM audit ORDER BY at DESC LIMIT ?", [limit]);
+}
+
+export async function auditFor(id: string, limit = 20) {
+  return q.all("SELECT * FROM audit WHERE entity_id = ? ORDER BY at DESC LIMIT ?", [id, limit]);
+}
+
+// сводка по сущностям: сколько правок, кто и когда менял последним
+export async function auditSummary() {
+  const rows = await q.all(
+    `SELECT entity_id, count(*) c, max(at) last_at FROM audit GROUP BY entity_id`);
+  const out: Record<string, any> = {};
+  for (const r of rows) {
+    const last = await q.get("SELECT actor, action FROM audit WHERE entity_id = ? ORDER BY at DESC LIMIT 1", [r.entity_id]);
+    out[r.entity_id] = { edits: Number(r.c), lastAt: r.last_at, lastActor: last?.actor || "", lastAction: last?.action || "" };
+  }
+  return out;
+}
+
 export async function stats() {
   const rows = await q.all("SELECT type, count(*) c FROM entities GROUP BY type");
   const links = Number((await q.get("SELECT count(*) c FROM links")).c);

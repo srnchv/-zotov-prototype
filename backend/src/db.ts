@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS links (
   PRIMARY KEY (a, b)
 );
 CREATE INDEX IF NOT EXISTS idx_links_b ON links(b);
+
+-- Журнал действий редакторов: кто и что создал/изменил/удалил
+CREATE TABLE IF NOT EXISTS audit (
+  entity_id    TEXT NOT NULL,
+  entity_title TEXT NOT NULL DEFAULT '',
+  action       TEXT NOT NULL,
+  actor        TEXT NOT NULL DEFAULT '',
+  at           TEXT NOT NULL DEFAULT (${SQL.NOW})
+);
+CREATE INDEX IF NOT EXISTS idx_audit_at ON audit(at);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit(entity_id);
 `;
 
 export let q: Q;
