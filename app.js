@@ -1227,7 +1227,7 @@ function adminEdit(id){
       </div>
       <div>
         <h3 style="margin-top:0">Медиа</h3>
-        <div class="media" style="aspect-ratio:4/3;${bgs(o,true)}"></div>
+        <div class="media" style="aspect-ratio:4/3;${o.type==='media'&&(o.med||o.thumb)?`background-image:url('${o.med||o.thumb}');background-size:cover;background-position:center`:bgs(o,true)}"></div>
         ${(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media').map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px">
           <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
           <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.title)}</span>
@@ -1236,6 +1236,7 @@ function adminEdit(id){
         <div style="margin-top:10px" id="upl-zone">
           <input type="file" id="f-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="admUpload('${o.id}')">
           <span class="btn sm" onclick="document.getElementById('f-file').click()">＋ Загрузить файл</span>
+          ${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}
           <span class="muted" id="upl-status" style="font-size:12px;margin-left:8px"></span>
         </div>
         <h3>Служебное</h3>
@@ -1259,9 +1260,24 @@ function adminDict(){
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}<span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="toast('Демо: значение добавлено в справочник')">＋</span></div></div>`).join('')}</div>`);
 }
 function adminMedia(){
-  const files=[...all('media'),{title:'plakat_1931.tif',format:'TIFF',size:'82 МБ'},{title:'chertezh_1925.pdf',format:'PDF',size:'12 МБ'},{title:'hronika_1924.mp4',format:'MP4',size:'1.2 ГБ'},{title:'manifest_1922.pdf',format:'PDF',size:'3 МБ'}];
-  return adminLayout('media',`<div style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="font-size:30px">Медиатека</h1><span class="btn dark" onclick="toast('Демо: загрузка в S3-совместимое хранилище')">＋ Загрузить</span></div>
-    <div class="grid g4" style="margin-top:16px">${files.map(f=>`<div class="card" style="padding:14px"><div class="media" style="aspect-ratio:4/3;margin-bottom:10px"></div><div style="font-size:13px;font-weight:500;word-break:break-all">${esc(f.title)}</div><div class="muted" style="font-size:12px">${esc(f.format||'')} · ${esc(f.size||'')}</div></div>`).join('')}</div>`);
+  const files=all('media');
+  const total=files.reduce((a,f)=>a+(typeof f.size==='number'?f.size:0),0);
+  const parents=f=>(f.links||[]).map(id=>DB[id]).filter(Boolean);
+  const card=f=>`<div class="card" style="padding:14px;cursor:pointer" onclick="location.hash='#/admin/edit/${f.id}'">
+      <div class="media" style="aspect-ratio:4/3;margin-bottom:10px;${f.thumb?`background-image:url('${f.thumb}');background-size:cover;background-position:center`:''}"></div>
+      <div style="font-size:13px;font-weight:500;word-break:break-all">${esc(f.title)}</div>
+      <div class="muted" style="font-size:12px">${esc(f.format||'')}${f.size?' · '+fmtSize(f.size):''}</div>
+      ${parents(f).length
+        ?`<div class="muted" style="font-size:11px;margin-top:8px">Прикреплён: ${parents(f).map(x=>esc(x.title)).join(', ')}</div>`
+        :`<div style="font-size:11px;margin-top:8px;color:#b8860b">Не прикреплён к сущностям</div>`}
+    </div>`;
+  return adminLayout('media',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap"><h1 style="font-size:30px">Медиатека</h1>
+      <span style="display:flex;align-items:center;gap:10px"><input type="file" id="f-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="admUpload('')">
+      <span class="muted" id="upl-status" style="font-size:12px"></span><span class="btn dark" onclick="document.getElementById('f-file').click()">＋ Загрузить в архив</span></span></div>
+    <div class="muted" style="font-size:13px;margin-top:6px">Общее хранилище файлов архива. Файл прикрепляется к сущностям связями — один и тот же файл может относиться к нескольким карточкам.${files.length?` Всего: ${files.length} · ${fmtSize(total)}`:''}</div>
+    ${files.length
+      ?`<div class="grid g4" style="margin-top:16px">${files.map(card).join('')}</div>`
+      :`<p class="muted" style="margin-top:24px">Файлов пока нет. Загрузите первый — он появится здесь, и его можно будет прикрепить к любой сущности.</p>`}`);
 }
 function adminRoles(){
   const roles=['Администратор','Редактор','Модератор','Исследователь'];
@@ -1325,8 +1341,9 @@ window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-let lpFor=null;
-window.admPickLink=id=>{lpFor=id;fq='';drawLinkPicker();};
+let lpFor=null,lpMedia=false;
+window.admPickLink=id=>{lpFor=id;lpMedia=false;fq='';drawLinkPicker();};
+window.admPickMedia=id=>{lpFor=id;lpMedia=true;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
 window.admCloseLp=()=>{lpFor=null;document.getElementById('modal-root').innerHTML='';};
 window.admDoLink=async tid=>{
   try{await api(`/entities/${lpFor}/links`,{method:'POST',body:JSON.stringify({targetId:tid})});await refreshData();toast('Связь создана — видна с обеих сторон');render();drawLinkPicker();}
@@ -1335,9 +1352,9 @@ window.admDoLink=async tid=>{
 function drawLinkPicker(){
   if(!lpFor||!DB[lpFor])return;
   const cur=new Set(DB[lpFor].links||[]);
-  const opts=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&x.type!=='media');
+  const opts=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media'));
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal">
-    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Добавить связь</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${lpMedia?'Файл из медиатеки':'Добавить связь'}</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
     <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск по всем сущностям…" value="${esc(fq)}" oninput="fq=this.value;fmFilter(this.value)" autofocus></div>
     <div class="fmodal-list">${opts.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join('')}</div>
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="admCloseLp()">Готово</span></div>
