@@ -1346,12 +1346,14 @@ window.admPickLink=id=>{lpFor=id;lpMedia=false;lpType=null;fq='';drawLinkPicker(
 window.admPickMedia=id=>{lpFor=id;lpMedia=true;lpType=null;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
 window.admCloseLp=()=>{lpFor=null;document.getElementById('modal-root').innerHTML='';};
 window.admDoLink=async tid=>{
+  if(lpFor==='__new'){NEWLINKS.add(tid);toast('Добавлено — связь создастся вместе с сущностью');render();drawLinkPicker();return;}
   try{await api(`/entities/${lpFor}/links`,{method:'POST',body:JSON.stringify({targetId:tid})});await refreshData();toast('Связь создана — видна с обеих сторон');render();drawLinkPicker();}
   catch(e){toast('Ошибка: '+e.message);}
 };
+const lpCur=()=>lpFor==='__new'?new Set(NEWLINKS):new Set((DB[lpFor]&&DB[lpFor].links)||[]);
 function drawLinkPicker(){
-  if(!lpFor||!DB[lpFor])return;
-  const cur=new Set(DB[lpFor].links||[]);
+  if(!lpFor||(lpFor!=='__new'&&!DB[lpFor]))return;
+  const cur=lpCur();
   const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media'));
   // сначала выбор типа сущности, затем список — иначе в общем списке не сориентироваться
   const byType={};pool.forEach(x=>(byType[x.type]=byType[x.type]||[]).push(x));
@@ -1375,7 +1377,7 @@ window.lpSetType=t=>{lpType=lpType===t?null:t;drawLinkPicker();};
 window.lpSearch=q=>{
   const ql=(q||'').trim().toLowerCase();
   if(ql&&!lpType){ // раздел не выбран — ищем по всем и показываем совпадения
-    const cur=new Set(DB[lpFor].links||[]);
+    const cur=lpCur();
     const hits=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media')&&x.title.toLowerCase().includes(ql));
     const el=document.getElementById('lp-list');
     if(el)el.innerHTML=hits.length?hits.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join(''):'<div class="muted" style="font-size:13px;padding:14px 0">Ничего не найдено.</div>';
@@ -1384,25 +1386,69 @@ window.lpSearch=q=>{
   if(!ql&&!lpType){drawLinkPicker();return;}
   document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!ql||el.textContent.toLowerCase().includes(ql)?'':'none';});
 };
+// форма создания: всё заполняется сразу — поля типа, связи, файл; черновик по умолчанию
+let NEWF={type:'material',status:'draft'},NEWLINKS=new Set(),NEWFILE=null;
+const dvals=(t,k)=>[...new Set(all(t).map(o=>o[k]).filter(Boolean))].sort();
 function adminNew(){
+  const t=NEWF.type;
+  const inp=(label,key,ph)=>`<div class="field"><label>${label}</label><input class="inp" style="width:100%;color:var(--ink)" placeholder="${ph||''}" value="${esc(NEWF[key]||'')}" oninput="NEWF['${key}']=this.value"></div>`;
+  const sel=(label,key,vals)=>`<div class="field"><label>${label}</label><select class="sel" style="width:100%" onchange="NEWF['${key}']=this.value">
+      <option value="">— не задано —</option>${vals.map(v=>`<option ${NEWF[key]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
+  const extra={
+    material:sel('Тип материала','mtype',dvals('material','mtype'))+inp('Подтип','subtype','например Фотография · Ч/б')
+      +`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
+    event:sel('Тип события','evType',dvals('event','evType')),
+    person:sel('Группа','group',dvals('person','group').length?dvals('person','group'):['Конструктивисты','Связанные личности'])+inp('Роль','role','например фотограф, художник')+inp('Годы жизни','life','1891–1956'),
+    place:inp('Город','city','Москва')+inp('Тип места','placeType','например жилой дом'),
+    source:sel('Тип источника','srcType',dvals('source','srcType')),
+    theme:inp('Краткое определение','def',''),
+    project:inp('Даты проведения','dates','12.05–30.09.1927')+inp('Кураторы','curators',''),
+  }[t]||'';
+  const linkChips=[...NEWLINKS].map(id=>DB[id]).filter(Boolean)
+    .map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="font-size:11px">· ${TYPES[x.type].l}</span> <span class="muted" style="cursor:pointer" onclick="NEWLINKS.delete('${x.id}');render()">✕</span></span>`).join('');
   return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / Новая</div>
     <h1 style="font-size:26px">Создать сущность</h1>
-    <div style="max-width:520px">
-      <div class="field"><label>Тип</label><select class="sel" id="n-type" style="width:100%">${Object.keys(TYPES).filter(t=>t!=='media').map(t=>`<option value="${t}">${TYPES[t].l}</option>`).join('')}</select></div>
-      <div class="field"><label>Название</label><input class="inp" id="n-title" style="width:100%;color:var(--ink)" placeholder="Название сущности"></div>
-      <div class="field"><label>Дата / период (необязательно)</label><input class="inp" id="n-date" style="width:100%;color:var(--ink)" placeholder="например 1927"></div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <span class="btn dark" onclick="admCreate()">Создать</span>
-        <a class="btn" href="#/admin/entities">Отмена</a>
+    <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px;max-width:960px">
+      <div>
+        <div class="field"><label>Тип</label><select class="sel" style="width:100%" onchange="NEWF.type=this.value;render()">${Object.keys(TYPES).filter(x=>x!=='media').map(x=>`<option value="${x}" ${t===x?'selected':''}>${TYPES[x].l}</option>`).join('')}</select></div>
+        ${inp('Название','title','Название сущности')}
+        ${inp('Дата / период','date','например 1927')}
+        ${extra}
+        <div class="field"><label>Описание</label><textarea class="inp" style="width:100%" oninput="NEWF.desc=this.value" placeholder="Редакторское описание с научным аппаратом…">${esc(NEWF.desc||'')}</textarea></div>
+        <div class="field"><label>Статус</label><div class="chips">${[['draft','Черновик'],['published','Опубликовано']].map(([v,l])=>`<span class="fchip${(NEWF.status||'draft')===v?' on':''}" onclick="NEWF.status='${v}';render()">${l}</span>`).join('')}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px">Черновик не виден на публичном сайте — можно доработать и опубликовать позже.</div></div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <span class="btn dark" onclick="admCreate()">Создать</span>
+          <a class="btn" href="#/admin/entities" onclick="NEWF={type:'material',status:'draft'};NEWLINKS.clear();NEWFILE=null">Отмена</a>
+        </div>
       </div>
-      <div class="muted" style="font-size:13px;margin-top:14px">После создания откроется редактор — там добавляются связи, и объект сразу появится во всех связанных разделах публичной части.</div>
+      <div>
+        <h3 style="margin-top:0">Связи</h3>
+        <div class="muted" style="font-size:13px;margin-bottom:8px">Двусторонние: появятся на карточках обеих сущностей.</div>
+        ${linkChips?`<div class="chips" style="margin-bottom:10px">${linkChips}</div>`:''}
+        <span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('__new')">＋ добавить связь</span>
+        <h3>Медиа</h3>
+        <input type="file" id="n-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="NEWFILE=this.files[0];render()">
+        ${NEWFILE?`<div style="font-size:13px;margin-bottom:8px">${esc(NEWFILE.name)} · ${fmtSize(NEWFILE.size)} <span class="lnk" style="cursor:pointer" onclick="NEWFILE=null;render()">✕</span></div>`:''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="btn sm" onclick="document.getElementById('n-file').click()">＋ Загрузить файл</span>
+          <span class="btn sm" onclick="admPickMedia('__new')">＋ из медиатеки</span>
+        </div>
+        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности.</div>
+      </div>
     </div>`);
 }
 window.admCreate=async()=>{
   try{
-    const g=x=>document.getElementById(x).value;
-    const payload={};if(g('n-date'))payload.date=g('n-date');
-    const e=await api('/entities',{method:'POST',body:JSON.stringify({type:g('n-type'),title:g('n-title'),payload})});
+    if(!(NEWF.title||'').trim())return toast('Укажите название');
+    const {type,title,status,...rest}=NEWF;
+    const payload={};for(const[k,v]of Object.entries(rest))if(v)payload[k]=v;
+    const e=await api('/entities',{method:'POST',body:JSON.stringify({type,title:title.trim(),status:status||'draft',payload,links:[...NEWLINKS]})});
+    if(NEWFILE){
+      const fd=new FormData();fd.append('file',NEWFILE);fd.append('entityId',e.id);
+      await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
+    }
+    NEWF={type:'material',status:'draft'};NEWLINKS.clear();NEWFILE=null;
     await refreshData();toast('Создано');location.hash='#/admin/edit/'+e.id;
   }catch(e){toast('Ошибка: '+e.message);}
 };
