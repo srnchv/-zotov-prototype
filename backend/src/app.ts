@@ -124,9 +124,13 @@ export function createApp() {
     res.status(204).end();
   }));
 
-  app.get("/api/statistics", auth, ah(async (_req, res) => {
-    res.json(await repo.statistics());
-  }));
+  app.get("/api/statistics", auth, async (_req, res) => {
+    try { res.json(await repo.statistics()); }
+    catch (e: any) {
+      console.error("statistics failed:", e);
+      res.status(500).json({ error: "statistics: " + (e?.message || "failed") });
+    }
+  });
 
   // журнал: последние действия + сводка по сущностям (кто менял последним, сколько правок)
   app.get("/api/audit", auth, ah(async (_req, res) => {

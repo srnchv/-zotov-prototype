@@ -209,24 +209,24 @@ export async function addHit(visitor: string, device: string, path: string) {
 }
 
 export async function statistics() {
-  const totals = await q.get("SELECT count(*) hits, count(DISTINCT visitor) visitors FROM hits");
+  const totals = await q.get("SELECT count(*) AS c_hits, count(DISTINCT visitor) AS c_vis FROM hits");
   const byDay = await q.all(
-    "SELECT substr(at,1,10) day, count(*) hits, count(DISTINCT visitor) visitors FROM hits GROUP BY substr(at,1,10) ORDER BY day DESC LIMIT 14");
-  const devices = await q.all("SELECT device, count(DISTINCT visitor) visitors FROM hits GROUP BY device");
-  const pages = await q.all("SELECT path, count(*) hits FROM hits GROUP BY path ORDER BY hits DESC LIMIT 10");
+    "SELECT substr(at,1,10) AS d, count(*) AS h, count(DISTINCT visitor) AS v FROM hits GROUP BY substr(at,1,10) ORDER BY d DESC LIMIT 14");
+  const devices = await q.all("SELECT device AS dev, count(DISTINCT visitor) AS v FROM hits GROUP BY device");
+  const pages = await q.all("SELECT path AS p, count(*) AS h FROM hits GROUP BY path ORDER BY count(*) DESC LIMIT 10");
   // топ сущностей по просмотрам (счётчик в payload) и по числу правок (журнал)
   const topViewed = (await q.all("SELECT id, title, type, payload FROM entities"))
     .map((r: any) => ({ id: r.id, title: r.title, type: r.type, views: Number(JSON.parse(r.payload || "{}").views) || 0 }))
     .filter((x) => x.views > 0).sort((a, b) => b.views - a.views).slice(0, 10);
   const topEdited = await q.all(
-    "SELECT entity_id id, entity_title title, count(*) edits FROM audit GROUP BY entity_id, entity_title ORDER BY edits DESC LIMIT 10");
+    "SELECT entity_id AS eid, entity_title AS et, count(*) AS c FROM audit GROUP BY entity_id, entity_title ORDER BY count(*) DESC LIMIT 10");
   return {
-    visitors: Number(totals.visitors), hits: Number(totals.hits),
-    byDay: byDay.map((r: any) => ({ day: r.day, hits: Number(r.hits), visitors: Number(r.visitors) })).reverse(),
-    devices: devices.map((r: any) => ({ device: r.device || "неизвестно", visitors: Number(r.visitors) })),
-    pages: pages.map((r: any) => ({ path: r.path, hits: Number(r.hits) })),
+    visitors: Number(totals.c_vis), hits: Number(totals.c_hits),
+    byDay: byDay.map((r: any) => ({ day: r.d, hits: Number(r.h), visitors: Number(r.v) })).reverse(),
+    devices: devices.map((r: any) => ({ device: r.dev || "неизвестно", visitors: Number(r.v) })),
+    pages: pages.map((r: any) => ({ path: r.p, hits: Number(r.h) })),
     topViewed,
-    topEdited: topEdited.map((r: any) => ({ id: r.id, title: r.title, edits: Number(r.edits) })),
+    topEdited: topEdited.map((r: any) => ({ id: r.eid, title: r.et, edits: Number(r.c) })),
   };
 }
 
