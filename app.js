@@ -1341,9 +1341,9 @@ window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-let lpFor=null,lpMedia=false;
-window.admPickLink=id=>{lpFor=id;lpMedia=false;fq='';drawLinkPicker();};
-window.admPickMedia=id=>{lpFor=id;lpMedia=true;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
+let lpFor=null,lpMedia=false,lpType=null;
+window.admPickLink=id=>{lpFor=id;lpMedia=false;lpType=null;fq='';drawLinkPicker();};
+window.admPickMedia=id=>{lpFor=id;lpMedia=true;lpType=null;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
 window.admCloseLp=()=>{lpFor=null;document.getElementById('modal-root').innerHTML='';};
 window.admDoLink=async tid=>{
   try{await api(`/entities/${lpFor}/links`,{method:'POST',body:JSON.stringify({targetId:tid})});await refreshData();toast('Связь создана — видна с обеих сторон');render();drawLinkPicker();}
@@ -1352,15 +1352,38 @@ window.admDoLink=async tid=>{
 function drawLinkPicker(){
   if(!lpFor||!DB[lpFor])return;
   const cur=new Set(DB[lpFor].links||[]);
-  const opts=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media'));
+  const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media'));
+  // сначала выбор типа сущности, затем список — иначе в общем списке не сориентироваться
+  const byType={};pool.forEach(x=>(byType[x.type]=byType[x.type]||[]).push(x));
+  const typeTabs=Object.keys(TYPES).filter(t=>byType[t])
+    .map(t=>`<span class="fchip${lpType===t?' on':''}" onclick="lpSetType('${t}')">${TYPES[t].pl} <span style="opacity:.6">${byType[t].length}</span></span>`).join('');
+  const opts=lpType?(byType[lpType]||[]):pool;
+  const list=lpType||lpMedia
+    ?opts.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)}${lpMedia?` <span style="color:var(--muted);font-size:11px">· ${esc(x.format||'')}</span>`:''}</span>`).join('')
+    :`<div class="muted" style="font-size:13px;padding:14px 0">Выберите раздел выше — или начните вводить название.</div>`;
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal">
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${lpMedia?'Файл из медиатеки':'Добавить связь'}</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
-    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск по всем сущностям…" value="${esc(fq)}" oninput="fq=this.value;fmFilter(this.value)" autofocus></div>
-    <div class="fmodal-list">${opts.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join('')}</div>
+    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск по всем сущностям…" value="${esc(fq)}" oninput="fq=this.value;lpSearch(this.value)" autofocus></div>
+    ${lpMedia?'':`<div class="chips" style="margin:12px 0 4px">${typeTabs}</div>`}
+    <div class="fmodal-list" id="lp-list">${list}</div>
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="admCloseLp()">Готово</span></div>
   </div></div>`;
-  if(fq)fmFilter(fq);
+  if(fq)lpSearch(fq);
 }
+window.lpSetType=t=>{lpType=lpType===t?null:t;drawLinkPicker();};
+// поиск в пикере: при вводе ищем по всем сущностям (поверх выбранного раздела — если он выбран)
+window.lpSearch=q=>{
+  const ql=(q||'').trim().toLowerCase();
+  if(ql&&!lpType){ // раздел не выбран — ищем по всем и показываем совпадения
+    const cur=new Set(DB[lpFor].links||[]);
+    const hits=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media')&&x.title.toLowerCase().includes(ql));
+    const el=document.getElementById('lp-list');
+    if(el)el.innerHTML=hits.length?hits.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join(''):'<div class="muted" style="font-size:13px;padding:14px 0">Ничего не найдено.</div>';
+    return;
+  }
+  if(!ql&&!lpType){drawLinkPicker();return;}
+  document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!ql||el.textContent.toLowerCase().includes(ql)?'':'none';});
+};
 function adminNew(){
   return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / Новая</div>
     <h1 style="font-size:26px">Создать сущность</h1>
