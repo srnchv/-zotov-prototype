@@ -489,7 +489,7 @@ function filterBar(){
     const n=dim==='type'?typeCnt():(dim==='person'?FILT.person.size+FILT.persongroup.size:(dim==='place'?FILT.place.size+FILT.placecountry.size+FILT.placecity.size:FILT[dim].size)), open=openDim===dim;
     return `<span class="fcat${open?' open':''}${n?' has':''}" onclick="toggleDim('${dim}')">${label}${n?`<b class="cnt">${n}</b>`:''}<i>${open?'−':'+'}</i></span>`;
   }).join('');
-  return `<div class="fbar r1">${row(FROWS[0])}</div><div class="fbar r2">${row(FROWS[1])}${hasFilters()?`<span class="fcat reset" onclick="resetFilters()">Сбросить всё ✕</span>`:''}</div>`;
+  return `<div class="fbar r1">${row(FROWS[0])}</div><div class="fbar r2">${row(FROWS[1])}</div>`; // «Сбросить всё» живёт в строке активных фильтров ниже
 }
 // модальное окно категории (паттерн RAAN): полный список значений + поиск + «только выбранные»
 let fq='', fOnly=false, pgOpen={};
