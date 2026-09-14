@@ -135,6 +135,22 @@ test("аудит: кто создал/правил, просмотры без и
   await fetch(`${base}/api/entities/${created.id}`, { method: "DELETE", headers: authed });
 });
 
+test("посещаемость: хиты, уникальные посетители, устройства", async () => {
+  const hit = (visitor: string, device: string, path: string) =>
+    fetch(`${base}/api/hit`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ visitor, device, path }) });
+  await hit("v-1", "десктоп", "/");
+  await hit("v-1", "десктоп", "/e/m1");
+  await hit("v-2", "мобильные", "/");
+  const s = await (await fetch(`${base}/api/statistics`, { headers: authed })).json();
+  assert.equal(s.visitors, 2);
+  assert.equal(s.hits, 3);
+  assert.ok(s.byDay.length >= 1 && s.byDay.at(-1).visitors === 2);
+  assert.ok(s.devices.find((d: any) => d.device === "мобильные")?.visitors === 1);
+  assert.ok(s.pages.find((p: any) => p.path === "/")?.hits === 2);
+  const noAuth = await fetch(`${base}/api/statistics`);
+  assert.equal(noAuth.status, 401);
+});
+
 test("dicts and stats", async () => {
   const d = await (await fetch(`${base}/api/dicts`)).json();
   assert.ok(d.materialTypes.includes("Видео"));

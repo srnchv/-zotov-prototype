@@ -115,6 +115,19 @@ export function createApp() {
     res.status(204).end();
   }));
 
+  // хит посещаемости с публичной части: анонимный id браузера + устройство
+  app.post("/api/hit", ah(async (req, res) => {
+    const { visitor, device, path } = z.object({
+      visitor: z.string().min(1).max(40), device: z.string().max(30).optional(), path: z.string().max(120).optional(),
+    }).parse(req.body);
+    await repo.addHit(visitor, device || "", path || "");
+    res.status(204).end();
+  }));
+
+  app.get("/api/statistics", auth, ah(async (_req, res) => {
+    res.json(await repo.statistics());
+  }));
+
   // журнал: последние действия + сводка по сущностям (кто менял последним, сколько правок)
   app.get("/api/audit", auth, ah(async (_req, res) => {
     res.json({ recent: await repo.auditRecent(100), summary: await repo.auditSummary() });

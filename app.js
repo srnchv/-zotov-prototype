@@ -1124,13 +1124,14 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 
 
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
-const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['roles','Пользователи']];
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['roles','Пользователи']];
+const admRole=()=>localStorage.getItem('zotov_admrole')||'admin';
 let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
 function adminLayout(tab,inner){
   const side=`<div class="side">
     <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">роль: ${({admin:'администратор',editor:'редактор',moderator:'модератор'})[localStorage.getItem('zotov_admrole')||'admin']}</div></div>
-    ${ADMIN_TABS.map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
+    ${ADMIN_TABS.filter(([k])=>k!=='stats'||admRole()==='admin').map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
     <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="index.html#/" style="font-size:13px">← На публичный сайт</a></div>
   </div>`;
   const top=`<header class="top"><div class="row">
@@ -1312,6 +1313,47 @@ function adminMedia(){
     ${files.length
       ?`<div class="grid g4" style="margin-top:16px">${files.map(card).join('')}</div>`
       :`<p class="muted" style="margin-top:24px">Файлов пока нет. Загрузите первый — он появится здесь, и его можно будет прикрепить к любой сущности.</p>`}`);
+}
+// статистика посещаемости и работы редакции — только администратору
+let STATS=null,STATSloading=false;
+async function loadStats(){
+  if(STATSloading)return;STATSloading=true;
+  try{STATS=await api('/statistics');}catch(e){STATS={error:e.message};}
+  STATSloading=false;render();
+}
+function adminStats(){
+  if(admRole()!=='admin')return adminLayout('stats','<h1 style="font-size:30px">Статистика</h1><div class="muted" style="margin-top:20px">Доступно только администратору.</div>');
+  if(!STATS){loadStats();return adminLayout('stats','<h1 style="font-size:30px">Статистика</h1><div class="muted" style="margin-top:20px">Собираем данные…</div>');}
+  if(STATS.error)return adminLayout('stats',`<h1 style="font-size:30px">Статистика</h1><div class="muted" style="margin-top:20px">Не удалось загрузить (${esc(STATS.error)}). <span class="lnk" style="cursor:pointer" onclick="STATS=null;render()">Повторить</span></div>`);
+  const s=STATS;
+  const maxH=Math.max(1,...s.byDay.map(d=>d.hits));
+  const bars=s.byDay.map(d=>`<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:26px">
+      <span class="muted" style="font-size:10px">${d.hits}</span>
+      <div style="width:100%;max-width:32px;background:var(--ink);height:${Math.round(d.hits/maxH*80)+2}px" title="${d.day}: ${d.hits} просмотров · ${d.visitors} посетителей"></div>
+      <span class="muted" style="font-size:10px;white-space:nowrap">${d.day.slice(5)}</span></div>`).join('');
+  const devTotal=s.devices.reduce((a,d)=>a+d.visitors,0)||1;
+  const PATHL={'':'Главная','/':'Главная','/archive':'Поиск','/chrono':'Хронограф','/map':'Карта','/texts':'Тексты','/cabinet':'Личный кабинет'};
+  const pathLabel=p=>PATHL[p]||(p.startsWith('/e/')?'Карточка: '+esc((DB[p.slice(3)]||{}).title||p.slice(3)):p.startsWith('/cat/')?'Каталог: '+(TYPES[p.slice(5)]?TYPES[p.slice(5)].pl:p.slice(5)):esc(p));
+  const card=(n,l)=>`<div class="card" style="padding:16px"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l}</div></div>`;
+  const listTable=(rows,cols)=>`<table class="atable">${rows.map(r=>`<tr>${cols(r)}</tr>`).join('')}</table>`;
+  return adminLayout('stats',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Статистика</h1><span class="btn sm" onclick="STATS=null;render()">Обновить</span></div>
+    <div class="grid g4" style="margin-top:16px">
+      ${card(s.visitors,'Посетителей всего')}${card(s.hits,'Просмотров страниц')}
+      ${card(s.byDay.length?s.byDay[s.byDay.length-1].visitors:0,'Посетителей сегодня')}${card(s.byDay.length?s.byDay[s.byDay.length-1].hits:0,'Просмотров сегодня')}
+    </div>
+    <div class="grid g2" style="margin-top:20px">
+      <div class="card"><b>Просмотры по дням</b>
+        ${s.byDay.length?`<div style="display:flex;align-items:flex-end;gap:6px;margin-top:14px;min-height:120px">${bars}</div>`:'<div class="muted" style="font-size:13px;margin-top:10px">Данные появятся после первых визитов на публичную часть.</div>'}</div>
+      <div class="card"><b>Устройства</b>
+        <div style="margin-top:14px">${s.devices.length?s.devices.map(d=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(d.device)}</span><span class="muted">${d.visitors} · ${Math.round(d.visitors/devTotal*100)}%</span></div>
+          <div style="background:var(--fill);height:8px;margin-top:4px"><div style="background:var(--ink);height:8px;width:${Math.round(d.visitors/devTotal*100)}%"></div></div></div>`).join(''):'<div class="muted" style="font-size:13px">Пока нет данных.</div>'}
+        <div class="muted" style="font-size:12px;margin-top:12px">Считаем сами, без кук: анонимный идентификатор браузера. Внешняя метрика после установки покажет цифры чуть выше — это нормально.</div></div>
+    </div>
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card"><b>Популярные страницы</b>${s.pages.length?listTable(s.pages,r=>`<td style="font-size:13px">${pathLabel(r.path)}</td><td class="muted" style="text-align:right">${r.hits}</td>`):'<div class="muted" style="font-size:13px;margin-top:8px">—</div>'}</div>
+      <div class="card"><b>Топ сущностей по просмотрам</b>${s.topViewed.length?listTable(s.topViewed,r=>`<td style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${r.id}">${esc(r.title)}</a></td><td class="muted" style="text-align:right">${r.views}</td>`):'<div class="muted" style="font-size:13px;margin-top:8px">—</div>'}</div>
+      <div class="card"><b>Топ по числу правок</b>${s.topEdited.length?listTable(s.topEdited,r=>`<td style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${r.id}">${esc(r.title||r.id)}</a></td><td class="muted" style="text-align:right">${r.edits}</td>`):'<div class="muted" style="font-size:13px;margin-top:8px">—</div>'}</div>
+    </div>`);
 }
 function adminRoles(){
   // страница строится от роли вошедшего: конкретные действия — главное, настройка ролей — второстепенное
@@ -1518,7 +1560,8 @@ function admin(seg){
   const tab=seg[1]||'dash';
   if(tab==='edit') return adminEdit(seg[2]);
   if(tab==='new') return adminNew();
-  return {dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]?{dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,roles:adminRoles}[tab]():adminDash();
+  const views={dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,stats:adminStats,roles:adminRoles};
+  return views[tab]?views[tab]():adminDash();
 }
 
 
@@ -1528,6 +1571,15 @@ function admin(seg){
 const API='https://srnchv-zotov-prototype-27ea.twc1.net/api';
 let apiLive=null; // null: загрузка · true: живые данные · false: офлайн
 const admToken=()=>localStorage.getItem('zotov_admtoken')||'';
+// посещаемость: анонимный id браузера (без кук и персональных данных) + тип устройства
+const VISID=(()=>{try{let v=localStorage.getItem('zotov_vid');if(!v){v=Math.random().toString(36).slice(2,12);localStorage.setItem('zotov_vid',v);}return v;}catch(e){return 'anon';}})();
+const DEVICE=(()=>{try{const ua=navigator.userAgent||'';if(/Mobi|Android|iPhone/i.test(ua))return 'мобильные';if(/iPad|Tablet/i.test(ua))return 'планшеты';return 'десктоп';}catch(e){return 'неизвестно';}})();
+let lastHitPath=null;
+function trackHit(path){
+  if(ADMIN_APP||apiLive!==true||path===lastHitPath)return;
+  lastHitPath=path;
+  fetch(API+'/hit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({visitor:VISID,device:DEVICE,path})}).catch(()=>{});
+}
 // счётчик просмотров публичных страниц: раз за визит на сущность
 const VIEWED=new Set();
 function trackView(id){
@@ -1586,6 +1638,7 @@ function render(hash){
   else if(seg[0]==='request'){ html=null; }
   else html=home();
   if(html!==null){document.getElementById('app').innerHTML=html;if((seg[0]||'')!==lastPath)window.scrollTo(0,0);lastPath=seg[0]||'';}
+  trackHit('/'+seg.join('/'));
   if(seg[0]!=='archive') openDim=null;
   if(seg[0]!=='map'&&seg[0]!=='chrono') pkDim=null;
   if(seg[0]==='request') request(seg[1]);

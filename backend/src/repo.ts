@@ -203,6 +203,33 @@ export async function auditSummary() {
   return out;
 }
 
+// ---- Посещаемость (для сравнения с внешней метрикой) ----
+export async function addHit(visitor: string, device: string, path: string) {
+  await q.run("INSERT INTO hits (visitor, device, path) VALUES (?,?,?)", [visitor, device, path]);
+}
+
+export async function statistics() {
+  const totals = await q.get("SELECT count(*) hits, count(DISTINCT visitor) visitors FROM hits");
+  const byDay = await q.all(
+    "SELECT substr(at,1,10) day, count(*) hits, count(DISTINCT visitor) visitors FROM hits GROUP BY substr(at,1,10) ORDER BY day DESC LIMIT 14");
+  const devices = await q.all("SELECT device, count(DISTINCT visitor) visitors FROM hits GROUP BY device");
+  const pages = await q.all("SELECT path, count(*) hits FROM hits GROUP BY path ORDER BY hits DESC LIMIT 10");
+  // топ сущностей по просмотрам (счётчик в payload) и по числу правок (журнал)
+  const topViewed = (await q.all("SELECT id, title, type, payload FROM entities"))
+    .map((r: any) => ({ id: r.id, title: r.title, type: r.type, views: Number(JSON.parse(r.payload || "{}").views) || 0 }))
+    .filter((x) => x.views > 0).sort((a, b) => b.views - a.views).slice(0, 10);
+  const topEdited = await q.all(
+    "SELECT entity_id id, entity_title title, count(*) edits FROM audit GROUP BY entity_id, entity_title ORDER BY edits DESC LIMIT 10");
+  return {
+    visitors: Number(totals.visitors), hits: Number(totals.hits),
+    byDay: byDay.map((r: any) => ({ day: r.day, hits: Number(r.hits), visitors: Number(r.visitors) })).reverse(),
+    devices: devices.map((r: any) => ({ device: r.device || "неизвестно", visitors: Number(r.visitors) })),
+    pages: pages.map((r: any) => ({ path: r.path, hits: Number(r.hits) })),
+    topViewed,
+    topEdited: topEdited.map((r: any) => ({ id: r.id, title: r.title, edits: Number(r.edits) })),
+  };
+}
+
 export async function stats() {
   const rows = await q.all("SELECT type, count(*) c FROM entities GROUP BY type");
   const links = Number((await q.get("SELECT count(*) c FROM links")).c);

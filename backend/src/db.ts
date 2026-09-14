@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS audit (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_at ON audit(at);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit(entity_id);
+
+-- Посещаемость публичной части: анонимный id браузера, устройство, страница
+CREATE TABLE IF NOT EXISTS hits (
+  visitor TEXT NOT NULL,
+  device  TEXT NOT NULL DEFAULT '',
+  path    TEXT NOT NULL DEFAULT '',
+  at      TEXT NOT NULL DEFAULT (${SQL.NOW})
+);
+CREATE INDEX IF NOT EXISTS idx_hits_at ON hits(at);
 `;
 
 export let q: Q;
