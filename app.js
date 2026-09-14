@@ -1124,12 +1124,12 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 
 
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
-const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['roles','Права и роли']];
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['roles','Пользователи']];
 let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
 function adminLayout(tab,inner){
   const side=`<div class="side">
-    <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">роль: редактор</div></div>
+    <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">роль: ${({admin:'администратор',editor:'редактор',moderator:'модератор'})[localStorage.getItem('zotov_admrole')||'admin']}</div></div>
     ${ADMIN_TABS.map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
     <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="index.html#/" style="font-size:13px">← На публичный сайт</a></div>
   </div>`;
@@ -1170,9 +1170,9 @@ window.admLogin=async()=>{
 window.admLogout=()=>{['zotov_admtoken','zotov_admname','zotov_admdemo'].forEach(k=>localStorage.removeItem(k));toast('Вы вышли');render();};
 const admLogged=()=>!!(admToken()||localStorage.getItem('zotov_admdemo'));
 function adminDash(){
-  const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[TYPES[t].pl,all(t).length]);
+  const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[t,TYPES[t].pl,all(t).length]);
   return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
-    <div class="grid g4" style="margin-top:16px">${counts.map(([l,n])=>`<div class="card" style="padding:16px"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l}</div></div>`).join('')}</div>
+    <div class="grid g4" style="margin-top:16px">${counts.map(([t,l,n])=>`<div class="card" style="padding:16px;cursor:pointer" onclick="admType='${t}';location.hash='#/admin/entities'"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l} →</div></div>`).join('')}</div>
     <div class="grid g2" style="margin-top:24px">
       <div class="card"><b>Очередь модерации</b><div class="muted" style="font-size:13px;margin:6px 0 10px">4 заявки на доступ ждут решения</div><a class="btn sm" href="#/admin/moderation">К модерации →</a></div>
       <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${[['Выставка «1927»: подготовка','ред. А.С. · сегодня'],['Дом Наркомфина','ред. М.К. · вчера'],['Манифест конструктивистов','создан · 2 дня назад']].map(r=>`<div class="r" style="padding:8px 0"><span style="font-size:14px">${r[0]}</span><span class="muted" style="font-size:12px">${r[1]}</span></div>`).join('')}</div></div>
@@ -1280,13 +1280,40 @@ function adminMedia(){
       :`<p class="muted" style="margin-top:24px">Файлов пока нет. Загрузите первый — он появится здесь, и его можно будет прикрепить к любой сущности.</p>`}`);
 }
 function adminRoles(){
-  const roles=['Администратор','Редактор','Модератор','Исследователь'];
-  const perms=['Создание и правка сущностей','Публикация','Модерация заявок','Справочники','Пользователи и роли','Просмотр закрытых материалов'];
-  const has={'Администратор':[1,1,1,1,1,1],'Редактор':[1,1,0,0,0,1],'Модератор':[0,0,1,0,0,1],'Исследователь':[0,0,0,0,0,0]};
-  return adminLayout('roles',`<h1 style="font-size:30px">Права и роли</h1>
-    <table class="atable" style="margin-top:14px"><thead><tr><th>Право</th>${roles.map(r=>`<th style="text-align:center">${r}</th>`).join('')}</tr></thead>
-    <tbody>${perms.map((p,i)=>`<tr><td>${p}</td>${roles.map(r=>`<td style="text-align:center"><span class="opt${has[r][i]?' on':''}" style="display:inline-flex;padding:0" onclick="toast('Демо: право переключено')"><span class="bx"></span></span></td>`).join('')}</tr>`).join('')}</tbody></table>
-    <div class="muted" style="font-size:13px;margin-top:12px">Роль назначается пользователю; исследователь — публичная роль из личного кабинета.</div>`);
+  // страница строится от роли вошедшего: конкретные действия — главное, настройка ролей — второстепенное
+  const myRole=localStorage.getItem('zotov_admrole')||'admin';
+  const ROLES={
+    admin:{l:'Администратор',can:['Создавать и править сущности','Публиковать и снимать с публикации','Модерировать заявки на доступ','Вести справочники','Управлять пользователями и ролями','Видеть закрытые материалы']},
+    editor:{l:'Редактор',can:['Создавать и править сущности','Публиковать и снимать с публикации','Видеть закрытые материалы']},
+    moderator:{l:'Модератор',can:['Модерировать заявки на доступ','Видеть закрытые материалы']},
+  };
+  const me=ROLES[myRole]||ROLES.admin;
+  const users=[
+    ['Тестовый администратор','admin@zotov.center','admin','активен'],
+    ['Анна Смирнова','a.smirnova@zotov.center','editor','активна'],
+    ['Михаил Ким','m.kim@zotov.center','moderator','активен'],
+    ['Пётр Смирнов','p.smirnov@mail.ru','researcher','исследователь · из личного кабинета'],
+  ];
+  const roleSel=(cur,i)=>`<select class="sel" style="padding:6px 10px;font-size:13px" onchange="toast('Демо: роль изменена — на стенде роли пока не сохраняются')">
+    ${[['admin','Администратор'],['editor','Редактор'],['moderator','Модератор'],['researcher','Исследователь']].map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  const adminBlock=myRole!=='admin'?'':`
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:34px"><h3 style="margin:0">Пользователи</h3><span class="btn sm" onclick="toast('Демо: приглашение отправляется на почту')">＋ Пригласить пользователя</span></div>
+    <table class="atable" style="margin-top:12px"><thead><tr><th>Имя</th><th>Почта</th><th>Роль</th><th>Статус</th><th></th></tr></thead>
+    <tbody>${users.map(([n,e,r,s],i)=>`<tr><td style="font-weight:500">${n}</td><td class="muted">${e}</td><td>${roleSel(r,i)}</td><td class="muted" style="font-size:13px">${s}</td>
+      <td style="text-align:right;white-space:nowrap"><span class="lnk" style="font-size:13px;cursor:pointer" onclick="toast('Демо: ссылка для сброса пароля отправлена')">Сбросить пароль</span></td></tr>`).join('')}</tbody></table>
+    <div class="muted" style="font-size:13px;margin-top:10px">Исследователи регистрируются сами через личный кабинет — здесь они появляются для контроля доступа к закрытым материалам.</div>
+    <details style="margin-top:34px"><summary style="cursor:pointer;font-weight:600">Настройка ролей (что умеет каждая роль)</summary>
+      <table class="atable" style="margin-top:12px"><thead><tr><th>Право</th><th style="text-align:center">Администратор</th><th style="text-align:center">Редактор</th><th style="text-align:center">Модератор</th><th style="text-align:center">Исследователь</th></tr></thead>
+      <tbody>${[['Создание и правка сущностей',[1,1,0,0]],['Публикация',[1,1,0,0]],['Модерация заявок',[1,0,1,0]],['Справочники',[1,0,0,0]],['Пользователи и роли',[1,0,0,0]],['Просмотр закрытых материалов',[1,1,1,0]]]
+        .map(([p,h])=>`<tr><td>${p}</td>${h.map(v=>`<td style="text-align:center"><span class="opt${v?' on':''}" style="display:inline-flex;padding:0" onclick="toast('Демо: право переключено')"><span class="bx"></span></span></td>`).join('')}</tr>`).join('')}</tbody></table>
+    </details>`;
+  return adminLayout('roles',`<h1 style="font-size:30px">Пользователи и права</h1>
+    <div class="card" style="margin-top:16px;max-width:640px">
+      <div class="kicker">Ваша роль</div>
+      <div style="font-size:20px;font-weight:600;margin:4px 0 10px">${me.l}</div>
+      <div style="font-size:14px;line-height:1.7">${me.can.map(c=>`✓ ${c}`).join('<br>')}</div>
+    </div>
+    ${adminBlock}`);
 }
 // --- живые мутации админки ---
 window.admSave=async id=>{
