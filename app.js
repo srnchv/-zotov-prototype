@@ -1125,14 +1125,14 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 
 
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
-const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['roles','Пользователи']];
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация · в разработке'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['roles','Пользователи']];
 const admRole=()=>localStorage.getItem('zotov_admrole')||'admin';
 let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
 function adminLayout(tab,inner){
   const side=`<div class="side">
     <div style="padding:6px 4px 14px"><b>Админ-панель</b><div class="kicker">роль: ${({admin:'администратор',editor:'редактор',moderator:'модератор'})[localStorage.getItem('zotov_admrole')||'admin']}</div></div>
-    ${ADMIN_TABS.filter(([k])=>k!=='stats'||admRole()==='admin').map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}">${l}</a>`).join('')}
+    ${ADMIN_TABS.filter(([k])=>k!=='stats'||admRole()==='admin').map(([k,l])=>`<a href="#/admin/${k}" class="${tab===k?'active':''}" ${k==='moderation'?'style="color:#b5b5b5"':''}>${l}</a>`).join('')}
     <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:12px"><a href="index.html#/" style="font-size:13px">← На публичный сайт</a></div>
   </div>`;
   const top=`<header class="top"><div class="row">
@@ -1176,8 +1176,7 @@ function adminDash(){
   const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[t,TYPES[t].pl,all(t).length]);
   return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
     <div class="grid g4" style="margin-top:16px">${counts.map(([t,l,n])=>`<div class="card" style="padding:16px;cursor:pointer" onclick="admType='${t}';location.hash='#/admin/entities'"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l} →</div></div>`).join('')}</div>
-    <div class="grid g3" style="margin-top:24px">
-      <div class="card"><b>Очередь модерации</b><div class="muted" style="font-size:13px;margin:6px 0 10px">4 заявки на доступ ждут решения</div><a class="btn sm" href="#/admin/moderation">К модерации →</a></div>
+    <div class="grid g2" style="margin-top:24px">
       <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${
         (AUDS&&AUDS.recent&&AUDS.recent.length)
           ?AUDS.recent.slice(0,4).map(a=>`<div class="r" style="padding:8px 0"><span style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${a.entity_id}">${esc(a.entity_title||a.entity_id)}</a><br><span class="muted" style="font-size:11px">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span></span><span class="muted" style="font-size:11px;white-space:nowrap">${fmtAt(a.at)}</span></div>`).join('')
@@ -1200,6 +1199,22 @@ const fmtAt=s=>s?String(s).slice(0,16).replace('T',' '):'';
 const ACTL={create:'создание',update:'правка',delete:'удаление',link:'связь',unlink:'связь снята',media:'файл'};
 let admSortKey='title',admSortDir=1;
 window.admSort=k=>{if(admSortKey===k)admSortDir=-admSortDir;else{admSortKey=k;admSortDir=1;}render();};
+// массовые действия над выбранными сущностями
+let admSel=new Set();
+window.admToggleSel=id=>{admSel.has(id)?admSel.delete(id):admSel.add(id);render();};
+window.admSelAll=ids=>{const arr=ids.split(',');const allSel=arr.every(i=>admSel.has(i));arr.forEach(i=>allSel?admSel.delete(i):admSel.add(i));render();};
+window.admBulk=async action=>{
+  const ids=[...admSel];if(!ids.length)return;
+  if(action==='delete'&&!confirm(`Удалить ${ids.length} сущн. и все их связи?`))return;
+  try{
+    for(const id of ids){
+      if(action==='delete')await api('/entities/'+id,{method:'DELETE'});
+      else await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({status:action})});
+    }
+    admSel.clear();await refreshData();
+    toast(action==='delete'?'Удалено':action==='published'?'Опубликовано':'Перенесено в черновики');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
 function adminEntities(){
   loadAuds();
   const sum=(AUDS&&AUDS.summary)||{};
@@ -1215,9 +1230,17 @@ function adminEntities(){
   return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><a class="btn dark" href="#/admin/new">＋ Создать сущность</a></div>
     <input class="secsearch" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQ=this.value;admRefresh()">
     <div class="chips" style="margin:12px 0">${types.map(([v,l])=>`<span class="chip" ${admType===v?'style="background:#1f1f1f;color:#fff"':''} onclick="admType='${v}';admRefresh()">${l}</span>`).join('')}</div>
-    <div class="muted" style="font-size:13px;margin:4px 0 10px">${rows.length} записей · сортировка по клику на заголовок колонки</div>
-    <table class="atable"><thead><tr>${th('title','Название')}${th('type','Тип')}${th('date','Дата')}${th('status','Статус')}${th('views','Просмотры','right')}${th('edits','Правки','right')}${th('changed','Изменён')}<th></th></tr></thead>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin:4px 0 10px">
+      <span class="muted" style="font-size:13px">${rows.length} записей · сортировка по клику на заголовок колонки</span>
+      ${admSel.size?`<span style="display:flex;gap:8px;align-items:center"><span class="muted" style="font-size:13px">Выбрано: ${admSel.size}</span>
+        <span class="btn sm" onclick="admBulk('published')">Опубликовать</span>
+        <span class="btn sm" onclick="admBulk('draft')">В черновики</span>
+        <span class="btn sm" style="color:#9a2e2e" onclick="admBulk('delete')">Удалить</span>
+        <span class="lnk" style="font-size:13px;cursor:pointer" onclick="admSel.clear();render()">снять выбор</span></span>`:''}
+    </div>
+    <table class="atable"><thead><tr><th style="width:26px"><input type="checkbox" ${rows.length&&rows.every(o=>admSel.has(o.id))?'checked':''} onclick="admSelAll('${rows.map(o=>o.id).join(',')}')"></th>${th('title','Название')}${th('type','Тип')}${th('date','Дата')}${th('status','Статус')}${th('views','Просмотры','right')}${th('edits','Правки','right')}${th('changed','Изменён')}<th></th></tr></thead>
     <tbody>${rows.map(o=>{const s=sum[o.id];return `<tr>
+      <td><input type="checkbox" ${admSel.has(o.id)?'checked':''} onclick="admToggleSel('${o.id}')"></td>
       <td><a class="lnk" style="text-decoration:none;font-weight:500" href="#/admin/edit/${o.id}">${esc(o.title)}</a></td>
       <td class="muted">${TYPES[o.type].l}</td>
       <td class="muted">${esc(o.date||o.dates||o.life||o.year||'—')}</td>
@@ -1234,7 +1257,17 @@ function adminEdit(id){
   const o=DB[id];
   if(!o) return adminLayout('entities','<h1>Не найдено</h1>');
   const F=(label,val,fid)=>`<div class="field"><label>${label}</label><input class="inp" ${fid?`id="${fid}"`:''} style="width:100%;color:var(--ink)" value="${esc(val||'')}"></div>`;
+  // типы — только из справочников: свободный ввод запрещён
+  const FS=(label,val,fid,vals)=>`<div class="field"><label>${label}</label><select class="sel" id="${fid}" style="width:100%">
+      <option value="">— не задано —</option>${[...new Set([...(vals||[]),...(val?[val]:[])])].map(v=>`<option ${val===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
   const isMat=o.type==='material';
+  const typedFields={
+    material:FS('Тип материала',o.mtype,'f-mtype',dictValues('mtype'))+F('Подтип',o.subtype,'f-subtype'),
+    event:FS('Тип события',o.evType,'f-evType',dictValues('evType')),
+    place:F('Город',o.city,'f-city')+FS('Тип места',o.placeType,'f-placeType',dictValues('placeType')),
+    source:FS('Тип источника',o.srcType,'f-srcType',dictValues('srcType')),
+    person:FS('Группа',o.group,'f-group',dictValues('group'))+F('Роль',o.role,'f-role'),
+  }[o.type]||'';
   const by={};(o.links||[]).forEach(lid=>{const x=DB[lid];if(x)(by[x.type]=by[x.type]||[]).push(x);});
   const relBlocks=REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}</div></div>`).join('')
     +`<div style="margin-top:6px"><span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('${o.id}')">＋ добавить связь</span></div>`;
@@ -1244,8 +1277,8 @@ function adminEdit(id){
       <div>
         <h3 style="margin-top:0">Карточка</h3>
         ${F('Название',o.title,'f-title')}
-        ${F('Тип сущности',TYPES[o.type].l)}
-        ${isMat?F('Тип материала',o.mtype,'f-mtype')+F('Подтип',o.subtype,'f-subtype'):''}
+        <div class="field"><label>Тип сущности</label><input class="inp" style="width:100%;background:var(--fill);color:var(--muted)" value="${TYPES[o.type]?TYPES[o.type].l:o.type}" disabled title="Тип задаётся при создании"></div>
+        ${typedFields}
         ${F('Дата / период',o.date||o.dates||o.life||o.year,'f-date')}
         ${isMat?`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${o.access===v?' on':''}" onclick="admPatch('${o.id}',{payload:{access:'${v}'}})">${l}</span>`).join('')}</div></div>`:''}
         <div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>
@@ -1281,12 +1314,11 @@ function adminEdit(id){
     </div>`);
 }
 function adminModeration(){
-  const rows=[['Фотография экспозиции, 1927','Анна Исследователь','сегодня','исследование для диссертации','Новая'],['Документ фонда №14','П. Смирнов','вчера','публикация в журнале','На рассмотрении'],['Аудиозапись лекции','НИУ ВШЭ, семинар','2 дня','учебный курс','Требует уточнения'],['Протокол заседания ВХУТЕМАС','М. Ким','3 дня','выставочный проект','Новая']];
-  return adminLayout('moderation',`<h1 style="font-size:30px">Модерация</h1>
-    <div class="muted" style="font-size:14px;margin-bottom:14px">Заявки исследователей на доступ к материалам «по запросу».</div>
-    <table class="atable"><thead><tr><th>Материал</th><th>Заявитель</th><th>Дата</th><th>Цель</th><th>Статус</th><th></th></tr></thead>
-    <tbody>${rows.map(r=>`<tr><td style="font-weight:500">${r[0]}</td><td class="muted">${r[1]}</td><td class="muted">${r[2]}</td><td class="muted" style="max-width:220px">${r[3]}</td><td><span class="statbadge">${r[4]}</span></td>
-      <td style="text-align:right;white-space:nowrap"><span class="btn sm" onclick="toast('Демо: доступ предоставлен на 30 дней, заявителю уйдёт уведомление')">Одобрить</span> <span class="btn sm" onclick="toast('Демо: запрошено уточнение')">Уточнить</span> <span class="btn sm" onclick="toast('Демо: отклонено')">Отклонить</span></td></tr>`).join('')}</tbody></table>`);
+  return adminLayout('moderation',`<h1 style="font-size:30px" class="muted">Модерация</h1>
+    <div class="card" style="margin-top:16px;max-width:560px">
+      <div class="kicker">Раздел в разработке</div>
+      <div style="margin-top:8px;font-size:14px;line-height:1.6" class="muted">Здесь будут заявки исследователей на доступ к материалам «по запросу»: одобрение, уточнение, отклонение. Раздел заработает вместе с личным кабинетом исследователя.</div>
+    </div>`);
 }
 // Справочники: базовые значения приходят из данных, добавленные/скрытые хранятся
 // в сущностях типа dict (id dict-<ключ>) — переживают деплой, работают через обычный API.
@@ -1350,7 +1382,7 @@ function adminDict(){
 }
 let mdKind='all';
 function adminMedia(){
-  const kindOf=f=>f.kind==='image'?'image':f.kind==='video'?'video':f.kind==='audio'?'audio':'doc';
+  const kindOf=f=>{if(['image','video','audio'].includes(f.kind))return f.kind;const ext=String(f.format||f.title||'').toLowerCase().split('.').pop();if(['mp3','wav','ogg','flac','m4a'].includes(ext))return 'audio';if(['mp4','mov','webm','avi'].includes(ext))return 'video';if(['jpg','jpeg','png','webp','gif','tif','tiff'].includes(ext))return 'image';return 'doc';};
   const allFiles=all('media');
   const KINDS=[['all','Все'],['image','Фото'],['video','Видео'],['audio','Аудио'],['doc','Документы']];
   const files=allFiles.filter(f=>mdKind==='all'||kindOf(f)===mdKind);
@@ -1456,7 +1488,7 @@ function adminRoles(){
 window.admSave=async id=>{
   try{
     const g=x=>document.getElementById(x)?document.getElementById(x).value:undefined;
-    const payload={};['mtype','subtype','date','desc'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
+    const payload={};['mtype','subtype','date','desc','evType','placeType','srcType','group','role','city'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
     await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({title:g('f-title'),payload})});
     await refreshData();toast('Сохранено — объект обновлён во всех разделах');render();
   }catch(e){toast('Ошибка: '+e.message);}
@@ -1553,7 +1585,7 @@ window.lpSearch=q=>{
   document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!ql||el.textContent.toLowerCase().includes(ql)?'':'none';});
 };
 // форма создания: всё заполняется сразу — поля типа, связи, файл; черновик по умолчанию
-let NEWF={type:'material',status:'draft'},NEWLINKS=new Set(),NEWFILE=null;
+let NEWF={type:'material',status:'published'},NEWLINKS=new Set(),NEWFILE=null;
 const dvals=(t,k)=>[...new Set(all(t).map(o=>o[k]).filter(Boolean))].sort();
 function adminNew(){
   const t=NEWF.type;
@@ -1581,11 +1613,11 @@ function adminNew(){
         ${inp('Дата / период','date','например 1927')}
         ${extra}
         <div class="field"><label>Описание</label><textarea class="inp" style="width:100%" oninput="NEWF.desc=this.value" placeholder="Редакторское описание с научным аппаратом…">${esc(NEWF.desc||'')}</textarea></div>
-        <div class="field"><label>Статус</label><div class="chips">${[['draft','Черновик'],['published','Опубликовано']].map(([v,l])=>`<span class="fchip${(NEWF.status||'draft')===v?' on':''}" onclick="NEWF.status='${v}';render()">${l}</span>`).join('')}</div>
+        <div class="field"><label>Публикация</label><div class="chips">${[['published','Опубликовать сразу'],['draft','Создать черновиком']].map(([v,l])=>`<span class="fchip${(NEWF.status||'published')===v?' on':''}" onclick="NEWF.status='${v}';render()">${l}</span>`).join('')}</div>
           <div class="muted" style="font-size:12px;margin-top:4px">Черновик не виден на публичном сайте — можно доработать и опубликовать позже.</div></div>
         <div style="display:flex;gap:10px;margin-top:20px">
           <span class="btn dark" onclick="admCreate()">Создать</span>
-          <a class="btn" href="#/admin/entities" onclick="NEWF={type:'material',status:'draft'};NEWLINKS.clear();NEWFILE=null">Отмена</a>
+          <a class="btn" href="#/admin/entities" onclick="NEWF={type:'material',status:'published'};NEWLINKS.clear();NEWFILE=null">Отмена</a>
         </div>
       </div>
       <div>
@@ -1609,12 +1641,12 @@ window.admCreate=async()=>{
     if(!(NEWF.title||'').trim())return toast('Укажите название');
     const {type,title,status,...rest}=NEWF;
     const payload={};for(const[k,v]of Object.entries(rest))if(v)payload[k]=v;
-    const e=await api('/entities',{method:'POST',body:JSON.stringify({type,title:title.trim(),status:status||'draft',payload,links:[...NEWLINKS]})});
+    const e=await api('/entities',{method:'POST',body:JSON.stringify({type,title:title.trim(),status:status||'published',payload,links:[...NEWLINKS]})});
     if(NEWFILE){
       const fd=new FormData();fd.append('file',NEWFILE);fd.append('entityId',e.id);
       await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
     }
-    NEWF={type:'material',status:'draft'};NEWLINKS.clear();NEWFILE=null;
+    NEWF={type:'material',status:'published'};NEWLINKS.clear();NEWFILE=null;
     await refreshData();toast('Создано');location.hash='#/admin/edit/'+e.id;
   }catch(e){toast('Ошибка: '+e.message);}
 };
