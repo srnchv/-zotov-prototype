@@ -1324,14 +1324,25 @@ window.dictRm=(key,v)=>{
   if(!confirm(`Убрать «${v}» из справочника? У существующих карточек значение сохранится.`))return;
   dictPatch(key,st=>{st.added=st.added.filter(x=>x!==v);if(!st.removed.includes(v))st.removed.push(v);}).then(()=>toast('Значение убрано'));
 };
+window.dictEdit=(key,v)=>{
+  const nv=(window.prompt('Переименовать значение:',v)||'').trim();
+  if(!nv||nv===v)return;
+  dictPatch(key,st=>{ // старое скрываем, новое добавляем; старые карточки сохраняют прежнее значение
+    st.added=st.added.filter(x=>x!==v);
+    if(!st.removed.includes(v))st.removed.push(v);
+    st.removed=st.removed.filter(x=>x!==nv);
+    if(!st.added.includes(nv))st.added.push(nv);
+  }).then(()=>toast('Переименовано. У существующих карточек прежнее значение — обновите их при необходимости.'));
+};
 function adminDict(){
   const fixed=[['Уровни доступа',Object.values(ACCESS),'системный — уровни задаются логикой доступа']];
   return adminLayout('dict',`<h1 style="font-size:30px">Справочники</h1>
     <div class="muted" style="font-size:14px;margin-bottom:6px">Управляемые списки значений — используются в карточках и фильтрах. Убранное значение исчезает из выбора, но у старых карточек сохраняется.</div>
     <div class="grid g2" style="margin-top:14px">
     ${DICTDEF.map(([key,l])=>{const vals=dictValues(key);return `<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
-      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)} <span class="muted" style="cursor:pointer" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
-      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAdd('${key}')">＋</span></div></div>`;}).join('')}
+      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="dictEdit('${key}','${esc(v)}')">${esc(v)}</span> <span class="muted" style="cursor:pointer" title="Убрать" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
+      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAdd('${key}')">＋</span></div>
+      <div class="muted" style="font-size:11px;margin-top:8px">Клик по значению — переименовать, ✕ — убрать.</div></div>`;}).join('')}
     ${fixed.map(([l,vals,note])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}</div>
       <div class="muted" style="font-size:12px;margin-top:8px">${note}</div></div>`).join('')}
