@@ -334,6 +334,7 @@ const navFilt=()=>{location.hash=buildHash();};
 
 // --- движок ---
 function textMatch(o,ql){
+  if(o.type==='dict')return false; // служебные записи справочников не ищутся
   return ['title','alt','desc','role','def','author','subtype','mtype','date','placeType','orgType','srcType','prType','life']
     .some(k=>typeof o[k]==='string'&&o[k].toLowerCase().includes(ql));
 }
@@ -1206,7 +1207,7 @@ function adminEntities(){
   const yearNum=o=>yearOf(o.date||o.dates||o.life||o.year)||0;
   const val={title:o=>o.title,type:o=>TYPES[o.type].l,date:yearNum,status:o=>o.status||'published',
     views:o=>Number(o.views)||0,edits:o=>(sum[o.id]&&sum[o.id].edits)||0,changed:o=>(sum[o.id]&&sum[o.id].lastAt)||''}[admSortKey]||(o=>o.title);
-  const rows=RAW.filter(o=>o.type!=='media'&&o.type!=='tag')
+  const rows=RAW.filter(o=>o.type!=='media'&&o.type!=='tag'&&o.type!=='dict')
     .filter(o=>admType==='all'||o.type===admType)
     .filter(o=>!admQ||o.title.toLowerCase().includes(admQ.toLowerCase()))
     .sort((a,b)=>{const x=val(a),y=val(b);return (typeof x==='number'?x-y:String(x).localeCompare(String(y),'ru'))*admSortDir;});
@@ -1287,18 +1288,66 @@ function adminModeration(){
     <tbody>${rows.map(r=>`<tr><td style="font-weight:500">${r[0]}</td><td class="muted">${r[1]}</td><td class="muted">${r[2]}</td><td class="muted" style="max-width:220px">${r[3]}</td><td><span class="statbadge">${r[4]}</span></td>
       <td style="text-align:right;white-space:nowrap"><span class="btn sm" onclick="toast('Демо: доступ предоставлен на 30 дней, заявителю уйдёт уведомление')">Одобрить</span> <span class="btn sm" onclick="toast('Демо: запрошено уточнение')">Уточнить</span> <span class="btn sm" onclick="toast('Демо: отклонено')">Отклонить</span></td></tr>`).join('')}</tbody></table>`);
 }
-function adminDict(){
-  const dicts=[['Типы материалов',TYPELIST],['Уровни доступа',Object.values(ACCESS).concat(['… (в ТЗ 9 уровней — полный справочник)'])],['Типы событий',[...new Set(all('event').map(e=>e.evType).filter(Boolean))].sort()],['Типы источников',[...new Set(all('source').map(x=>x.srcType).filter(Boolean))]],['Типы мест',[...new Set(all('place').map(p=>(p.placeType||'').split('·')[0].trim()).filter(Boolean))]],['Доступность',A11Y]];
-  return adminLayout('dict',`<h1 style="font-size:30px">Справочники</h1>
-    <div class="muted" style="font-size:14px;margin-bottom:6px">Управляемые списки значений — используются в карточках и фильтрах.</div>
-    <div class="grid g2" style="margin-top:14px">${dicts.map(([l,vals])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
-      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}<span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="toast('Демо: значение добавлено в справочник')">＋</span></div></div>`).join('')}</div>`);
+// Справочники: базовые значения приходят из данных, добавленные/скрытые хранятся
+// в сущностях типа dict (id dict-<ключ>) — переживают деплой, работают через обычный API.
+const DICTDEF=[
+  ['mtype','Типы материалов',()=>TYPELIST],
+  ['evType','Типы событий',()=>dvals('event','evType')],
+  ['srcType','Типы источников',()=>dvals('source','srcType')],
+  ['placeType','Типы мест',()=>[...new Set(all('place').map(p=>(p.placeType||'').split('·')[0].trim()).filter(Boolean))]],
+  ['group','Группы личностей',()=>dvals('person','group')],
+  ['a11y','Доступность',()=>[...new Set([...A11Y,...all('material').flatMap(o=>o.a11y||[])])]],
+];
+function dictValues(key){
+  const def=DICTDEF.find(d=>d[0]===key);
+  const base=def?def[2]():[];
+  const s=DB['dict-'+key]||{};
+  const rem=new Set(s.removed||[]);
+  return [...new Set([...base,...(s.added||[])])].filter(v=>!rem.has(v));
 }
+async function dictPatch(key,mut){
+  const cur=DB['dict-'+key];
+  const st={added:(cur&&cur.added)||[],removed:(cur&&cur.removed)||[]};
+  mut(st);
+  try{
+    if(cur)await api('/entities/dict-'+key,{method:'PATCH',body:JSON.stringify({payload:st})});
+    else await api('/entities',{method:'POST',body:JSON.stringify({id:'dict-'+key,type:'dict',title:'Справочник: '+(DICTDEF.find(d=>d[0]===key)||[,key])[1],payload:st})});
+    await refreshData();render();
+  }catch(e){toast('Ошибка: '+e.message);}
+}
+window.dictAdd=key=>{
+  const v=(window.prompt('Новое значение справочника:')||'').trim();
+  if(!v)return;
+  dictPatch(key,st=>{st.removed=st.removed.filter(x=>x!==v);if(!st.added.includes(v))st.added.push(v);}).then(()=>toast('Значение добавлено'));
+};
+window.dictRm=(key,v)=>{
+  if(!confirm(`Убрать «${v}» из справочника? У существующих карточек значение сохранится.`))return;
+  dictPatch(key,st=>{st.added=st.added.filter(x=>x!==v);if(!st.removed.includes(v))st.removed.push(v);}).then(()=>toast('Значение убрано'));
+};
+function adminDict(){
+  const fixed=[['Уровни доступа',Object.values(ACCESS),'системный — уровни задаются логикой доступа']];
+  return adminLayout('dict',`<h1 style="font-size:30px">Справочники</h1>
+    <div class="muted" style="font-size:14px;margin-bottom:6px">Управляемые списки значений — используются в карточках и фильтрах. Убранное значение исчезает из выбора, но у старых карточек сохраняется.</div>
+    <div class="grid g2" style="margin-top:14px">
+    ${DICTDEF.map(([key,l])=>{const vals=dictValues(key);return `<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
+      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)} <span class="muted" style="cursor:pointer" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
+      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAdd('${key}')">＋</span></div></div>`;}).join('')}
+    ${fixed.map(([l,vals,note])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
+      <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}</div>
+      <div class="muted" style="font-size:12px;margin-top:8px">${note}</div></div>`).join('')}
+    </div>`);
+}
+let mdKind='all';
 function adminMedia(){
-  const files=all('media');
+  const kindOf=f=>f.kind==='image'?'image':f.kind==='video'?'video':f.kind==='audio'?'audio':'doc';
+  const allFiles=all('media');
+  const KINDS=[['all','Все'],['image','Фото'],['video','Видео'],['audio','Аудио'],['doc','Документы']];
+  const files=allFiles.filter(f=>mdKind==='all'||kindOf(f)===mdKind);
   const total=files.reduce((a,f)=>a+(typeof f.size==='number'?f.size:0),0);
   const parents=f=>(f.links||[]).map(id=>DB[id]).filter(Boolean);
-  const card=f=>`<div class="card" style="padding:14px;cursor:pointer" onclick="location.hash='#/admin/edit/${f.id}'">
+  const cnt=k=>k==='all'?allFiles.length:allFiles.filter(f=>kindOf(f)===k).length;
+  const card=f=>`<div class="card" style="padding:14px;cursor:pointer;position:relative" onclick="location.hash='#/admin/edit/${f.id}'">
+      <span title="Удалить файл" style="position:absolute;top:8px;right:10px;color:#9a2e2e;cursor:pointer;font-size:14px;z-index:2" onclick="event.stopPropagation();admDelete('${f.id}','#/admin/media')">✕</span>
       <div class="media" style="aspect-ratio:4/3;margin-bottom:10px;${f.thumb?`background-image:url('${f.thumb}');background-size:cover;background-position:center`:''}"></div>
       <div style="font-size:13px;font-weight:500;word-break:break-all">${esc(f.title)}</div>
       <div class="muted" style="font-size:12px">${esc(f.format||'')}${f.size?' · '+fmtSize(f.size):''}</div>
@@ -1309,10 +1358,11 @@ function adminMedia(){
   return adminLayout('media',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap"><h1 style="font-size:30px">Медиатека</h1>
       <span style="display:flex;align-items:center;gap:10px"><input type="file" id="f-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="admUpload('')">
       <span class="muted" id="upl-status" style="font-size:12px"></span><span class="btn dark" onclick="document.getElementById('f-file').click()">＋ Загрузить в архив</span></span></div>
-    <div class="muted" style="font-size:13px;margin-top:6px">Общее хранилище файлов архива. Файл прикрепляется к сущностям связями — один и тот же файл может относиться к нескольким карточкам.${files.length?` Всего: ${files.length} · ${fmtSize(total)}`:''}</div>
+    <div class="muted" style="font-size:13px;margin-top:6px">Общее хранилище файлов архива. Файл прикрепляется к сущностям связями — один и тот же файл может относиться к нескольким карточкам.${files.length?` Показано: ${files.length} · ${fmtSize(total)}`:''}</div>
+    <div class="chips" style="margin:12px 0">${KINDS.map(([k,l])=>`<span class="chip" ${mdKind===k?'style="background:#1f1f1f;color:#fff"':''} onclick="mdKind='${k}';render()">${l} <span style="opacity:.6">${cnt(k)}</span></span>`).join('')}</div>
     ${files.length
       ?`<div class="grid g4" style="margin-top:16px">${files.map(card).join('')}</div>`
-      :`<p class="muted" style="margin-top:24px">Файлов пока нет. Загрузите первый — он появится здесь, и его можно будет прикрепить к любой сущности.</p>`}`);
+      :`<p class="muted" style="margin-top:24px">${mdKind==='all'?'Файлов пока нет. Загрузите первый — он появится здесь, и его можно будет прикрепить к любой сущности.':'В этом разделе файлов нет.'}</p>`}`);
 }
 // статистика посещаемости и работы редакции — только администратору
 let STATS=null,STATSloading=false;
@@ -1404,10 +1454,12 @@ window.admPatch=async(id,patch)=>{
   try{await api('/entities/'+id,{method:'PATCH',body:JSON.stringify(patch)});await refreshData();toast('Сохранено');render();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-window.admDelete=async(id,stayId)=>{
-  if(!confirm(stayId?'Удалить файл?':'Удалить сущность и все её связи?'))return;
+window.admDelete=async(id,after)=>{
+  const isFile=DB[id]&&DB[id].type==='media';
+  if(!confirm(isFile?'Удалить файл из архива? Файл пропадёт из всех карточек.':'Удалить сущность и все её связи?'))return;
   try{await api('/entities/'+id,{method:'DELETE'});await refreshData();toast('Удалено');
-    if(stayId){location.hash='#/admin/edit/'+stayId;render();}else location.hash='#/admin/entities';}
+    const target=after?(after.startsWith('#')?after:'#/admin/edit/'+after):'#/admin/entities';
+    if(location.hash===target)render();else location.hash=target;}
   catch(e){toast('Ошибка: '+e.message);}
 };
 // байты → человекочитаемый размер
@@ -1457,7 +1509,7 @@ const lpCur=()=>lpFor==='__new'?new Set(NEWLINKS):new Set((DB[lpFor]&&DB[lpFor].
 function drawLinkPicker(){
   if(!lpFor||(lpFor!=='__new'&&!DB[lpFor]))return;
   const cur=lpCur();
-  const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media'));
+  const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':(x.type!=='media'&&x.type!=='dict')));
   // сначала выбор типа сущности, затем список — иначе в общем списке не сориентироваться
   const byType={};pool.forEach(x=>(byType[x.type]=byType[x.type]||[]).push(x));
   const typeTabs=Object.keys(TYPES).filter(t=>byType[t])
@@ -1481,7 +1533,7 @@ window.lpSearch=q=>{
   const ql=(q||'').trim().toLowerCase();
   if(ql&&!lpType){ // раздел не выбран — ищем по всем и показываем совпадения
     const cur=lpCur();
-    const hits=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':x.type!=='media')&&x.title.toLowerCase().includes(ql));
+    const hits=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':(x.type!=='media'&&x.type!=='dict'))&&x.title.toLowerCase().includes(ql));
     const el=document.getElementById('lp-list');
     if(el)el.innerHTML=hits.length?hits.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)} <span style="color:var(--muted);font-size:11px">· ${TYPES[x.type].l}</span></span>`).join(''):'<div class="muted" style="font-size:13px;padding:14px 0">Ничего не найдено.</div>';
     return;
@@ -1498,12 +1550,12 @@ function adminNew(){
   const sel=(label,key,vals)=>`<div class="field"><label>${label}</label><select class="sel" style="width:100%" onchange="NEWF['${key}']=this.value">
       <option value="">— не задано —</option>${vals.map(v=>`<option ${NEWF[key]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
   const extra={
-    material:sel('Тип материала','mtype',dvals('material','mtype'))+inp('Подтип','subtype','например Фотография · Ч/б')
+    material:sel('Тип материала','mtype',dictValues('mtype'))+inp('Подтип','subtype','например Фотография · Ч/б')
       +`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
-    event:sel('Тип события','evType',dvals('event','evType')),
-    person:sel('Группа','group',dvals('person','group').length?dvals('person','group'):['Конструктивисты','Связанные личности'])+inp('Роль','role','например фотограф, художник')+inp('Годы жизни','life','1891–1956'),
-    place:inp('Город','city','Москва')+inp('Тип места','placeType','например жилой дом'),
-    source:sel('Тип источника','srcType',dvals('source','srcType')),
+    event:sel('Тип события','evType',dictValues('evType')),
+    person:sel('Группа','group',dictValues('group').length?dictValues('group'):['Конструктивисты','Связанные личности'])+inp('Роль','role','например фотограф, художник')+inp('Годы жизни','life','1891–1956'),
+    place:inp('Город','city','Москва')+sel('Тип места','placeType',dictValues('placeType')),
+    source:sel('Тип источника','srcType',dictValues('srcType')),
     theme:inp('Краткое определение','def',''),
     project:inp('Даты проведения','dates','12.05–30.09.1927')+inp('Кураторы','curators',''),
   }[t]||'';

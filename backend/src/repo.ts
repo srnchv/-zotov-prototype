@@ -108,7 +108,7 @@ export async function search(query: string) {
          ts_rank(tsv, ${TSQ}) rnk,
          ts_headline('russian', ${PLAIN}, ${TSQ}, 'MaxWords=16, MinWords=6, MaxFragments=1') snippet
        FROM entities
-       WHERE tsv @@ ${TSQ} OR lower(title) LIKE ? ${fuzzy}
+       WHERE type != 'dict' AND (tsv @@ ${TSQ} OR lower(title) LIKE ? ${fuzzy})
        ORDER BY rnk DESC, title
        LIMIT 100`,
       [query, query, query, `%${query.toLowerCase()}%`, ...(trgmAvailable ? [query] : [])],
@@ -122,7 +122,7 @@ export async function search(query: string) {
   } else {
     const ql = `%${query.toLowerCase()}%`;
     direct = (await q.all(
-      `SELECT * FROM entities WHERE ${SQL.LC}(title) LIKE ? OR ${SQL.LC}(payload) LIKE ?`, [ql, ql],
+      `SELECT * FROM entities WHERE type != 'dict' AND (${SQL.LC}(title) LIKE ? OR ${SQL.LC}(payload) LIKE ?)`, [ql, ql],
     )).map(rowToEntity);
   }
 

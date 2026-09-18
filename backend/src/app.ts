@@ -60,7 +60,7 @@ export function createApp() {
 
   const entityBody = z.object({
     id: z.string().min(1).max(64).optional(),
-    type: z.enum(["material","person","place","event","theme","project","org","collection","source","media","tag"]),
+    type: z.enum(["material","person","place","event","theme","project","org","collection","source","media","tag","dict"]),
     title: z.string().min(1).max(500),
     status: z.enum(["draft","moderation","published"]).optional(),
     payload: z.record(z.unknown()).optional(),
