@@ -195,7 +195,7 @@ const REL_HEAD={material:'Материалы',person:'Связанные лич�
 function relatedSections(o){
   const by={}; (o.links||[]).forEach(id=>{const x=DB[id];if(x&&x.id!==o.id&&x.type!=='media')(by[x.type]=by[x.type]||[]).push(x);});
   const skip={person:['source']}[o.type]||[]; // у Личности источники не показываем (правка 07.08.2026)
-  return REL_ORDER.filter(t=>by[t]&&by[t].length&&!skip.includes(t)).map(t=>{
+  return REL_ORDER.filter(t=>t!=='tag'&&by[t]&&by[t].length&&!skip.includes(t)).map(t=>{
     const items=by[t];
     const inner=CARD_TYPES.includes(t)
       ?`<div class="grid ${t==='person'?'g4':'g3'}">${items.map(tile).join('')}</div>`
@@ -426,7 +426,6 @@ function resultCard(o){
       if(sv.direct&&sv.snippet)return `<div class="muted" style="font-size:12px;line-height:1.4">…${sv.snippet}…</div>`;
       if(!sv.direct&&sv.via)return `<div class="muted" style="font-size:12px">Найдено через: ${esc(sv.via)}</div>`;return '';})()}
     ${(person||coll||proj)?`<div class="rlinks">${person?`<span>Личность: ${esc(person.title)}</span>`:''}${proj?`<span>Выставка: ${esc(proj.title)}</span>`:''}${coll?`<span>Коллекция: ${esc(coll.title)}</span>`:''}</div>`:''}
-    ${tags.length?`<div class="rtags">${tags.map(t=>'#'+esc(t.title)).join(' ')}</div>`:''}
   </a>`;
 }
 
@@ -561,6 +560,13 @@ function drawFmodal(){
 }
 
 // --- страница архива / результатов ---
+// теги — служебные: карточками не выводятся, но их можно выбрать из поисковой строки
+function tagHints(){
+  const q=(FILT.q||'').toLowerCase();
+  const tags=all('tag').filter(t=>!q||t.title.toLowerCase().includes(q)).slice(0,12);
+  if(!tags.length)return '';
+  return `<div class="chips" style="margin-top:8px;align-items:center"><span class="muted" style="font-size:12px">Теги:</span>${tags.map(t=>`<span class="chip" style="font-size:12px;cursor:pointer" onclick="location.hash='#/archive?q='+encodeURIComponent('${esc(t.title)}')">#${esc(t.title)}</span>`).join('')}</div>`;
+}
 function archive(qs){
   FILT=parseFilt(qs);
   const {res,direct,server}=runSearch();
@@ -572,7 +578,7 @@ function archive(qs){
   }
   const browse=!FILT.q&&!hasFilters();
   // основные сущности (с изображением) — карточками, служебные — названиями ниже
-  const order=['material','person','place','event','theme','project','collection','org','source','tag','media'];
+  const order=['material','person','place','event','theme','project','collection','org','source']; // теги и файлы — служебные, в выдаче не выводятся
   const by={}; res.forEach(o=>(by[o.type]=by[o.type]||[]).push(o));
   let body;
   if(!res.length){
@@ -593,6 +599,7 @@ function archive(qs){
     :`<div class="crumbs"><a href="#/archive">Поиск</a> / ${FILT.q?'Результаты поиска':'Результаты фильтрации'}</div><h1 style="font-size:32px">${FILT.q?'Результаты по запросу «'+esc(FILT.q)+'»':'Результаты фильтрации'}</h1>${FILT.q?'<div class="muted" style="font-size:13px">Поиск по названиям и связанным данным — результаты сгруппированы по типам.</div>':''}`;
   return page('#/archive',`${head}
     ${searchInput(FILT.q)}
+    ${tagHints()}
     ${filterBar()}
     <div style="margin-top:18px">${activeChips()}${toolbar(res.length)}${body}</div>`);
 }
@@ -1263,16 +1270,18 @@ function adminEdit(id){
   const isMat=o.type==='material';
   const typedFields={
     material:FS('Тип материала',o.mtype,'f-mtype',dictValues('mtype'))+F('Подтип',o.subtype,'f-subtype'),
-    event:FS('Тип события',o.evType,'f-evType',dictValues('evType')),
-    place:F('Город',o.city,'f-city')+FS('Тип места',o.placeType,'f-placeType',dictValues('placeType')),
-    source:FS('Тип источника',o.srcType,'f-srcType',dictValues('srcType')),
+    event:FS('Подтип (тип события)',o.evType,'f-evType',dictValues('evType')),
+    place:F('Город',o.city,'f-city')+FS('Подтип (тип места)',o.placeType,'f-placeType',dictValues('placeType')),
+    source:FS('Подтип (тип источника)',o.srcType,'f-srcType',dictValues('srcType')),
     person:FS('Группа',o.group,'f-group',dictValues('group'))+F('Роль',o.role,'f-role'),
   }[o.type]||'';
   const by={};(o.links||[]).forEach(lid=>{const x=DB[lid];if(x)(by[x.type]=by[x.type]||[]).push(x);});
-  const relBlocks=REL_ORDER.filter(t=>by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}</div></div>`).join('')
+  const relBlocks=REL_ORDER.filter(t=>t!=='tag'&&by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}</div></div>`).join('')
     +`<div style="margin-top:6px"><span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('${o.id}')">＋ добавить связь</span></div>`;
+  const subLine=[TYPES[o.type]?TYPES[o.type].l:o.type, o.mtype||o.evType||o.placeType||o.srcType||o.group, o.type==='material'?o.subtype:null].filter(Boolean).join(' · ');
   return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / ${esc(o.title)}</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
+    <div class="kicker" style="margin-top:6px">${esc(subLine)}</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px;margin-top:2px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
     <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px">
       <div>
         <h3 style="margin-top:0">Карточка</h3>
@@ -1284,6 +1293,9 @@ function adminEdit(id){
         <div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>
         <h3>Связи <span class="muted" style="font-size:13px;font-weight:400">— двусторонние: появятся на карточках обеих сущностей</span></h3>
         ${relBlocks||'<div class="muted">Связей пока нет.</div>'}
+        <h3>Теги <span class="muted" style="font-size:13px;font-weight:400">— служебные: помогают поиску, на сайте не выводятся</span></h3>
+        <div class="chips">${(by.tag||[]).map(x=>`<span class="chip">#${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}
+        <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="admAddTag('${o.id}')">＋ тег</span></div>
         <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
           <span class="btn dark" onclick="admSave('${o.id}')">Сохранить</span>
           ${o.status==='published'?`<span class="btn" onclick="admPatch('${o.id}',{status:'draft'})">В черновики</span>`:`<span class="btn" onclick="admPatch('${o.id}',{status:'published'})">Опубликовать</span>`}
@@ -1356,6 +1368,19 @@ window.dictRm=(key,v)=>{
   if(!confirm(`Убрать «${v}» из справочника? У существующих карточек значение сохранится.`))return;
   dictPatch(key,st=>{st.added=st.added.filter(x=>x!==v);if(!st.removed.includes(v))st.removed.push(v);}).then(()=>toast('Значение убрано'));
 };
+window.tagRm=async id=>{
+  if(!confirm('Удалить тег? Он снимется со всех карточек.'))return;
+  try{await api('/entities/'+id,{method:'DELETE'});await refreshData();toast('Тег удалён');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+window.tagEdit=async id=>{
+  const t=DB[id];if(!t)return;
+  const nv=(window.prompt('Переименовать тег:',t.title)||'').trim().replace(/^#/,'');
+  if(!nv||nv===t.title)return;
+  if(all('tag').some(x=>x.id!==id&&x.title.toLowerCase()===nv.toLowerCase()))return toast('Такой тег уже есть');
+  try{await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({title:nv})});await refreshData();toast('Переименовано');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
 window.dictEdit=(key,v)=>{
   const nv=(window.prompt('Переименовать значение:',v)||'').trim();
   if(!nv||nv===v)return;
@@ -1375,6 +1400,10 @@ function adminDict(){
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="dictEdit('${key}','${esc(v)}')">${esc(v)}</span> <span class="muted" style="cursor:pointer" title="Убрать" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
       <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAdd('${key}')">＋</span></div>
       <div class="muted" style="font-size:11px;margin-top:8px">Клик по значению — переименовать, ✕ — убрать.</div></div>`;}).join('')}
+    <div class="card"><b>Теги</b> <span class="muted" style="font-size:12px">${all('tag').length}</span>
+      <div class="chips" style="margin-top:10px">${all('tag').map(t=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="tagEdit('${t.id}')">#${esc(t.title)}</span> <span class="muted" style="cursor:pointer" title="Удалить тег" onclick="tagRm('${t.id}')">✕</span></span>`).join('')}
+      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="admAddTag('')">＋</span></div>
+      <div class="muted" style="font-size:11px;margin-top:8px">Служебные: помогают поиску, на публичном сайте не выводятся. Удаление снимает тег со всех карточек.</div></div>
     ${fixed.map(([l,vals,note])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}</div>
       <div class="muted" style="font-size:12px;margin-top:8px">${note}</div></div>`).join('')}
@@ -1535,6 +1564,19 @@ window.mediaPlay=async(id,kind)=>{
       :`<video controls autoplay src="${url}" style="width:100%;max-height:560px;border-radius:10px"></video>`;
   }catch(e){toast('Файл недоступен: '+e.message);}
 };
+window.admAddTag=async id=>{
+  const name=(window.prompt('Тег (существующий подхватится, новый создастся):')||'').trim().replace(/^#/,'');
+  if(!name)return;
+  try{
+    let tag=all('tag').find(t=>t.title.toLowerCase()===name.toLowerCase());
+    if(!tag)tag=await api('/entities',{method:'POST',body:JSON.stringify({type:'tag',title:name})});
+    if(id){
+      if(DB[id]&&(DB[id].links||[]).includes(tag.id)){toast('Такой тег уже стоит');return;}
+      await api(`/entities/${id}/links`,{method:'POST',body:JSON.stringify({targetId:tag.id})});
+    }
+    await refreshData();toast('Тег добавлен');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
 window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
   catch(e){toast('Ошибка: '+e.message);}
@@ -1585,7 +1627,7 @@ window.lpSearch=q=>{
   document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!ql||el.textContent.toLowerCase().includes(ql)?'':'none';});
 };
 // форма создания: всё заполняется сразу — поля типа, связи, файл; черновик по умолчанию
-let NEWF={type:'material',status:'published'},NEWLINKS=new Set(),NEWFILE=null;
+let NEWF={type:'material',status:'published'},NEWLINKS=new Set(),NEWFILE=null,NEWTAGS=[];
 const dvals=(t,k)=>[...new Set(all(t).map(o=>o[k]).filter(Boolean))].sort();
 function adminNew(){
   const t=NEWF.type;
@@ -1595,10 +1637,10 @@ function adminNew(){
   const extra={
     material:sel('Тип материала','mtype',dictValues('mtype'))+inp('Подтип','subtype','например Фотография · Ч/б')
       +`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
-    event:sel('Тип события','evType',dictValues('evType')),
+    event:sel('Подтип (тип события)','evType',dictValues('evType')),
     person:sel('Группа','group',dictValues('group').length?dictValues('group'):['Конструктивисты','Связанные личности'])+inp('Роль','role','например фотограф, художник')+inp('Годы жизни','life','1891–1956'),
-    place:inp('Город','city','Москва')+sel('Тип места','placeType',dictValues('placeType')),
-    source:sel('Тип источника','srcType',dictValues('srcType')),
+    place:inp('Город','city','Москва')+sel('Подтип (тип места)','placeType',dictValues('placeType')),
+    source:sel('Подтип (тип источника)','srcType',dictValues('srcType')),
     theme:inp('Краткое определение','def',''),
     project:inp('Даты проведения','dates','12.05–30.09.1927')+inp('Кураторы','curators',''),
   }[t]||'';
@@ -1625,6 +1667,9 @@ function adminNew(){
         <div class="muted" style="font-size:13px;margin-bottom:8px">Двусторонние: появятся на карточках обеих сущностей.</div>
         ${linkChips?`<div class="chips" style="margin-bottom:10px">${linkChips}</div>`:''}
         <span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('__new')">＋ добавить связь</span>
+        <h3>Теги <span class="muted" style="font-size:12px;font-weight:400">— служебные, для поиска</span></h3>
+        <div class="chips">${NEWTAGS.map(t=>`<span class="chip">#${esc(t)} <span class="muted" style="cursor:pointer" onclick="NEWTAGS=NEWTAGS.filter(x=>x!=='${esc(t)}');render()">✕</span></span>`).join('')}
+        <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="newTag()">＋ тег</span></div>
         <h3>Медиа</h3>
         <input type="file" id="n-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="NEWFILE=this.files[0];render()">
         ${NEWFILE?`<div style="font-size:13px;margin-bottom:8px">${esc(NEWFILE.name)} · ${fmtSize(NEWFILE.size)} <span class="lnk" style="cursor:pointer" onclick="NEWFILE=null;render()">✕</span></div>`:''}
@@ -1636,17 +1681,31 @@ function adminNew(){
       </div>
     </div>`);
 }
+window.newTag=()=>{
+  const name=(window.prompt('Тег (существующий подхватится, новый создастся):')||'').trim().replace(/^#/,'');
+  if(!name)return;
+  if(NEWTAGS.some(t=>t.toLowerCase()===name.toLowerCase()))return toast('Такой тег уже добавлен');
+  NEWTAGS.push(name);render();
+};
 window.admCreate=async()=>{
   try{
     if(!(NEWF.title||'').trim())return toast('Укажите название');
     const {type,title,status,...rest}=NEWF;
     const payload={};for(const[k,v]of Object.entries(rest))if(v)payload[k]=v;
-    const e=await api('/entities',{method:'POST',body:JSON.stringify({type,title:title.trim(),status:status||'published',payload,links:[...NEWLINKS]})});
+    // теги: существующие подхватываем, новые создаём (без дублей по названию)
+    const tagIds=[];
+    for(const name of NEWTAGS){
+      let tag=all('tag').find(t=>t.title.toLowerCase()===name.toLowerCase());
+      if(!tag)tag=await api('/entities',{method:'POST',body:JSON.stringify({type:'tag',title:name})});
+      tagIds.push(tag.id);
+    }
+    if(tagIds.length)await refreshData();
+    const e=await api('/entities',{method:'POST',body:JSON.stringify({type,title:title.trim(),status:status||'published',payload,links:[...new Set([...NEWLINKS,...tagIds])]})});
     if(NEWFILE){
       const fd=new FormData();fd.append('file',NEWFILE);fd.append('entityId',e.id);
       await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
     }
-    NEWF={type:'material',status:'published'};NEWLINKS.clear();NEWFILE=null;
+    NEWF={type:'material',status:'published'};NEWLINKS.clear();NEWFILE=null;NEWTAGS=[];
     await refreshData();toast('Создано');location.hash='#/admin/edit/'+e.id;
   }catch(e){toast('Ошибка: '+e.message);}
 };
