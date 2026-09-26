@@ -42,3 +42,24 @@ export async function getEntity(id: string): Promise<EntityFull | null> {
 }
 
 export const yearOf = (s?: unknown) => { const m = String(s ?? "").match(/\d{4}/); return m ? +m[0] : 0; };
+
+// год сущности — по первому датированному полю, каким бы оно ни называлось у типа
+export const entityYear = (e: Entity) => yearOf(e.date || e.year || e.dates || e.period || e.life);
+
+// картинка карточки: своё поле или первый привязанный медиафайл-изображение
+export const imgOf = (db: Record<string, Entity>, e: Entity, big = false) => {
+  const own = big ? (e.imgBig || e.img) : e.img;
+  if (own) return String(own);
+  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image");
+  return m ? String(big ? (m.big || m.med) : (m.med || m.thumb)) : "";
+};
+
+// серверный поиск (PG FTS с морфологией и опечатками); порядок items — релевантность
+export type SearchHit = { id: string; direct: boolean; snippet?: string; via?: string };
+export async function searchApi(q: string): Promise<SearchHit[]> {
+  try {
+    const r = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, { cache: "no-store" });
+    if (!r.ok) return [];
+    return ((await r.json()).items || []) as SearchHit[];
+  } catch { return []; }
+}

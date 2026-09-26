@@ -59,3 +59,37 @@ body.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px
 .sim .im img{width:100%;height:100%;object-fit:cover}
 .sim:hover h3{color:var(--red)}
 #matfoot{width:1740px;background:#fff;padding:80px 12px 4px 12px}
+
+/* ==== планшет 834 / мобайл 375 (Figma «Единый шаблон — респонсивы»): одна колонка, шапка сверху ==== */
+@media (max-width:1023px){
+  html.mob #cover{position:static;width:auto;height:auto;padding:12px 12px 16px}
+  html.mob #cover .top{position:static;width:auto}
+  html.mob #cover h1{font-size:32px;line-height:32px;letter-spacing:-.8px}
+  html.mob #cover .info .row .h{width:112px}
+  html.mob #secmenu{position:static;width:auto;margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;border:0;padding:0}
+  html.mob #secmenu a{border-top:4px solid var(--grey4);padding-top:8px}
+  html.mob #saveBtn{position:static;margin-top:16px;display:inline-flex}
+  html.mob #rest.mat{width:auto}
+  html.mob #rightcol{margin:0;width:auto;padding:0 12px}
+  html.mob .embed .imgbox{height:auto;aspect-ratio:4/3;max-height:560px}
+  html.mob .sec{padding-left:16px;padding-bottom:16px}
+  html.mob .sec .para{font-size:16px;line-height:19px;letter-spacing:-.1px;padding-right:0}
+  html.mob .sec .para + .para{margin-top:12px;text-indent:24px}
+  html.mob .rel-item{padding-right:104px;min-height:96px}
+  html.mob .rel-item h3{font-size:16px;line-height:18px}
+  html.mob .rel-item .im{width:92px;height:72px}
+  html.mob #similar{width:auto;padding:40px 12px 24px}
+  html.mob #similar .cards{flex-direction:column;gap:24px}
+  html.mob .sim.big,html.mob .sim.small{width:auto}
+  html.mob .sim.big .im,html.mob .sim.small .im{height:auto;aspect-ratio:3/2}
+  html.mob #matfoot{width:auto;padding:40px 12px 4px}
+}
+@media (min-width:600px) and (max-width:1023px){
+  html.mob #cover{padding:16px 16px 24px}
+  html.mob #cover h1{font-size:40px;line-height:40px;letter-spacing:-1.2px}
+  html.mob #rightcol,html.mob #similar,html.mob #matfoot{padding-left:16px;padding-right:16px}
+  html.mob #similar .cards{flex-direction:row;flex-wrap:wrap;gap:12px}
+  html.mob .sim.big{width:100%}
+  html.mob .sim.small{width:calc(50% - 6px)}
+  html.mob .sec{padding-left:112px}
+}

@@ -1,5 +1,6 @@
-// Заголовок-леттеринг: буквы Zotov Bold растянуты по ширине, справа круг со стрелкой (как buildTitle в вёрстке)
-export default function SectionTitle({ text, href, small }: { text: string; href?: string; small?: boolean }) {
+// Заголовок-леттеринг: буквы Zotov Bold растянуты по ширине, справа круг со стрелкой (как buildTitle в вёрстке).
+// bare — без круга (заголовок страницы, напр. «ПОИСК»)
+export default function SectionTitle({ text, href, small, bare }: { text: string; href?: string; small?: boolean; bare?: boolean }) {
   const chars = [...text];
   const Arrow = (
     <svg width={small ? 16 : 24} height={small ? 16 : 24} viewBox="0 0 16 16" fill="none">
@@ -7,9 +8,9 @@ export default function SectionTitle({ text, href, small }: { text: string; href
     </svg>
   );
   return (
-    <div className={"sec-title" + (small ? " sm" : "")}>
+    <div className={"sec-title" + (small ? " sm" : "") + (bare ? " bare" : "")}>
       {chars.map((c, i) => c === " " ? <span key={i} className="ch sp"> </span> : <span key={i} className="ch">{c}</span>)}
-      {href ? <a className="circle" href={href} aria-label={text}>{Arrow}</a> : <div className="circle">{Arrow}</div>}
+      {bare ? null : href ? <a className="circle" href={href} aria-label={text}>{Arrow}</a> : <div className="circle">{Arrow}</div>}
     </div>
   );
 }
