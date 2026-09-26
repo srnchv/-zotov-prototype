@@ -1,0 +1,61 @@
+/* Стили страницы материала — из material/index.html */
+body.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
+#menu.mat{position:absolute;left:0;top:50%;margin-top:-222px;width:172px;background:var(--grey4);padding:4px 0;display:flex;flex-direction:column;gap:4px}
+#menu.mat a{display:block;background:#fff;width:172px;padding:8px 12px;text-align:center;font-size:14.3px;letter-spacing:.143px;text-transform:uppercase;font-weight:500}
+#menu.mat a:hover{color:var(--red)}
+#cover{position:absolute;left:180px;top:0;width:864px;height:100%;background:#fff}
+#cover .top{position:absolute;left:12px;top:12px;width:852px;display:flex;flex-direction:column;gap:8px}
+#cover .crumbs{display:flex;gap:4px;align-items:center}
+#cover .kicker{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--grey2)}
+#cover h1{font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase}
+#cover .info .row{display:flex}
+#cover .info .row .h{width:144px;color:var(--grey2);flex:0 0 auto}
+#secmenu{position:absolute;right:0;bottom:12px;width:276px;display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey4);padding-bottom:12px}
+#secmenu a{display:flex;gap:4px;align-items:flex-start;border-top:4px solid var(--grey4);padding-top:12px;width:100%;cursor:pointer}
+#secmenu a:hover{color:var(--red)}
+#secmenu .num{color:var(--grey2)}
+#secmenu .sp{flex:1 1 auto}
+#saveBtn{position:absolute;left:12px;bottom:12px;background:var(--grey4);display:flex;gap:8px;align-items:center;justify-content:center;padding:12px 16px 12px 12px;cursor:pointer;border:0;font:inherit;color:inherit}
+#saveBtn:hover{color:var(--red)}
+
+#rest.mat{width:1740px}
+#rightcol{margin-left:864px;width:876px;background:#fff;padding:12px 12px 0 12px;display:flex;flex-direction:column;gap:8px}
+.embed .imgbox{background:var(--grey5);height:560px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
+.embed .imgbox img{max-height:100%;max-width:100%;object-fit:contain}
+.embed .imgbox video{max-height:100%;max-width:100%}
+.embed .ph{color:var(--grey2)}
+.sec{border-left:4px solid var(--ink);padding:0 0 24px 144px}
+.sec .para{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px;white-space:pre-line}
+.sec .para + .para{margin-top:20px;text-indent:48px}
+.sec .empty{color:var(--grey2);font-size:18px;line-height:20px}
+.doc{background:var(--grey4);display:flex;gap:8px;padding:8px;cursor:pointer;color:inherit}
+.doc:hover{color:var(--red)}
+.doc .t{flex:1 1 auto}
+.sec .doc + .doc{margin-top:4px}
+.src{display:flex}
+.src .n{width:48px}
+#relmats{padding-bottom:12px}
+#relmats .subhead{display:flex;justify-content:center;gap:4px;padding:26px 0 14px}
+.rel-item{position:relative;border-top:4px solid var(--ink);min-height:136px;cursor:pointer;display:block;padding-right:184px}
+.rel-item + .rel-item{margin-top:8px}
+.rel-item h3{padding-top:10px;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.2px;text-transform:uppercase;max-width:640px}
+.rel-item .sub{margin-top:2px;color:var(--grey2)}
+.rel-item .im{position:absolute;right:0;top:12px;width:168px;height:112px;background:var(--grey5);overflow:hidden}
+.rel-item .im img{width:100%;height:100%;object-fit:cover}
+.rel-item:hover h3{color:var(--red)}
+#similar{width:1740px;background:#fff;padding:80px 12px 40px 12px}
+#similar .cards{display:flex;gap:12px}
+.sim{cursor:pointer;display:flex;flex-direction:column}
+.sim.big{width:852px}
+.sim.small{width:420px}
+.sim h3{border-top:4px solid var(--ink);padding-top:10px;font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.2px;text-transform:uppercase}
+.sim .year{margin-top:2px}
+.sim .vbar{width:4px;background:var(--ink);flex:1 1 auto;min-height:40px;margin:8px 0}
+.sim .type{font-weight:700;font-size:14.3px;letter-spacing:.143px}
+.sim .cat{color:var(--grey2)}
+.sim .im{margin-top:8px;overflow:hidden;background:var(--grey5)}
+.sim.big .im{height:560px}
+.sim.small .im{height:460px}
+.sim .im img{width:100%;height:100%;object-fit:cover}
+.sim:hover h3{color:var(--red)}
+#matfoot{width:1740px;background:#fff;padding:80px 12px 4px 12px}
