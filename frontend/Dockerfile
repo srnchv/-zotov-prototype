@@ -5,7 +5,8 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG NEXT_PUBLIC_API_URL=https://srnchv-zotov-prototype-27ea.twc1.net/api
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_TELEMETRY_DISABLED=1
+# сборщик Timeweb даёт мало памяти: ограничиваем кучу Node и параллельность, иначе next build молча убивается (OOM)
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=1024
 RUN npm run build
 
 FROM node:22-alpine
