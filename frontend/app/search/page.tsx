@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Sidebar from "@/components/Sidebar";
 import SectionTitle from "@/components/SectionTitle";
 import Footer from "@/components/Footer";
+import { getSite } from "@/lib/site";
 import StageScale from "@/components/StageScale";
 import { loadArchive, ofType, published, searchApi, entityYear, imgOf, TYPES, type Entity } from "@/lib/api";
 
@@ -59,7 +60,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const n = Math.max(PAGE, Number(first(raw.n)) || PAGE);
   const sort = SORTS[sp.sort] ? sp.sort : "rel";
 
-  const [db, hits] = await Promise.all([loadArchive(), q ? searchApi(q) : Promise.resolve([])]);
+  const [db, hits, site] = await Promise.all([loadArchive(), q ? searchApi(q) : Promise.resolve([]), getSite()]);
   const okType = (e: Entity) => published(e) && !["media", "tag", "source", "dict"].includes(e.type);
 
   // база выдачи: серверный поиск по запросу или весь архив
@@ -106,7 +107,7 @@ export default async function SearchPage({ searchParams }: Props) {
   return (
     <>
       <StageScale shift={180} />
-      <div id="stage"><Sidebar variant="mat" active="/search" /></div>
+      <div id="stage"><Sidebar variant="mat" active="/search" centerUrl={site.centerUrl} /></div>
       <div id="restWrap">
         <div id="rest" className="srch">
           <div id="srch">
@@ -192,7 +193,7 @@ export default async function SearchPage({ searchParams }: Props) {
 
               {items.length > n ? <div id="more"><a href={mk(sp, {}) + (Object.keys(sp).length ? "&" : "?") + "n=" + (n + PAGE)}>Показать ещё</a></div> : null}
             </div>
-            <div id="sfoot"><Footer /></div>
+            <div id="sfoot"><Footer site={site} /></div>
           </div>
         </div>
       </div>

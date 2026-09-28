@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { NAV, LOGIN_URL, CENTER_URL, ExtIcon } from "./Sidebar";
 
-export default function MobileMenu() {
+export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -12,7 +12,7 @@ export default function MobileMenu() {
         <a className="mlogo" href="/"><img src="/assets/logo-zotov.svg" alt="Зотов" /></a>
         <button type="button" className="mbtn" onClick={() => setOpen(true)}>Меню</button>
       </div>
-      <a className="mcenter" href={CENTER_URL} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+      <a className="mcenter" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
       {open ? (
         <div className="moverlay" role="dialog" aria-label="Меню">
           <div className="mmenu open">
@@ -21,7 +21,7 @@ export default function MobileMenu() {
           </div>
           <nav className="mnav">
             {NAV.map(([t, h]) => <a key={t} href={h}>{t}</a>)}
-            <a className="sec" href={CENTER_URL} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+            <a className="sec" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
           </nav>
           <a className="mlogin" href={LOGIN_URL}>Войти</a>
         </div>

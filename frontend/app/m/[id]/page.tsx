@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import SectionTitle from "@/components/SectionTitle";
 import Footer from "@/components/Footer";
+import { getSite } from "@/lib/site";
 import StageScale from "@/components/StageScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
@@ -54,7 +55,7 @@ function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string
 
 export default async function EntityPage({ params }: Props) {
   const { id } = await params;
-  const [e, db] = await Promise.all([getEntity(id), loadArchive()]);
+  const [e, db, site] = await Promise.all([getEntity(id), loadArchive(), getSite()]);
   if (!e || e.type === "dict" || e.type === "tag" || (e.status && e.status !== "published")) notFound();
   const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
@@ -102,7 +103,7 @@ export default async function EntityPage({ params }: Props) {
       <StageScale shift={180} />
       <ViewPing id={e.id} />
       <div id="stage">
-        <Sidebar variant="mat" />
+        <Sidebar variant="mat" centerUrl={site.centerUrl} />
         <section id="cover">
           <div className="top">
             <div className="div8" />
@@ -195,7 +196,7 @@ export default async function EntityPage({ params }: Props) {
             </div>
           </section>
 
-          <div id="matfoot"><Footer /></div>
+          <div id="matfoot"><Footer site={site} /></div>
         </div>
       </div>
     </>

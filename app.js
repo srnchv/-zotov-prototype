@@ -1132,7 +1132,7 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 
 
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
-const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация · в разработке'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['roles','Пользователи']];
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация · в разработке'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['site','Тексты сайта'],['roles','Пользователи']];
 const admRole=()=>localStorage.getItem('zotov_admrole')||'admin';
 let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
@@ -1555,6 +1555,62 @@ function adminStats(){
       <div class="card"><b>Топ по числу правок</b>${s.topEdited.length?listTable(s.topEdited,r=>`<td style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${r.id}">${esc(r.title||r.id)}</a></td><td class="muted" style="text-align:right">${r.edits}</td>`):'<div class="muted" style="font-size:13px;margin-top:8px">—</div>'}</div>
     </div>`);
 }
+// ===== Тексты сайта: общие тексты главной, блок «Об архиве», ссылки и соцсети =====
+// Хранятся одной служебной сущностью `site` (type dict) — фронт читает её при рендере, изменения видны сразу.
+const SITE_DEF=[
+  ['Первый экран',[
+    ['hero1','Подзаголовок, строка 1','Уникальный архив о конструктивизме,'],
+    ['hero2','Подзаголовок, строка 2','медиа и городской истории:'],
+    ['hero3','Подзаголовок, строка 3 (справа)','материалы, личности, события, места и проекты,'],
+    ['hero4','Подзаголовок, строка 4 (по центру)','объединённые в единую систему связей'],
+    ['searchPh','Плейсхолдер строки поиска','Материалы, личности, темы и тд'],
+  ]],
+  ['Об архиве',[
+    ['about1','Заголовок, строка 1','Первый в мире цифровой архив,'],
+    ['about2','Заголовок, строка 2 (справа)','объединяющий источники и исследования,'],
+    ['about3','Заголовок, строка 3 (справа)','посвященные конструктивизму'],
+    ['aboutCol1','Колонка 1','Зотов. Архив объединит материалы и исследования, посвященные эпохе 1920-1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределенных по разным городам, организациям и изданиям.','ta'],
+    ['aboutCol2','Колонка 2','Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.','ta'],
+    ['aboutCol3','Колонка 3','Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.','ta'],
+    ['aboutCol4','Колонка 4','Зотов. Архив приглашает к сотрудничеству исследователей, проекты и институции, цели работы которых связаны с цифровизацией и сохранением наследия конструктивизма.','ta'],
+    ['aboutEmail','E-mail для сотрудничества','archive@centrezotov.ru'],
+  ]],
+  ['Ссылки',[
+    ['centerUrl','Сайт Центра «Зотов» (ссылка «Зотов Центр»)','https://zotov.center'],
+    ['privacyUrl','Политика конфиденциальности (ссылка)',''],
+    ['personalUrl','Обработка персональных данных (ссылка)',''],
+    ['offerUrl','Публичная оферта (ссылка)',''],
+    ['copyright','Копирайт в футере','© Центр Зотов, 2022–2026'],
+  ]],
+  ['Соцсети',[
+    ['vk','ВКонтакте (ссылка)',''],
+    ['tg','Telegram (ссылка)',''],
+    ['yt','YouTube (ссылка)',''],
+    ['dzen','Дзен (ссылка)',''],
+  ]],
+];
+const siteVal=k=>{const s=DB['site']||{};const def=SITE_DEF.flatMap(g=>g[1]).find(f=>f[0]===k);return s[k]!=null&&s[k]!==''?s[k]:(def?def[2]:'');};
+function adminSite(){
+  return adminLayout('site',`<h1 style="font-size:30px">Тексты сайта</h1>
+    <div class="muted" style="font-size:14px;margin:6px 0 18px;max-width:720px">Общие тексты главной страницы, блок «Об архиве», ссылки в меню и футере, соцсети. Сохранённое сразу появляется на сайте.</div>
+    <div class="grid g2" style="gap:16px;align-items:start">
+    ${SITE_DEF.map(([title,fields])=>`<div class="card"><b>${title}</b>
+      ${fields.map(([k,l,,ta])=>`<div class="field" style="margin-top:10px"><label>${l}</label>${ta
+        ?`<textarea class="inp" id="site-${k}" style="width:100%;min-height:96px">${esc(siteVal(k))}</textarea>`
+        :`<input class="inp" id="site-${k}" style="width:100%;color:var(--ink)" value="${esc(siteVal(k))}">`}</div>`).join('')}
+    </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px"><span class="btn dark" onclick="siteSave()">Сохранить</span><a class="btn" href="index.html" target="_blank">Открыть сайт</a></div>`);
+}
+window.siteSave=async()=>{
+  const payload={};
+  SITE_DEF.flatMap(g=>g[1]).forEach(([k])=>{const e=document.getElementById('site-'+k);if(e)payload[k]=e.value.trim();});
+  try{
+    if(DB['site'])await api('/entities/site',{method:'PATCH',body:JSON.stringify({payload})});
+    else await api('/entities',{method:'POST',body:JSON.stringify({id:'site',type:'dict',title:'Тексты сайта',payload})});
+    await refreshData();toast('Сохранено — тексты обновлены на сайте');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
 function adminRoles(){
   // страница строится от роли вошедшего: конкретные действия — главное, настройка ролей — второстепенное
   const myRole=localStorage.getItem('zotov_admrole')||'admin';
@@ -1817,7 +1873,7 @@ function admin(seg){
   const tab=seg[1]||'dash';
   if(tab==='edit') return adminEdit(seg[2]);
   if(tab==='new') return adminNew();
-  const views={dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,stats:adminStats,roles:adminRoles};
+  const views={dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,stats:adminStats,site:adminSite,roles:adminRoles};
   return views[tab]?views[tab]():adminDash();
 }
 

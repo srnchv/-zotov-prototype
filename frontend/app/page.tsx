@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
 import { loadArchive, ofType, linked, yearOf, imgOf, type Entity } from "@/lib/api";
+import { getSite } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ const MOSAIC_D: [number, number, number][] = [[1, 1, 1], [3, 1, 2], [5, 1, 1], [
 const MOSAIC_M: [number, number, number][] = [[1, 1, 1], [2, 1, 2], [4, 2, 1], [1, 3, 1], [3, 3, 1], [2, 4, 1], [3, 4, 2], [1, 5, 1], [2, 6, 1], [3, 6, 1], [1, 7, 2], [4, 7, 1], [3, 8, 1]];
 
 export default async function Home() {
-  const db = await loadArchive();
+  const [db, site] = await Promise.all([loadArchive(), getSite()]);
   const mats = (e: Entity) => { const n = linked(db, e, "material").length; return `${n} ${plural(n, ["материал", "материала", "материалов"])}`; };
   const img = (e: Entity, fb: string, big = false) => imgOf(db, e, big) || fb;
   const themes = ofType(db, "theme");
@@ -54,28 +55,28 @@ export default async function Home() {
     <>
       <StageScale shift={180} />
       <MiniOnScroll />
-      <div id="stage"><Sidebar /></div>
+      <div id="stage"><Sidebar centerUrl={site.centerUrl} /></div>
 
       <div id="restWrap">
         <div id="rest" className="home">
           {/* ---- первый экран ---- */}
           <section id="hero">
-            <div className="mhead"><MobileMenu /></div>
+            <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
             <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
             <div id="lede">
-              <span className="l">Уникальный архив о конструктивизме,</span>
-              <span className="l">медиа и городской истории:</span>
-              <span className="r">материалы, личности, события, места и проекты,</span>
-              <span className="c">объединённые в единую систему связей</span>
+              <span className="l">{site.hero1}</span>
+              <span className="l">{site.hero2}</span>
+              <span className="r">{site.hero3}</span>
+              <span className="c">{site.hero4}</span>
             </div>
             <div id="lede-m">
-              <p>Уникальный архив о конструктивизме, медиа и городской истории:</p>
-              <p className="r">материалы, личности, события, места и проекты, объединённые в единую систему связей</p>
+              <p>{site.hero1} {site.hero2}</p>
+              <p className="r">{site.hero3} {site.hero4}</p>
             </div>
             <a id="search" href="/search">
               <div className="lbl">Поиск в каталоге</div>
               <div className="box">
-                <div className="ph">Материалы, личности, темы и тд</div>
+                <div className="ph">{site.searchPh}</div>
                 <svg className="ic" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>
               </div>
             </a>
@@ -154,23 +155,23 @@ export default async function Home() {
             <div className="shade" />
             <Lettering text="об архиве" cream />
             <div className="lead">
-              <span className="l">Первый в мире цифровой архив,</span>
-              <span className="r">объединяющий источники и исследования,</span>
-              <span className="r">посвященные конструктивизму</span>
+              <span className="l">{site.about1}</span>
+              <span className="r">{site.about2}</span>
+              <span className="r">{site.about3}</span>
             </div>
             <div className="lead-m">
-              <p>Уникальный архив о конструктивизме, медиа и городской истории:</p>
-              <p className="r">материалы, личности, события, места и проекты, объединённые в единую систему связей</p>
+              <p>{site.about1}</p>
+              <p className="r">{site.about2} {site.about3}</p>
             </div>
             <div className="cols hrow">
-              <div>Зотов. Архив объединит материалы и исследования, посвященные эпохе 1920-1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределенных по разным городам, организациям и изданиям.</div>
-              <div>Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.</div>
-              <div>Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.</div>
-              <div className="last"><span>Зотов. Архив приглашает к сотрудничеству исследователей, проекты и институции, цели работы которых связаны с цифровизацией и сохранением наследия конструктивизма.</span><span>По вопросам сотрудничества:<br /><a href="mailto:archive@centrezotov.ru">archive@centrezotov.ru</a></span></div>
+              <div>{site.aboutCol1}</div>
+              <div>{site.aboutCol2}</div>
+              <div>{site.aboutCol3}</div>
+              <div className="last"><span>{site.aboutCol4}</span><span>По вопросам сотрудничества:<br /><a href={`mailto:${site.aboutEmail}`}>{site.aboutEmail}</a></span></div>
             </div>
           </section>
 
-          <div id="foot"><Footer /></div>
+          <div id="foot"><Footer site={site} /></div>
         </div>
       </div>
     </>
