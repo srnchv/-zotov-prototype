@@ -2,7 +2,8 @@ import "./home.css";
 import Sidebar from "@/components/Sidebar";
 import SectionTitle from "@/components/SectionTitle";
 import Footer from "@/components/Footer";
-import HomeChoreo from "@/components/HomeChoreo";
+import StageScale from "@/components/StageScale";
+import MiniOnScroll from "@/components/MiniOnScroll";
 import { loadArchive, ofType, linked, yearOf, type Entity } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +38,14 @@ export default async function Home() {
 
   return (
     <>
-      <HomeChoreo />
-      <div id="stage">
-        <Sidebar />
+      <StageScale shift={180} />
+      <MiniOnScroll />
+      <div id="stage"><Sidebar /></div>
+
+      <div id="restWrap">
+        <div id="rest" className="home">
         <section id="hero">
           <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
-          <div id="barcode"><img src="/assets/union.svg" alt="" /></div>
           <div id="lede"><span>Первый в мире цифровой архив,</span><span>объединяющий источники и исследования,</span><span>посвященные конструктивизму</span></div>
           <a id="search" href="/search">
             <div className="lbl">Поиск в каталоге</div>
@@ -63,12 +66,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-      </div>
-
-      <div id="scrollspace" />
-
-      <div id="restWrap">
-        <div id="rest" className="home">
           <section id="projects">
             <SectionTitle text="проекты центра" href="/cat/project" />
             <div className="grid">
@@ -147,8 +144,9 @@ export default async function Home() {
           <a id="mapb" href="/map"><img src="/assets/map-banner.png" alt="Карта" /></a>
 
           <section id="about">
-            <SectionTitle text="об архиве" />
-            <div className="lead">Зотов. Архив объединит материалы и исследования, посвящённые эпохе 1920–1930-х гг. в России</div>
+            <img className="bg" src="/assets/about-bg.jpg" alt="" />
+            <SectionTitle text="об архиве" bare />
+            <div className="lead"><span>Зотов. Архив объединит</span><span>материалы и исследования,</span><span>посвященные эпохе 1920-1930-х гг. в России</span></div>
             <div className="cols">
               <div>Зотов. Архив объединит материалы и исследования, посвящённые эпохе 1920–1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределённых по разным городам, организациям и изданиям.</div>
               <div>Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неиспользованные источники.</div>

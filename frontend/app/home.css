@@ -1,9 +1,7 @@
 /* Стили главной — из main-page/index.html */
-#hero{position:absolute;left:180px;top:0;width:1740px;height:1080px;background:#fff;overflow:hidden}
+#hero{position:relative;width:1740px;height:1080px;background:#fff;overflow:hidden;margin:0 -12px}
 #word{position:absolute;left:12px;top:12px;height:320px;width:1716px;display:flex;align-items:flex-start;justify-content:space-between}
 #word img{height:320px;width:auto;flex:0 0 auto}
-#barcode{position:absolute;right:12px;top:12px;height:320px;width:0;overflow:hidden}
-#barcode img{position:absolute;right:0;top:0;width:856px;height:320px;max-width:none}
 /* подзаголовок-лесенка: первая строка слева, остальные прижаты вправо (макет «Frame 4») */
 #lede{position:absolute;left:12px;top:336px;width:1716px;display:flex;flex-direction:column;font-size:48px;line-height:46px;letter-spacing:-1.4px;font-weight:700;text-transform:uppercase;color:var(--ink)}
 #lede span{align-self:flex-end;white-space:nowrap}
@@ -28,8 +26,8 @@
 .theme:hover h4{color:var(--red)}
 .theme:hover{border-color:var(--red)}
 
-#scrollspace{width:1px}
-#rest.home{width:1740px;background:#fff;padding:80px 12px 8px 12px}
+#rest.home{width:1740px;background:#fff;padding:0 12px 8px 12px}
+#projects{padding-top:80px}
 
 #projects .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0 8px;grid-auto-rows:866px}
 .project{display:flex;flex-direction:column;cursor:pointer}
@@ -90,26 +88,17 @@
 #mapb img{width:1720px;height:400px;display:block}
 
 /* «Об архиве» — тёмный блок по Figma-десктопу */
-#about{margin-top:160px;background:var(--ink);color:#fff;padding:12px 12px 24px;position:relative;overflow:hidden}
-#about .bg{position:absolute;inset:0;opacity:.35;object-fit:cover;width:100%;height:100%}
-#about .sec-title .ch{color:#fff}
-#about .sec-title .circle{background:#fff}
-#about .sec-title .circle svg path{fill:var(--ink)}
-#about .lead{position:relative;font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase;max-width:1200px;margin:0 0 640px 0}
-#about .cols{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:0 8px;font-size:14px;line-height:16px;font-weight:500}
+/* «Об архиве» по макету Frame 3: фото на всю ширину, кремовый текст, леттеринг, лесенка, четыре колонки с линиями внизу */
+#about{margin:160px -12px 0;width:1740px;height:1180px;background:#1d1d1b;color:#f3ecd9;padding:12px;position:relative;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box}
+#about .bg{position:absolute;inset:0;object-fit:cover;width:100%;height:100%;filter:brightness(.55) saturate(.6)}
+#about .sec-title{position:relative;height:144px}
+#about .sec-title .ch{color:#f3ecd9}
+#about .lead{position:relative;display:flex;flex-direction:column;font-size:48px;line-height:46px;letter-spacing:-1.4px;font-weight:700;text-transform:uppercase}
+#about .lead span{align-self:flex-end;white-space:nowrap}
+#about .lead span:first-child{align-self:flex-start}
+#about .cols{position:relative;margin-top:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:0 12px;font-size:14px;line-height:16px;font-weight:500}
+#about .cols div{border-left:2px solid #f3ecd9;padding-left:12px}
 #about .cols a{text-decoration:underline}
 
 #foot{margin-top:160px}
 
-@supports (animation-timeline: scroll()) {
-  @keyframes wordRide{to{width:856px}}
-  @keyframes barRide{to{width:856px}}
-  @keyframes searchRide{to{transform:translateY(var(--dockShiftS))}}
-  @keyframes themesRide{to{transform:translateY(var(--dockShiftT))}}
-  @keyframes heroRide{to{transform:translateY(var(--heroShift))}}
-  #word{animation:wordRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
-  #barcode{animation:barRide linear both;animation-timeline:scroll(root);animation-range:0px var(--aEnd)}
-  #search{animation:searchRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEndS);will-change:transform}
-  #themes{animation:themesRide linear both;animation-timeline:scroll(root);animation-range:var(--bStart) var(--bEnd);will-change:transform}
-  #hero{animation:heroRide linear both;animation-timeline:scroll(root);animation-range:var(--cStart) var(--cEnd);will-change:transform}
-}

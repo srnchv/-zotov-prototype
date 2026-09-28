@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
-import { API, getEntity, loadArchive, linked, mediaKind, TYPES, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, published, TYPES, type Entity } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -67,13 +67,32 @@ export default async function EntityPage({ params }: Props) {
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
   const video = media.find((m) => mediaKind(m) === "video"), audio = media.find((m) => mediaKind(m) === "audio"), pdf = media.find((m) => mediaKind(m) === "pdf");
-  const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []);
+  // субтитры — через свой роут /subs (тот же origin, поэтому <video> не нужен crossorigin и CORS хранилища)
+  const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m!.id}/${t.lang}.vtt` }));
+  // видео и аудио играют напрямую из хранилища по подписанной ссылке (без прокси — иначе подтормаживает); срок — 6 часов
+  const playUrl = async (m?: Entity) => {
+    if (!m) return "";
+    try { const r = await fetch(`${API}/media/${m.id}/original?ttl=21600`, { cache: "no-store" }); if (r.ok) return String((await r.json()).url || ""); } catch {}
+    return fileUrl(m);
+  };
+  const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
   const isOpen = (s(e, "access") || "open") === "open";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
   const groups = REL_ORDER.filter((t) => t !== "source").map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
   const relCount = groups.reduce((a, [, arr]) => a + arr.length, 0);
-  const similar = rel.filter((x) => ["project", "collection", "theme", "material"].includes(x.type)).slice(0, 3);
+  // «Похожее»: прямые связи с проектами/коллекциями/темами/материалами; если их мало — ближайшие по общим связям
+  const SIM_TYPES = ["project", "collection", "theme", "material", "event", "person", "place"];
+  let similar = rel.filter((x) => ["project", "collection", "theme", "material"].includes(x.type)).slice(0, 3);
+  if (similar.length < 3) {
+    const mine = new Set(ent.links || []);
+    const taken = new Set([e.id, ...similar.map((x) => x.id)]);
+    const scored = Object.values(db)
+      .filter((x) => SIM_TYPES.includes(x.type) && published(x) && !taken.has(x.id))
+      .map((x) => ({ x, n: (x.links || []).filter((id) => mine.has(id)).length }))
+      .filter((c) => c.n > 0).sort((a, b) => b.n - a.n || a.x.title.localeCompare(b.x.title, "ru"));
+    similar = [...similar, ...scored.slice(0, 3 - similar.length).map((c) => c.x)];
+  }
   const paras = s(e, "desc").split(/\n\s*\n/).filter(Boolean);
   const kicker = [TYPES[e.type]?.l, s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "prType") || s(e, "colType") || s(e, "orgType")].filter(Boolean).join(" · ");
   const rows = infoRows(ent, db, coll);
@@ -115,9 +134,9 @@ export default async function EntityPage({ params }: Props) {
         <div id="rest" className="mat">
           <div id="rightcol">
             <div className="embed">
-              {video && isOpen ? <Player kind="video" src={fileUrl(video)} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
+              {video && isOpen ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
                 : <div className="imgbox">{cover ? <img src={cover.src} alt={e.title} /> : <span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span>}</div>}
-              {audio && isOpen ? <Player kind="audio" src={fileUrl(audio)} tracks={tracks(audio)} title={String(audio.title)} /> : null}
+              {audio && isOpen ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
               {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               <div>{e.title}</div>
               <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] !== "—" ? rows[1]?.[1] : rows[2]?.[1]}</div>

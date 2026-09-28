@@ -203,9 +203,16 @@ export function createApp() {
 
   app.get("/api/media/:id/original", ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
-    const url = await media.originalUrl(String(req.params.id));
+    // ttl — для плееров публичной части (до суток); закрытые материалы — только редактору
+    const ttl = Math.min(86400, Math.max(60, Number(req.query.ttl) || 600));
+    const m = await repo.getEntity(String(req.params.id));
+    if (!m || m.type !== "media") return res.status(404).json({ error: "not found" });
+    const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
+    const access = String((parent?.access ?? m.access) || "open");
+    if (access !== "open" && req.headers.authorization !== `Bearer ${ADMIN_TOKEN}`) return res.status(403).json({ error: "access restricted" });
+    const url = await media.originalUrl(m.id, ttl);
     if (!url) return res.status(404).json({ error: "not found" });
-    res.json({ url, expiresIn: 600 });
+    res.json({ url, expiresIn: ttl });
   }));
 
   // единый обработчик ошибок (в т.ч. zod)

@@ -82,10 +82,10 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
 }
 
 // Подписанная ссылка на оригинал (оригиналы напрямую не публикуются)
-export async function originalUrl(mediaId: string) {
+export async function originalUrl(mediaId: string, expiresIn = 600) {
   const m = await repo.getEntity(mediaId);
   if (!m || m.type !== "media" || !m.origKey) return null;
-  return getSignedUrl(s3(), new GetObjectCommand({ Bucket: BUCKET, Key: String(m.origKey) }), { expiresIn: 600 });
+  return getSignedUrl(s3(), new GetObjectCommand({ Bucket: BUCKET, Key: String(m.origKey) }), { expiresIn });
 }
 
 // Самопроверка хранилища: пробуем записать и удалить один байт, возвращаем детали ошибки
