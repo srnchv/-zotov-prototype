@@ -181,7 +181,6 @@ export default async function SearchPage({ searchParams }: Props) {
                           <h3>{e.title}</h3>
                           <div className="y">{yearLabel(e)}</div>
                           <div className="vb" />
-                          {snippets[e.id] ? <div className="snip" dangerouslySetInnerHTML={{ __html: snippets[e.id] }} /> : null}
                           <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}{extra ? <span className="grey">{extra}</span> : null}</div>
                         </div>
                         {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" /></div> : null}

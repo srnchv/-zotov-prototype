@@ -41,7 +41,7 @@ const meta = (x: Entity, db: Record<string, Entity>) => {
 function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string, string][] {
   const t = TYPES[e.type]?.l || e.type;
   switch (e.type) {
-    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ") || t], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата/период", s(e, "date") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", ACCESS[s(e, "access")] || "Открытый доступ"]];
+    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""], ["Права и доступ", ACCESS[s(e, "access")] || "Открытый доступ"]];
     case "person": return [["Тип, подтип", `${t}, ${s(e, "group") || "—"}`], ["Роль", s(e, "role") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", "Открытый доступ"]];
     case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
     case "place": return [["Тип, подтип", `${t}, ${s(e, "placeType") || "—"}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Статус", s(e, "status") === "published" ? "Существует" : s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
@@ -94,8 +94,7 @@ export default async function EntityPage({ params }: Props) {
     similar = [...similar, ...scored.slice(0, 3 - similar.length).map((c) => c.x)];
   }
   const paras = s(e, "desc").split(/\n\s*\n/).filter(Boolean);
-  const kicker = [TYPES[e.type]?.l, s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "prType") || s(e, "colType") || s(e, "orgType")].filter(Boolean).join(" · ");
-  const rows = infoRows(ent, db, coll);
+  const rows = infoRows(ent, db, coll).filter(([, v]) => v && v !== "—"); // пустые поля не показываем
   const gid = (t: string) => "g-" + t;
 
   return (
@@ -112,7 +111,6 @@ export default async function EntityPage({ params }: Props) {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>
               <a href={`/cat/${e.type}`}>{TYPES[e.type]?.pl || e.type}</a>
             </div>
-            <div className="kicker">{kicker}</div>
             <h1>{e.title}</h1>
             <div className="info">{rows.map(([k, v]) => <div className="row" key={k}><div className="h">{k}</div><div>{v}</div></div>)}</div>
           </div>
@@ -139,7 +137,7 @@ export default async function EntityPage({ params }: Props) {
               {audio && isOpen ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
               {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               <div>{e.title}</div>
-              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] !== "—" ? rows[1]?.[1] : rows[2]?.[1]}</div>
+              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div>
             </div>
 
             <div className="div8" id="a-desc" />
