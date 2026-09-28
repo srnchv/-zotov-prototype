@@ -10,7 +10,7 @@
 .mhead{display:none}
 #word{position:absolute;left:12px;top:12px;height:320px;width:1716px;display:flex;align-items:flex-start;justify-content:space-between}
 #word img{height:320px;width:auto;flex:0 0 auto}
-#lede{position:absolute;left:12px;top:344px;width:1716px;display:flex;flex-direction:column;font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase;color:var(--ink)}
+#lede{position:absolute;left:12px;top:344px;width:1716px;display:flex;flex-direction:column;font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase;color:var(--ink)}
 #lede span{white-space:nowrap}
 #lede .l{align-self:flex-start}
 #lede .r{align-self:flex-end}
@@ -19,7 +19,7 @@
 #search{position:absolute;left:300px;top:718px;width:1140px;height:64px;display:flex;flex-direction:column;gap:4px}
 #search .lbl{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
 #search .box{position:relative;height:44px;border:4px solid var(--ink);border-top:0;box-sizing:border-box}
-#search .ph{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:24px;line-height:24px;letter-spacing:-.24px;font-weight:500;color:var(--grey3);white-space:nowrap}
+#search .ph{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-family:var(--hf);font-size:24px;line-height:24px;letter-spacing:-.24px;font-weight:500;color:var(--grey3);white-space:nowrap}
 #search .ic{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:24px;height:24px}
 
 /* ==== темы (item-horizontal 360×136, лента) ==== */
@@ -29,7 +29,7 @@
 .theme .dv{height:8px;background:var(--ink)}
 .theme .row{display:flex;gap:12px;flex:1 1 auto;min-height:0}
 .theme .tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
-.theme h4{font-size:20px;line-height:20px;font-weight:700;text-transform:uppercase}
+.theme h4{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
 .theme .vb{flex:1 1 auto;min-height:12px;border-left:4px solid var(--ink)}
 .theme .cnt{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
 .theme .im{width:120px;height:120px;flex:0 0 auto;overflow:hidden;background:var(--grey5)}
@@ -57,7 +57,7 @@
 .vcard{display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
 .vcard .dv{height:8px;background:var(--ink)}
 .vcard .tx{display:flex;flex-direction:column;gap:4px}
-.vcard h3{font-weight:700;text-transform:uppercase}
+.vcard h3{font-family:var(--hf);font-weight:500;text-transform:uppercase}
 .vcard .sub{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
 .vcard .vb{border-left:4px solid var(--ink);min-height:36px}
 .vcard .im{overflow:hidden;background:var(--grey5)}
@@ -79,7 +79,7 @@
 .vcard.small .vb{flex:1 1 auto}
 .vcard.small .im{width:184px;height:184px;flex:0 0 auto}
 .ditem{display:flex;flex-direction:column;gap:4px;width:276px}
-.ditem .year{font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+.ditem .year{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase;white-space:nowrap}
 
 /* мозаика личностей: 12 колонок 132×165, gap 12, плитки в рамке 12px #e5e5e5 */
 .mosaic{display:grid;grid-template-columns:repeat(12,132px);grid-auto-rows:165px;gap:12px;width:1716px}
@@ -92,7 +92,7 @@
 #about .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#d9d9d9}
 #about .shade{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 #about .lt{position:absolute;left:0;right:0;top:12px}
-#about .lead{position:absolute;left:12px;top:148px;width:1716px;display:flex;flex-direction:column;font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:700;text-transform:uppercase}
+#about .lead{position:absolute;left:12px;top:148px;width:1716px;display:flex;flex-direction:column;font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
 #about .lead span{white-space:nowrap}
 #about .lead .l{align-self:flex-start}
 #about .lead .r{align-self:flex-end}
@@ -125,7 +125,7 @@
   #word{position:static;height:120px;width:auto;padding:12px;margin-top:110px;box-sizing:border-box}
   #word img{height:96px}
   #lede{display:none}
-  #lede-m{display:block;padding:0 12px;font-size:20px;line-height:20px;font-weight:700;text-transform:uppercase}
+  #lede-m{display:block;padding:0 12px;font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
   #lede-m .r{text-align:right}
   #search{position:static;width:auto;margin:126px 12px 0}
   #search .ph{font-size:20px;line-height:20px}
@@ -149,7 +149,7 @@
   .tile{grid-column:var(--mc) / span var(--ms);grid-row:var(--mr) / span var(--ms)}
   #about{width:auto;height:640px;margin:20px 0 0}
   #about .lead{display:none}
-  #about .lead-m{display:block;position:absolute;left:12px;right:12px;top:84px;font-size:20px;line-height:20px;font-weight:700;text-transform:uppercase}
+  #about .lead-m{display:block;position:absolute;left:12px;right:12px;top:84px;font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
   #about .lead-m .r{text-align:right}
   #about .lt{top:12px}
   #about .cols{top:auto;bottom:12px;left:0;right:0;padding:0 12px;overflow-x:auto;scrollbar-width:none}

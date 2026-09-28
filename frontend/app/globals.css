@@ -1,10 +1,11 @@
 /* Токены и базовые стили — перенесены из HTML-вёрстки (main-page, material) без изменений */
 @font-face{font-family:'PT Root UI';src:url('/assets/fonts/pt-root-ui.woff2') format('woff2');font-weight:300 700;font-display:swap}
 @font-face{font-family:'Roboto Flex';src:url('/assets/fonts/roboto-flex.woff2') format('woff2');font-weight:100 1000;font-display:swap}
+@font-face{font-family:'Algorytm';src:url('/assets/fonts/algorytm-medium.woff2') format('woff2');font-weight:500;font-display:swap}
 @font-face{font-family:'Zotov Contrast';src:url('/assets/fonts/zotov-contrast.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:'Zotov Bold';src:url('/assets/fonts/zotov-bold.woff2') format('woff2');font-weight:400;font-display:swap}
 @font-face{font-family:'Zotov Light';src:url('/assets/fonts/zotov-light.woff2') format('woff2');font-weight:400;font-display:swap}
-:root{--ink:#262626;--red:#F43C3A;--grey2:#8c8c8c;--grey3:#bfbfbf;--grey4:#ebebeb;--grey5:#e5e5e5}
+:root{--hf:'Algorytm','PT Root UI',sans-serif;--ink:#262626;--red:#F43C3A;--grey2:#8c8c8c;--grey3:#bfbfbf;--grey4:#ebebeb;--grey5:#e5e5e5}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:#fff}
 body{font-family:'PT Root UI','Golos Text',system-ui,sans-serif;color:var(--ink);overflow-x:hidden}
