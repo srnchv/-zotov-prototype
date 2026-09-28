@@ -120,7 +120,7 @@ export default async function EntityPage({ params }: Props) {
               {audio && isOpen ? <Player kind="audio" src={fileUrl(audio)} tracks={tracks(audio)} title={String(audio.title)} /> : null}
               {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               <div>{e.title}</div>
-              <div className="grey">{[linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ")}</div>
+              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] !== "—" ? rows[1]?.[1] : rows[2]?.[1]}</div>
             </div>
 
             <div className="div8" id="a-desc" />
