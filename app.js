@@ -1311,7 +1311,7 @@ function adminEdit(id){
   const selInline=(vals,cur,onch)=>`<select class="sel" style="font-size:13px;padding:2px 6px" onchange="${onch}">${vals.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
   return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / Карточка сущности</div>
     <div class="kicker" style="margin-top:6px">Карточка сущности / ${TYPES[o.type]?TYPES[o.type].l:o.type}${rec?' · '+SRCKIND.record:''}</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px;margin-top:2px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
+    <h1 style="font-size:26px;margin-top:2px">${esc(o.title)}</h1>
     <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px">
       <div>
         <h3 style="margin-top:0">Карточка</h3>
@@ -1319,8 +1319,8 @@ function adminEdit(id){
         ${o.type==='source'?`<div class="field"><label>Что это</label><div class="chips">${Object.entries(SRCKIND).map(([v,l])=>`<span class="fchip${(o.srcKind||'text')===v?' on':''}" onclick="admPatch('${o.id}',{payload:{srcKind:'${v}'}})">${l}</span>`).join('')}</div>
           <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>`:''}
         ${F('Название',o.title,'f-title')}
-        ${o.type==='theme'?F('Тип',o[tk],'f-'+tk):FS(TYPELABEL[o.type]||'Тип',o[tk],'f-'+tk,dictValues(tk))}
-        ${rec?'':F(SUBLABEL[o.type]||'Подтип',o[sk],'f-'+sk)}
+        ${o.type==='theme'?F('Тип',o[tk],'f-'+tk):FS(TYPELABEL[o.type]||'Тип',o[tk],'f-'+tk,dictValues(tk)).replace('<select ',`<select onchange="admSubRefresh('${tk}','f-${sk}',this.value)" `)}
+        ${rec||o.type==='theme'?'':`<div class="field"><label>${SUBLABEL[o.type]||'Подтип'} <span class="muted" style="font-weight:400">— из справочника, по выбранному типу</span></label><select class="sel" id="f-${sk}" style="width:100%">${subSelOpts(tk,o[tk],o[sk])}</select></div>`}
         ${F(DATELABEL[o.type]||'Дата / период',o[dk]||o.date,'f-'+dk)}
         ${specific}
         ${rec?'':`<div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>`}
@@ -1375,8 +1375,29 @@ const DICTDEF=[
   ['colType','Типы коллекций',()=>dvals('collection','colType')],
   ['orgType','Типы организаций',()=>dvals('org','orgType')],
   ['prType','Типы проектов Центра',()=>dvals('project','prType')],
+  // подтипы: живут в справочнике и привязаны к типу («Тип › Подтип»); в карточке — только выбор
+  ...Object.entries({mtype:'материалов',evType:'событий',group:'личностей (роли)',colType:'коллекций',placeType:'мест',orgType:'организаций',prType:'проектов Центра',srcType:'источников'}).map(([tk,l])=>['sub:'+tk,'Подтипы '+l,()=>{
+    const types=Object.keys(TYPEKEY).filter(t=>TYPEKEY[t]===tk);
+    return [...new Set(RAW.filter(o=>types.includes(o.type)&&o[tk]&&o[SUBKEY[o.type]||'subtype']).map(o=>o[tk]+' › '+o[SUBKEY[o.type]||'subtype']))].sort();
+  }]),
   ['a11y','Доступность',()=>[...new Set([...A11Y,...all('material').flatMap(o=>o.a11y||[])])]],
 ];
+// подтипы, доступные для выбранного типа
+const subOptions=(tk,typeVal)=>typeVal?dictValues('sub:'+tk).filter(v=>v.startsWith(typeVal+' › ')).map(v=>v.slice(typeVal.length+3)):[];
+const subSelOpts=(tk,typeVal,cur)=>`<option value="">— не задано —</option>${[...new Set([...subOptions(tk,typeVal),...(cur?[cur]:[])])].map(v=>`<option ${cur===v?'selected':''}>${esc(v)}</option>`).join('')}`;
+// смена типа в карточке — перестраиваем список подтипов
+window.admSubRefresh=(tk,selId,typeVal)=>{const e=document.getElementById(selId);if(e)e.innerHTML=subSelOpts(tk,typeVal,'');};
+window.dictAddSub=(key,type)=>{
+  const v=(window.prompt(`Новый подтип для «${type}»:`)||'').trim();
+  if(!v)return;const full=type+' › '+v;
+  dictPatch(key,st=>{st.removed=st.removed.filter(x=>x!==full);if(!st.added.includes(full))st.added.push(full);}).then(()=>toast('Подтип добавлен'));
+};
+window.dictEditSub=(key,full)=>{
+  const [type,sub]=full.split(' › ');
+  const nv=(window.prompt('Переименовать подтип:',sub)||'').trim();
+  if(!nv||nv===sub)return;const nf=type+' › '+nv;
+  dictPatch(key,st=>{st.added=st.added.filter(x=>x!==full);if(!st.removed.includes(full))st.removed.push(full);st.removed=st.removed.filter(x=>x!==nf);if(!st.added.includes(nf))st.added.push(nf);}).then(()=>toast('Переименовано'));
+};
 function dictValues(key){
   const def=DICTDEF.find(d=>d[0]===key);
   const base=def?def[2]():[];
@@ -1431,13 +1452,19 @@ function adminDict(){
   return adminLayout('dict',`<h1 style="font-size:30px">Справочники</h1>
     <div class="muted" style="font-size:14px;margin-bottom:6px">Управляемые списки значений — используются в карточках и фильтрах. Убранное значение исчезает из выбора, но у старых карточек сохраняется.</div>
     <div class="grid g2" style="margin-top:14px">
-    ${DICTDEF.map(([key,l])=>{const vals=dictValues(key);return `<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
+    ${DICTDEF.map(([key,l])=>{const vals=dictValues(key);
+      if(key.startsWith('sub:')){const tk=key.slice(4);const types=dictValues(tk);
+        return `<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
+        ${types.length?types.map(t=>`<div style="margin-top:10px"><div class="kicker">${esc(t)}</div><div class="chips" style="margin-top:4px">${vals.filter(v=>v.startsWith(t+' › ')).map(v=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="dictEditSub('${key}','${esc(v)}')">${esc(v.slice(t.length+3))}</span> <span class="muted" style="cursor:pointer" title="Убрать" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
+          <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAddSub('${key}','${esc(t)}')">＋</span></div></div>`).join(''):'<div class="muted" style="font-size:13px;margin-top:8px">Сначала добавьте типы в соответствующий справочник.</div>'}
+        <div class="muted" style="font-size:11px;margin-top:8px">Подтип относится к типу: в карточке сущности он выбирается после типа.</div></div>`;}
+      return `<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="dictEdit('${key}','${esc(v)}')">${esc(v)}</span> <span class="muted" style="cursor:pointer" title="Убрать" onclick="dictRm('${key}','${esc(v)}')">✕</span></span>`).join('')}
       <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="dictAdd('${key}')">＋</span></div>
       <div class="muted" style="font-size:11px;margin-top:8px">Клик по значению — переименовать, ✕ — убрать.</div></div>`;}).join('')}
     <div class="card"><b>Теги</b> <span class="muted" style="font-size:12px">${all('tag').length}</span>
       <div class="chips" style="margin-top:10px">${all('tag').map(t=>`<span class="chip" style="font-size:13px"><span style="cursor:pointer" title="Переименовать" onclick="tagEdit('${t.id}')">#${esc(t.title)}</span> <span class="muted" style="cursor:pointer" title="Удалить тег" onclick="tagRm('${t.id}')">✕</span></span>`).join('')}
-      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="admAddTag('')">＋</span></div>
+      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="tagCreate()">＋</span></div>
       <div class="muted" style="font-size:11px;margin-top:8px">Служебные: помогают поиску, на публичном сайте не выводятся. Удаление снимает тег со всех карточек.</div></div>
     ${fixed.map(([l,vals,note])=>`<div class="card"><b>${l}</b> <span class="muted" style="font-size:12px">${vals.length}</span>
       <div class="chips" style="margin-top:10px">${vals.map(v=>`<span class="chip" style="font-size:13px">${esc(v)}</span>`).join('')}</div>
@@ -1598,9 +1625,13 @@ window.mediaPlay=async(id,kind)=>{
       :`<video controls autoplay src="${url}" style="width:100%;max-height:560px;border-radius:10px"></video>`;
   }catch(e){toast('Файл недоступен: '+e.message);}
 };
-window.admAddTag=async id=>{
-  const name=(window.prompt('Тег (существующий подхватится, новый создастся):')||'').trim().replace(/^#/,'');
+// добавить тег — то же окно, что и для связей: выбрать готовый или создать новый
+window.admAddTag=id=>{lpFor=id||'__new';lpMedia=false;lpTags=true;lpType='tag';fq='';drawLinkPicker();};
+window.admCreateTag=async name=>{
+  name=(name||'').trim().replace(/^#/,'');
   if(!name)return;
+  if(lpFor==='__new'){if(!NEWTAGS.some(t=>t.toLowerCase()===name.toLowerCase()))NEWTAGS.push(name);toast('Тег добавится вместе с сущностью');admCloseLp();render();return;}
+  const id=lpFor;
   try{
     let tag=all('tag').find(t=>t.title.toLowerCase()===name.toLowerCase());
     if(!tag)tag=await api('/entities',{method:'POST',body:JSON.stringify({type:'tag',title:name})});
@@ -1608,27 +1639,28 @@ window.admAddTag=async id=>{
       if(DB[id]&&(DB[id].links||[]).includes(tag.id)){toast('Такой тег уже стоит');return;}
       await api(`/entities/${id}/links`,{method:'POST',body:JSON.stringify({targetId:tag.id})});
     }
-    await refreshData();toast('Тег добавлен');render();
+    await refreshData();toast('Тег добавлен');admCloseLp();render();
   }catch(e){toast('Ошибка: '+e.message);}
 };
 window.admUnlink=async(id,tid)=>{
   try{await api(`/entities/${id}/links/${tid}`,{method:'DELETE'});await refreshData();toast('Связь удалена — у обеих сущностей');render();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-let lpFor=null,lpMedia=false,lpType=null;
-window.admPickLink=id=>{lpFor=id;lpMedia=false;lpType=null;fq='';drawLinkPicker();};
-window.admPickMedia=id=>{lpFor=id;lpMedia=true;lpType=null;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
+let lpFor=null,lpMedia=false,lpType=null,lpTags=false;
+window.admPickLink=id=>{lpFor=id;lpMedia=false;lpTags=false;lpType=null;fq='';drawLinkPicker();};
+window.admPickMedia=id=>{lpFor=id;lpMedia=true;lpTags=false;lpType=null;fq='';drawLinkPicker();}; // прикрепить файл из медиатеки
 window.admCloseLp=()=>{lpFor=null;document.getElementById('modal-root').innerHTML='';};
 window.admDoLink=async tid=>{
+  if(lpFor==='__new'&&lpTags){const t=DB[tid];if(t&&!NEWTAGS.includes(t.title))NEWTAGS.push(t.title);toast('Тег добавится вместе с сущностью');render();drawLinkPicker();return;}
   if(lpFor==='__new'){NEWLINKS.add(tid);toast('Добавлено — связь создастся вместе с сущностью');render();drawLinkPicker();return;}
   try{await api(`/entities/${lpFor}/links`,{method:'POST',body:JSON.stringify({targetId:tid})});await refreshData();toast('Связь создана — видна с обеих сторон');render();drawLinkPicker();}
   catch(e){toast('Ошибка: '+e.message);}
 };
-const lpCur=()=>lpFor==='__new'?new Set(NEWLINKS):new Set((DB[lpFor]&&DB[lpFor].links)||[]);
+const lpCur=()=>lpFor==='__new'?new Set(lpTags?all('tag').filter(t=>NEWTAGS.includes(t.title)).map(t=>t.id):NEWLINKS):new Set((DB[lpFor]&&DB[lpFor].links)||[]);
 function drawLinkPicker(){
   if(!lpFor||(lpFor!=='__new'&&!DB[lpFor]))return;
   const cur=lpCur();
-  const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':(x.type!=='media'&&x.type!=='dict')));
+  const pool=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':lpTags?x.type==='tag':(x.type!=='media'&&x.type!=='dict'&&x.type!=='tag')));
   // сначала выбор типа сущности, затем список — иначе в общем списке не сориентироваться
   const byType={};pool.forEach(x=>(byType[x.type]=byType[x.type]||[]).push(x));
   const typeTabs=Object.keys(TYPES).filter(t=>byType[t])
@@ -1638,10 +1670,12 @@ function drawLinkPicker(){
     ?opts.map(x=>`<span class="fopt" onclick="admDoLink('${x.id}')">${esc(x.title)}${lpMedia?` <span style="color:var(--muted);font-size:11px">· ${esc(x.format||'')}</span>`:''}</span>`).join('')
     :`<div class="muted" style="font-size:13px;padding:14px 0">Выберите раздел выше — или начните вводить название.</div>`;
   document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal">
-    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${lpMedia?'Файл из медиатеки':'Добавить связь'}</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
-    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск по всем сущностям…" value="${esc(fq)}" oninput="fq=this.value;lpSearch(this.value)" autofocus></div>
-    ${lpMedia?'':`<div class="chips" style="margin:12px 0 4px">${typeTabs}</div>`}
-    <div class="fmodal-list" id="lp-list">${list}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${lpMedia?'Файл из медиатеки':lpTags?'Добавить тег':'Добавить связь'}</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="${lpTags?'Найти тег или ввести новый…':'Поиск по всем сущностям…'}" value="${esc(fq)}" oninput="fq=this.value;lpSearch(this.value)" autofocus></div>
+    ${lpMedia||lpTags?'':`<div class="chips" style="margin:12px 0 4px">${typeTabs}</div>`}
+    ${lpTags?'<div class="muted" style="font-size:12px;margin:8px 0 4px">Теги служебные: помогают поиску, на сайте не выводятся.</div>':''}
+    <div class="fmodal-list" id="lp-list">${lpTags&&!list?'<div class="muted" style="font-size:13px;padding:14px 0">Свободных тегов нет — введите название нового.</div>':list}</div>
+    <div id="lp-create"></div>
     <div class="right" style="margin-top:18px"><span class="btn dark" onclick="admCloseLp()">Готово</span></div>
   </div></div>`;
   if(fq)lpSearch(fq);
@@ -1650,6 +1684,13 @@ window.lpSetType=t=>{lpType=lpType===t?null:t;drawLinkPicker();};
 // поиск в пикере: при вводе ищем по всем сущностям (поверх выбранного раздела — если он выбран)
 window.lpSearch=q=>{
   const ql=(q||'').trim().toLowerCase();
+  if(lpTags){ // теги: фильтруем список и предлагаем создать новый, если такого нет
+    document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!ql||el.textContent.toLowerCase().includes(ql)?'':'none';});
+    const c=document.getElementById('lp-create');
+    const exists=all('tag').some(t=>t.title.toLowerCase()===ql)||NEWTAGS.some(t=>t.toLowerCase()===ql);
+    if(c)c.innerHTML=ql&&!exists?`<span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer;margin-top:10px" onclick="admCreateTag(fq)">＋ Создать тег «${esc(q.trim())}»</span>`:'';
+    return;
+  }
   if(ql&&!lpType){ // раздел не выбран — ищем по всем и показываем совпадения
     const cur=lpCur();
     const hits=RAW.filter(x=>x.id!==lpFor&&!cur.has(x.id)&&(lpMedia?x.type==='media':(x.type!=='media'&&x.type!=='dict'))&&x.title.toLowerCase().includes(ql));
@@ -1666,7 +1707,7 @@ const dvals=(t,k)=>[...new Set(all(t).map(o=>o[k]).filter(Boolean))].sort();
 function adminNew(){
   const t=NEWF.type;
   const inp=(label,key,ph)=>`<div class="field"><label>${label}</label><input class="inp" style="width:100%;color:var(--ink)" placeholder="${ph||''}" value="${esc(NEWF[key]||'')}" oninput="NEWF['${key}']=this.value"></div>`;
-  const sel=(label,key,vals)=>`<div class="field"><label>${label}</label><select class="sel" style="width:100%" onchange="NEWF['${key}']=this.value">
+  const sel=(label,key,vals,rerender)=>`<div class="field"><label>${label}</label><select class="sel" style="width:100%" onchange="NEWF['${key}']=this.value${rerender?';render()':''}">
       <option value="">— не задано —</option>${vals.map(v=>`<option ${NEWF[key]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
   // единый порядок полей: Сущность → Название → Тип → Подтип → Дата → специфичные (Figma #14)
   const tk=TYPEKEY[t]||'subtype',sk=SUBKEY[t]||'subtype',dk=DATEKEY[t]||'date',rec=t==='source'&&NEWF.srcKind==='record';
@@ -1674,8 +1715,8 @@ function adminNew(){
   const common=(t==='source'?`<div class="field"><label>Что это</label><div class="chips">${Object.entries(SRCKIND).map(([v,l])=>`<span class="fchip${(NEWF.srcKind||'text')===v?' on':''}" onclick="NEWF.srcKind='${v}';render()">${l}</span>`).join('')}</div>
       <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>`:'')
     +inp('Название','title','Название сущности')
-    +(t==='theme'?inp('Тип',tk,''):sel(TYPELABEL[t]||'Тип',tk,typeVals))
-    +(rec?'':inp(SUBLABEL[t]||'Подтип',sk,t==='material'?'например Фотография · Ч/б':''))
+    +(t==='theme'?inp('Тип',tk,''):sel(TYPELABEL[t]||'Тип',tk,typeVals,true))
+    +(rec||t==='theme'?'':`<div class="field"><label>${SUBLABEL[t]||'Подтип'} <span class="muted" style="font-weight:400">— из справочника, по выбранному типу</span></label><select class="sel" style="width:100%" onchange="NEWF['${sk}']=this.value">${subSelOpts(tk,NEWF[tk],NEWF[sk])}</select></div>`)
     +inp(DATELABEL[t]||'Дата / период',dk,{person:'1891–1956',project:'12.05–30.09.1927',org:'1920 — 1930'}[t]||'например 1927');
   const extra={
     material:`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
@@ -1708,7 +1749,7 @@ function adminNew(){
         <span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('__new')">＋ добавить связь</span>
         <h3>Теги <span class="muted" style="font-size:12px;font-weight:400">— служебные, для поиска</span></h3>
         <div class="chips">${NEWTAGS.map(t=>`<span class="chip">#${esc(t)} <span class="muted" style="cursor:pointer" onclick="NEWTAGS=NEWTAGS.filter(x=>x!=='${esc(t)}');render()">✕</span></span>`).join('')}
-        <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="newTag()">＋ тег</span></div>
+        <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="admAddTag('__new')">＋ тег</span></div>
         ${(NEWF.type==='source'&&NEWF.srcKind==='record')?'':`<h3>Медиа</h3>
         <input type="file" id="n-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="NEWFILE=this.files[0];render()">
         ${NEWFILE?`<div style="font-size:13px;margin-bottom:8px">${esc(NEWFILE.name)} · ${fmtSize(NEWFILE.size)} <span class="lnk" style="cursor:pointer" onclick="NEWFILE=null;render()">✕</span></div>`:''}
@@ -1720,6 +1761,12 @@ function adminNew(){
       </div>
     </div>`);
 }
+window.tagCreate=async()=>{
+  const name=(window.prompt('Новый тег:')||'').trim().replace(/^#/,'');
+  if(!name)return;
+  if(all('tag').some(t=>t.title.toLowerCase()===name.toLowerCase()))return toast('Такой тег уже есть');
+  try{await api('/entities',{method:'POST',body:JSON.stringify({type:'tag',title:name})});await refreshData();toast('Тег создан');render();}catch(e){toast('Ошибка: '+e.message);}
+};
 window.newTag=()=>{
   const name=(window.prompt('Тег (существующий подхватится, новый создастся):')||'').trim().replace(/^#/,'');
   if(!name)return;
