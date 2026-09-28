@@ -1,11 +1,15 @@
-// Сайдбар по макету Figma «MENU»: логотип, мини-«АРХИВ», вертикальная колонка пунктов 172px, «Зотов.Центр →» внизу.
-// Один компонент для всех страниц; на главной мини-«АРХИВ» появляется, когда большой леттеринг уехал.
+// Сайдбар по макету Figma HOME / left-menu (180×1180): логотип 148×96, мини-леттеринг «архив»,
+// пункты с линией сверху 4px #e5e5e5, «Зотов Центр ↗», внизу кнопка «Войти». Один на все страницы.
 const LETTERS = ["a", "r", "h", "i", "v"];
 export const NAV = [
-  ["поиск", "/search"], ["темы", "/cat/theme"], ["хронограф", "/chrono"], ["карта", "/map"],
-  ["личности", "/cat/person"], ["коллекции", "/cat/collection"], ["проекты центра", "/cat/project"], ["тексты", "/texts"],
-  ["войти", "https://srnchv.github.io/-zotov-prototype/#/cabinet"],
+  ["поиск", "/search"], ["темы", "/cat/theme"], ["проекты центра", "/cat/project"], ["хронограф", "/chrono"],
+  ["личности", "/cat/person"], ["карта", "/map"], ["коллекции", "/cat/collection"], ["тексты", "/texts"],
 ];
+export const LOGIN_URL = "https://srnchv.github.io/-zotov-prototype/#/cabinet";
+export const CENTER_URL = "https://zotov.center";
+export const ExtIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v1.5H3.5v9h9V10H14v4H2V2h4Zm8 0v5.5h-1.5V4.56L7.53 9.53 6.47 8.47l4.97-4.97H8.5V2H14Z" fill="#262626" /></svg>
+);
 export default function Sidebar({ variant = "home", active }: { variant?: "home" | "mat"; active?: string }) {
   return (
     <aside id="sidebar" className="mat">
@@ -15,8 +19,9 @@ export default function Sidebar({ variant = "home", active }: { variant?: "home"
       </div>
       <nav id="menu" className="mat">
         {NAV.map(([t, h]) => <a key={t} href={h} className={active === h ? "active" : undefined}>{t}</a>)}
+        <a className="sec" href={CENTER_URL} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
       </nav>
-      <a id="center-link" href="https://zotov.center" target="_blank" rel="noreferrer"><span>Зотов.Центр</span><span>→</span></a>
+      <a id="login-btn" href={LOGIN_URL}>Войти</a>
     </aside>
   );
 }
