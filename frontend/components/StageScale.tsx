@@ -11,11 +11,13 @@ export default function StageScale({ shift = 180 }: { shift?: number }) {
       document.documentElement.classList.toggle("mob", mob);
       if (mob) {
         stage.style.cssText = ""; rest.style.cssText = ""; restWrap.style.cssText = "";
+        const sb0 = document.getElementById("sidebar"); if (sb0) sb0.style.cssText = "";
         return;
       }
       const k = window.innerWidth / 1920;
       const stageH = Math.max(900, window.innerHeight / k);
       stage.style.height = stageH + "px";
+      const sb = document.getElementById("sidebar"); if (sb) sb.style.height = stageH + "px"; // «Войти» прибит к нижнему краю окна
       stage.style.transform = `scale(${k})`;
       rest.style.transform = `translateX(${shift * k}px) scale(${k})`;
       restWrap.style.height = rest.offsetHeight * k + "px";

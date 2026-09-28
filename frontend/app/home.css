@@ -45,7 +45,8 @@
 .slink:hover i{background:var(--red)}
 
 /* ==== секции: леттеринг 120 (top 20) + features (padding-top 64) + ссылка ==== */
-.sec{padding-top:20px}
+.sec{padding-top:20px;border-top:8px solid var(--grey5)}
+#themes{border-top:0}
 .lt{display:flex;justify-content:space-between;align-items:center;height:120px;padding:0 8px;font-family:'Zotov Bold',sans-serif;font-size:137px;line-height:106px;color:var(--ink)}
 .lt span{display:inline-block;width:55px;text-align:center}
 .lt .cream{color:#fffadc}
@@ -88,7 +89,7 @@
 .tile:hover{border-color:var(--red)}
 
 /* ==== об архиве (desktop/about 1080): фото + затемнение, песочный текст ==== */
-#about{position:relative;width:1740px;height:1080px;margin-top:20px;color:#fffadc;overflow:hidden}
+#about{position:relative;width:1740px;height:1080px;margin-top:20px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden;box-sizing:content-box}
 #about .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#d9d9d9}
 #about .shade{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 #about .lt{position:absolute;left:0;right:0;top:12px}

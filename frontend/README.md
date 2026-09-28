@@ -15,3 +15,10 @@ npm i && NEXT_PUBLIC_API_URL=https://srnchv-zotov-prototype-27ea.twc1.net/api np
 
 ## Деплой (Timeweb App Platform)
 Новое приложение → Docker → тот же репозиторий, подпапка `frontend/`, порт 3000. Переменная `NEXT_PUBLIC_API_URL` — адрес API (по умолчанию стенд).
+
+## Локальный просмотр без деплоя
+```bash
+cd frontend && npm install && npm run dev
+```
+Открыть http://localhost:3000 — данные берутся с живого API стенда, правки в коде подхватываются сразу (hot reload).
+После `git pull` новые коммиты видны без перезапуска.
