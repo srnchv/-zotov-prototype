@@ -34,9 +34,16 @@ function mk(sp: Record<string, string>, patch: Record<string, string | undefined
 const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]).join(",");
 
 // подпись под карточкой: тип + подтип/категория
-const kind = (e: Entity) => {
+// состав карточки по замечанию редакции: тип / подтип; для коллекций и тем — число материалов, город / организация
+const kind = (e: Entity, db: Record<string, Entity>) => {
   const sub = s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "prType") || s(e, "colType") || s(e, "orgType") || s(e, "role");
-  return [TYPES[e.type]?.pl || e.type, sub] as const;
+  let extra = "";
+  if (e.type === "collection" || e.type === "theme") {
+    const n = (e.links || []).filter((id) => db[id]?.type === "material").length;
+    const org = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "org");
+    extra = [n ? `${n} материалов` : "", s(e, "city"), s(e, "country"), org?.title].filter(Boolean).join(", ");
+  }
+  return [TYPES[e.type]?.pl || e.type, sub, extra] as const;
 };
 const yearLabel = (e: Entity) => s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period") || s(e, "year") || (entityYear(e) ? String(entityYear(e)) : "");
 
@@ -166,7 +173,7 @@ export default async function SearchPage({ searchParams }: Props) {
               {shown.length ? (
                 <div id="grid">
                   {shown.map((e) => {
-                    const [t, sub] = kind(e);
+                    const [t, sub, extra] = kind(e, db);
                     const im = imgOf(db, e);
                     return (
                       <a className="rc" key={e.id} href={`/m/${e.id}`}>
@@ -175,9 +182,9 @@ export default async function SearchPage({ searchParams }: Props) {
                           <div className="y">{yearLabel(e)}</div>
                           <div className="vb" />
                           {snippets[e.id] ? <div className="snip" dangerouslySetInnerHTML={{ __html: snippets[e.id] }} /> : null}
-                          <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}</div>
+                          <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}{extra ? <span className="grey">{extra}</span> : null}</div>
                         </div>
-                        <div className={"im" + (e.type === "person" ? " p" : "")}>{im ? <img src={im} alt="" loading="lazy" /> : null}</div>
+                        {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" /></div> : null}
                       </a>
                     );
                   })}

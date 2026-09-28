@@ -163,7 +163,7 @@ export default async function EntityPage({ params }: Props) {
                   <h3>{x.title}</h3><div className="year">{meta(x, db)}</div>
                   <div className="vbar" />
                   <div className="type">{TYPES[x.type]?.l}</div><div className="cat">{s(x, "mtype") || s(x, "colType") || s(x, "prType") || ""}</div>
-                  <div className="im">{x.imgBig || x.img ? <img src={String(x.imgBig || x.img)} alt="" /> : null}</div>
+                  {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" /></div> : null}
                 </a>
               ))}
             </div>

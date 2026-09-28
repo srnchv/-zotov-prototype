@@ -68,7 +68,7 @@
 #tabs .r .act:hover{color:var(--red)}
 
 #grid{display:grid;grid-template-columns:repeat(6,1fr);gap:24px 12px;padding:24px 0 0}
-.rc{display:flex;flex-direction:column;gap:8px;min-height:368px;border-top:8px solid var(--ink);padding-top:8px}
+.rc{display:flex;flex-direction:column;gap:8px;min-height:176px;border-top:8px solid var(--ink);padding-top:8px}
 .rc .tx{flex:1 1 auto;display:flex;flex-direction:column;gap:4px}
 .rc h3{font-size:20px;line-height:20px;font-weight:700;text-transform:uppercase;letter-spacing:-.2px}
 .rc .y{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}

@@ -6,7 +6,7 @@
 const TYPES = {
   material:{l:'Материал',pl:'Материалы'}, person:{l:'Личность',pl:'Личности'},
   place:{l:'Место',pl:'Места'}, event:{l:'Событие',pl:'События'},
-  theme:{l:'Тема',pl:'Темы'}, project:{l:'Выставка / проект',pl:'Выставки и проекты'},
+  theme:{l:'Тема',pl:'Темы'}, project:{l:'Проект Центра',pl:'Проекты Центра'},
   org:{l:'Организация',pl:'Организации'}, collection:{l:'Коллекция / фонд',pl:'Коллекции'},
   source:{l:'Источник',pl:'Источники'}, media:{l:'Медиафайл',pl:'Медиафайлы'},
   tag:{l:'Тег',pl:'Теги'}
@@ -190,8 +190,8 @@ const tile=o=>`<a class="card tile" href="#/e/${o.id}"><div class="img"${bgimg(o
 
 // основные сущности (есть изображение) — карточками; служебные (организации, источники, теги) — названиями
 const CARD_TYPES=['material','person','place','event','theme','project','collection'];
-const REL_ORDER=['material','person','place','event','project','collection','theme','org','source','tag'];
-const REL_HEAD={material:'Материалы',person:'Связанные личности',place:'Связанные места',event:'Связанные события',project:'Связанные выставки и проекты',collection:'Коллекции и фонды',theme:'Темы',org:'Организации',source:'Источники',tag:'Теги'};
+const REL_ORDER=['material','event','person','place','project','collection','theme','org','source','tag'];
+const REL_HEAD={material:'Материалы',person:'Связанные личности',place:'Связанные места',event:'Связанные события',project:'Проекты Центра',collection:'Коллекции и фонды',theme:'Темы',org:'Организации',source:'Источники',tag:'Теги'};
 function relatedSections(o){
   const by={}; (o.links||[]).forEach(id=>{const x=DB[id];if(x&&x.id!==o.id&&x.type!=='media')(by[x.type]=by[x.type]||[]).push(x);});
   const skip={person:['source']}[o.type]||[]; // у Личности источники не показываем (правка 07.08.2026)
@@ -1180,18 +1180,14 @@ window.admLogout=()=>{['zotov_admtoken','zotov_admname','zotov_admdemo'].forEach
 const admLogged=()=>!!(admToken()||localStorage.getItem('zotov_admdemo'));
 function adminDash(){
   loadAuds();
-  const counts=['material','event','person','place','theme','project','collection','source'].map(t=>[t,TYPES[t].pl,all(t).length]);
+  const counts=['material','event','person','place','theme','project','collection','org','source'].map(t=>[t,TYPES[t].pl,all(t).length]);
   return adminLayout('dash',`<h1 style="font-size:30px">Дашборд</h1>
     <div class="grid g4" style="margin-top:16px">${counts.map(([t,l,n])=>`<div class="card" style="padding:16px;cursor:pointer" onclick="admType='${t}';location.hash='#/admin/entities'"><div style="font-size:28px;font-weight:600">${n}</div><div class="muted" style="font-size:13px">${l} →</div></div>`).join('')}</div>
-    <div class="grid g2" style="margin-top:24px">
+    <div style="margin-top:24px;max-width:760px">
       <div class="card"><b>Последние изменения</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${
         (AUDS&&AUDS.recent&&AUDS.recent.length)
-          ?AUDS.recent.slice(0,4).map(a=>`<div class="r" style="padding:8px 0"><span style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${a.entity_id}">${esc(a.entity_title||a.entity_id)}</a><br><span class="muted" style="font-size:11px">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span></span><span class="muted" style="font-size:11px;white-space:nowrap">${fmtAt(a.at)}</span></div>`).join('')
+          ?AUDS.recent.slice(0,8).map(a=>`<div class="r" style="padding:8px 0"><span style="font-size:13px"><a class="lnk" style="text-decoration:none" href="#/admin/edit/${a.entity_id}">${esc(a.entity_title||a.entity_id)}</a><br><span class="muted" style="font-size:11px">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span></span><span class="muted" style="font-size:11px;white-space:nowrap">${fmtAt(a.at)}</span></div>`).join('')
           :`<div class="muted" style="font-size:13px;padding:8px 0">${AUDSloading?'Загружаем журнал…':'Изменений пока не было.'}</div>`}</div></div>
-      <div class="card"><b>Самые просматриваемые</b><div class="metabox" style="border:none;padding:0;margin-top:8px">${
-        (()=>{const top=RAW.filter(o=>Number(o.views)>0).sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,4);
-          return top.length?top.map(o=>`<div class="r" style="padding:8px 0"><a class="lnk" style="font-size:13px;text-decoration:none" href="#/admin/edit/${o.id}">${esc(o.title)}</a><span class="muted" style="font-size:12px">${o.views}</span></div>`).join('')
-          :'<div class="muted" style="font-size:13px;padding:8px 0">Просмотры начнут считаться с публичных страниц.</div>';})()}</div></div>
     </div>`);
 }
 // журнал с сервера (кто/что/когда) — кэш на сессию админки
@@ -1235,7 +1231,7 @@ function adminEntities(){
     .sort((a,b)=>{const x=val(a),y=val(b);return (typeof x==='number'?x-y:String(x).localeCompare(String(y),'ru'))*admSortDir;});
   const th=(k,l,align)=>`<th style="cursor:pointer;white-space:nowrap;${align?'text-align:'+align:''}" onclick="admSort('${k}')">${l}${admSortKey===k?(admSortDir>0?' ↑':' ↓'):''}</th>`;
   return adminLayout('entities',`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:30px">Сущности</h1><a class="btn dark" href="#/admin/new">＋ Создать сущность</a></div>
-    <input class="secsearch" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQ=this.value;admRefresh()">
+    <input class="secsearch" id="adm-q" style="max-width:420px" placeholder="Поиск по названию…" value="${esc(admQ)}" oninput="admQInput(this.value)">
     <div class="chips" style="margin:12px 0">${types.map(([v,l])=>`<span class="chip" ${admType===v?'style="background:#1f1f1f;color:#fff"':''} onclick="admType='${v}';admRefresh()">${l}</span>`).join('')}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin:4px 0 10px">
       <span class="muted" style="font-size:13px">${rows.length} записей · сортировка по клику на заголовок колонки</span>
@@ -1259,72 +1255,108 @@ function adminEntities(){
     </tr>`;}).join('')}</tbody></table>`);
 }
 window.admRefresh=()=>render();
+// ввод в поиске: перерисовываем с задержкой и возвращаем курсор, иначе поле теряет фокус после каждой буквы
+let admQT=null;
+window.admQInput=v=>{admQ=v;clearTimeout(admQT);admQT=setTimeout(()=>{render();const e=document.getElementById('adm-q');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},220);};
+// ключи «Тип» (из справочника) и «Подтип» (свободный ввод) для каждой сущности — единый порядок полей по правкам Веры (Figma #14)
+const TYPEKEY={material:'mtype',event:'evType',person:'group',collection:'colType',place:'placeType',org:'orgType',project:'prType',source:'srcType',theme:'themeType'};
+const SUBKEY={person:'role'};
+const TYPELABEL={person:'Группа',collection:'Тип коллекции'};
+const SUBLABEL={person:'Роль (художник, архитектор…)',collection:'Родительская коллекция'};
+// поле даты у сущностей называется по-разному — редактируем «своё» поле, а не общее
+const DATEKEY={person:'life',project:'dates',org:'period',collection:'period',source:'year'};
+const DATELABEL={person:'Годы жизни',project:'Даты проведения',org:'Период деятельности',collection:'Период',source:'Год'};
+const typeKeyOf=o=>TYPEKEY[o.type]||'subtype';
+const subKeyOf=o=>SUBKEY[o.type]||'subtype';
+const dateKeyOf=o=>DATEKEY[o.type]||'date';
+// источник: текстовый материал (полная карточка) или библиографическая запись (короткая)
+const SRCKIND={text:'Текстовый материал',record:'Библиографическая запись'};
+const isRecord=o=>o.type==='source'&&o.srcKind==='record';
+// вид файла по метаданным или расширению
+const kindOf=f=>{if(['image','video','audio'].includes(f.kind))return f.kind;const ext=String(f.format||f.title||'').toLowerCase().split('.').pop();if(['mp3','wav','ogg','flac','m4a'].includes(ext))return 'audio';if(['mp4','mov','webm','avi'].includes(ext))return 'video';if(['jpg','jpeg','png','webp','gif','tif','tiff'].includes(ext))return 'image';return 'doc';};
+const MEDIA_FLOORS=[['image','Фото','image/*'],['video','Видео','video/*'],['audio','Аудио','audio/*'],['doc','Документы','application/pdf,.doc,.docx,.txt']];
 function adminEdit(id){
   loadAuds();
   const o=DB[id];
   if(!o) return adminLayout('entities','<h1>Не найдено</h1>');
-  const F=(label,val,fid)=>`<div class="field"><label>${label}</label><input class="inp" ${fid?`id="${fid}"`:''} style="width:100%;color:var(--ink)" value="${esc(val||'')}"></div>`;
+  const F=(label,val,fid,ph)=>`<div class="field"><label>${label}</label><input class="inp" ${fid?`id="${fid}"`:''} style="width:100%;color:var(--ink)" placeholder="${ph||''}" value="${esc(val||'')}"></div>`;
   // типы — только из справочников: свободный ввод запрещён
   const FS=(label,val,fid,vals)=>`<div class="field"><label>${label}</label><select class="sel" id="${fid}" style="width:100%">
       <option value="">— не задано —</option>${[...new Set([...(vals||[]),...(val?[val]:[])])].map(v=>`<option ${val===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
-  const isMat=o.type==='material';
-  const typedFields={
-    material:FS('Тип материала',o.mtype,'f-mtype',dictValues('mtype'))+F('Подтип',o.subtype,'f-subtype'),
-    event:FS('Подтип (тип события)',o.evType,'f-evType',dictValues('evType')),
-    place:F('Город',o.city,'f-city')+FS('Подтип (тип места)',o.placeType,'f-placeType',dictValues('placeType')),
-    source:FS('Подтип (тип источника)',o.srcType,'f-srcType',dictValues('srcType')),
-    person:FS('Группа',o.group,'f-group',dictValues('group'))+F('Роль',o.role,'f-role'),
+  const tk=typeKeyOf(o),sk=subKeyOf(o),dk=dateKeyOf(o),rec=isRecord(o);
+  // специфичные поля — после общих
+  const specific={
+    place:F('Город',o.city,'f-city','Москва')+F('Адрес',o.address,'f-address'),
+    project:F('Кураторы',o.curators,'f-curators'),
+    source:F('Автор',o.author,'f-author')+F('Издательство',o.publisher,'f-publisher')+F('Место издания',o.pubplace,'f-pubplace'),
+    theme:F('Краткое определение',o.def,'f-def'),
   }[o.type]||'';
   const by={};(o.links||[]).forEach(lid=>{const x=DB[lid];if(x)(by[x.type]=by[x.type]||[]).push(x);});
   const relBlocks=REL_ORDER.filter(t=>t!=='tag'&&by[t]&&by[t].length).map(t=>`<div style="margin-bottom:12px"><div class="kicker" style="margin-bottom:6px">${REL_HEAD[t]}</div><div class="chips">${by[t].map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}</div></div>`).join('')
     +`<div style="margin-top:6px"><span class="chip" style="border:1px dashed #bbb;background:#fff" onclick="admPickLink('${o.id}')">＋ добавить связь</span></div>`;
-  const subLine=[TYPES[o.type]?TYPES[o.type].l:o.type, o.mtype||o.evType||o.placeType||o.srcType||o.group, o.type==='material'?o.subtype:null].filter(Boolean).join(' · ');
-  return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / ${esc(o.title)}</div>
-    <div class="kicker" style="margin-top:6px">${esc(subLine)}</div>
+  // медиа по этажам: фото (с выбором обложки), видео, аудио, документы
+  const files=(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media');
+  const isCover=m=>o.cover?o.cover===m.id:(!!m.thumb&&o.img===m.thumb);
+  const floors=MEDIA_FLOORS.map(([k,l,accept])=>{const fs=files.filter(m=>kindOf(m)===k);return `<div style="margin-top:14px"><div class="kicker" style="display:flex;justify-content:space-between;align-items:center">${l} <span class="muted" style="font-weight:400">${fs.length||''}</span></div>
+      ${fs.map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
+        <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
+        <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(m.title)}<br><span class="muted" style="font-size:11px">${esc(m.format||'')} · ${fmtSize(m.size)}</span></span>
+        ${k==='image'?(isCover(m)?'<span class="statbadge" title="Показывается в карточках и на странице">Обложка</span>':`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" onclick="admSetCover('${o.id}','${m.id}')">Сделать обложкой</span>`):''}
+        <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>`).join('')}
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><span class="btn sm" onclick="admUploadKind('${o.id}','${accept}')">＋ Загрузить</span>${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}</div>
+    </div>`;}).join('');
+  const s=AUDS&&AUDS.summary&&AUDS.summary[o.id];
+  const hist=AUDS&&AUDS.recent?AUDS.recent.filter(a=>a.entity_id===o.id).slice(0,5):[];
+  const row=(k,v)=>`<div class="r"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  const selInline=(vals,cur,onch)=>`<select class="sel" style="font-size:13px;padding:2px 6px" onchange="${onch}">${vals.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  return adminLayout('entities',`<div class="crumbs"><a href="#/admin/entities">Сущности</a> / Карточка сущности</div>
+    <div class="kicker" style="margin-top:6px">Карточка сущности / ${TYPES[o.type]?TYPES[o.type].l:o.type}${rec?' · '+SRCKIND.record:''}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1 style="font-size:26px;margin-top:2px">${esc(o.title)}</h1><span class="statbadge">${PUBSTAT(o)}</span></div>
     <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px">
       <div>
         <h3 style="margin-top:0">Карточка</h3>
+        <div class="field"><label>Сущность</label><input class="inp" style="width:100%;background:var(--fill);color:var(--muted)" value="${TYPES[o.type]?TYPES[o.type].l:o.type}" disabled title="Задаётся при создании"></div>
+        ${o.type==='source'?`<div class="field"><label>Что это</label><div class="chips">${Object.entries(SRCKIND).map(([v,l])=>`<span class="fchip${(o.srcKind||'text')===v?' on':''}" onclick="admPatch('${o.id}',{payload:{srcKind:'${v}'}})">${l}</span>`).join('')}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>`:''}
         ${F('Название',o.title,'f-title')}
-        <div class="field"><label>Тип сущности</label><input class="inp" style="width:100%;background:var(--fill);color:var(--muted)" value="${TYPES[o.type]?TYPES[o.type].l:o.type}" disabled title="Тип задаётся при создании"></div>
-        ${typedFields}
-        ${F('Дата / период',o.date||o.dates||o.life||o.year,'f-date')}
-        ${isMat?`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${o.access===v?' on':''}" onclick="admPatch('${o.id}',{payload:{access:'${v}'}})">${l}</span>`).join('')}</div></div>`:''}
-        <div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>
+        ${o.type==='theme'?F('Тип',o[tk],'f-'+tk):FS(TYPELABEL[o.type]||'Тип',o[tk],'f-'+tk,dictValues(tk))}
+        ${rec?'':F(SUBLABEL[o.type]||'Подтип',o[sk],'f-'+sk)}
+        ${F(DATELABEL[o.type]||'Дата / период',o[dk]||o.date,'f-'+dk)}
+        ${specific}
+        ${rec?'':`<div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>`}
         <h3>Связи <span class="muted" style="font-size:13px;font-weight:400">— двусторонние: появятся на карточках обеих сущностей</span></h3>
         ${relBlocks||'<div class="muted">Связей пока нет.</div>'}
-        <h3>Теги <span class="muted" style="font-size:13px;font-weight:400">— служебные: помогают поиску, на сайте не выводятся</span></h3>
-        <div class="chips">${(by.tag||[]).map(x=>`<span class="chip">#${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}
-        <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="admAddTag('${o.id}')">＋ тег</span></div>
         <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
           <span class="btn dark" onclick="admSave('${o.id}')">Сохранить</span>
-          ${o.status==='published'?`<span class="btn" onclick="admPatch('${o.id}',{status:'draft'})">В черновики</span>`:`<span class="btn" onclick="admPatch('${o.id}',{status:'published'})">Опубликовать</span>`}
           <a class="btn" href="#/admin/entities">Назад</a>
           <span class="btn" style="color:#9a2e2e;margin-left:auto" onclick="admDelete('${o.id}')">Удалить</span>
         </div>
       </div>
       <div>
-        <h3 style="margin-top:0">Медиа</h3>
+        ${rec?'':`<h3 style="margin-top:0">Медиа</h3>
         <div class="media" style="aspect-ratio:4/3;${o.type==='media'&&(o.med||o.thumb)?`background-image:url('${o.med||o.thumb}');background-size:cover;background-position:center`:bgs(o,true)}"></div>
-        ${(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media').map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13px">
-          <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
-          <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.title)}</span>
-          <span class="muted" style="margin-left:auto;white-space:nowrap">${esc(m.format||'')} · ${fmtSize(m.size)}</span>
-          <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>`).join('')}
-        <div style="margin-top:10px" id="upl-zone">
-          <input type="file" id="f-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="admUpload('${o.id}')">
-          <span class="btn sm" onclick="document.getElementById('f-file').click()">＋ Загрузить файл</span>
-          ${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}
-          <span class="muted" id="upl-status" style="font-size:12px;margin-left:8px"></span>
+        <input type="file" id="f-file" style="display:none" onchange="admUpload('${o.id}')">
+        <span class="muted" id="upl-status" style="font-size:12px"></span>
+        ${floors}`}
+        <h3 ${rec?'style="margin-top:0"':''}>Служебная информация</h3>
+        <div class="metabox">
+          ${row('ID',esc(o.id))}
+          ${row('Статус',selInline([['published','Опубликовано'],['draft','Черновик']],o.status||'published',`admPatch('${o.id}',{status:this.value})`))}
+          ${row('Уровень доступа',selInline(Object.entries(ACCESS),o.access||'open',`admPatch('${o.id}',{payload:{access:this.value}})`))}
+          <div class="r" style="align-items:flex-start"><span class="k">Теги</span><span class="v"><span class="chips" style="justify-content:flex-end">${(by.tag||[]).map(x=>`<span class="chip" style="font-size:12px">#${esc(x.title)} <span class="muted" style="cursor:pointer" onclick="admUnlink('${o.id}','${x.id}')">✕</span></span>`).join('')}
+            <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer;font-size:12px" onclick="admAddTag('${o.id}')">＋ тег</span></span></span></div>
         </div>
-        <h3>Служебное</h3>
-        ${(()=>{const s=AUDS&&AUDS.summary&&AUDS.summary[o.id];
-          const hist=AUDS&&AUDS.recent?AUDS.recent.filter(a=>a.entity_id===o.id).slice(0,5):[];
-          return `<div class="metabox">${[['ID',o.id],['Просмотры',String(o.views||0)],['Создан',fmtAt(o.created_at)||'—'],['Изменён',s?fmtAt(s.lastAt)+' · '+s.lastActor:'—'],['Правок',String(s?s.edits:0)]].map(r=>`<div class="r"><span class="k">${r[0]}</span><span class="v">${esc(r[1])}</span></div>`).join('')}</div>
-          ${hist.length?`<div class="kicker" style="margin-top:14px">Журнал</div><div class="metabox" style="margin-top:6px">${hist.map(a=>`<div class="r"><span class="k">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span><span class="v" style="font-size:12px">${fmtAt(a.at)}</span></div>`).join('')}</div>`:''}`;})()}
+        <div class="muted" style="font-size:11px;margin-top:6px">Теги служебные: помогают поиску, на сайте не выводятся.</div>
+        <h3>Статистика карточки</h3>
+        <div class="metabox">${[['Просмотры',String(o.views||0)],['Создание',fmtAt(o.created_at)||'—'],['Последнее изменение',s?fmtAt(s.lastAt)+' · '+esc(s.lastActor):'—'],['Всего правок',String(s?s.edits:0)]].map(r=>row(r[0],r[1])).join('')}</div>
+        ${hist.length?`<div class="kicker" style="margin-top:14px">Журнал</div><div class="metabox" style="margin-top:6px">${hist.map(a=>`<div class="r"><span class="k">${ACTL[a.action]||a.action} · ${esc(a.actor)}</span><span class="v" style="font-size:12px">${fmtAt(a.at)}</span></div>`).join('')}</div>`:''}
       </div>
     </div>`);
 }
+// обложка карточки — выбранное фото из прикреплённых
+window.admSetCover=(id,mid)=>{const m=DB[mid];if(!m)return;admPatch(id,{payload:{cover:mid,img:m.thumb||'',imgBig:m.med||m.thumb||''}});};
+// загрузка на конкретный «этаж»: ограничиваем выбор файлов по виду
+window.admUploadKind=(id,accept)=>{const i=document.getElementById('f-file');if(!i)return;i.accept=accept;i.click();};
 function adminModeration(){
   return adminLayout('moderation',`<h1 style="font-size:30px" class="muted">Модерация</h1>
     <div class="card" style="margin-top:16px;max-width:560px">
@@ -1340,6 +1372,9 @@ const DICTDEF=[
   ['srcType','Типы источников',()=>dvals('source','srcType')],
   ['placeType','Типы мест',()=>[...new Set(all('place').map(p=>(p.placeType||'').split('·')[0].trim()).filter(Boolean))]],
   ['group','Группы личностей',()=>dvals('person','group')],
+  ['colType','Типы коллекций',()=>dvals('collection','colType')],
+  ['orgType','Типы организаций',()=>dvals('org','orgType')],
+  ['prType','Типы проектов Центра',()=>dvals('project','prType')],
   ['a11y','Доступность',()=>[...new Set([...A11Y,...all('material').flatMap(o=>o.a11y||[])])]],
 ];
 function dictValues(key){
@@ -1411,7 +1446,6 @@ function adminDict(){
 }
 let mdKind='all';
 function adminMedia(){
-  const kindOf=f=>{if(['image','video','audio'].includes(f.kind))return f.kind;const ext=String(f.format||f.title||'').toLowerCase().split('.').pop();if(['mp3','wav','ogg','flac','m4a'].includes(ext))return 'audio';if(['mp4','mov','webm','avi'].includes(ext))return 'video';if(['jpg','jpeg','png','webp','gif','tif','tiff'].includes(ext))return 'image';return 'doc';};
   const allFiles=all('media');
   const KINDS=[['all','Все'],['image','Фото'],['video','Видео'],['audio','Аудио'],['doc','Документы']];
   const files=allFiles.filter(f=>mdKind==='all'||kindOf(f)===mdKind);
@@ -1517,7 +1551,7 @@ function adminRoles(){
 window.admSave=async id=>{
   try{
     const g=x=>document.getElementById(x)?document.getElementById(x).value:undefined;
-    const payload={};['mtype','subtype','date','desc','evType','placeType','srcType','group','role','city'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
+    const payload={};['mtype','subtype','date','desc','evType','placeType','srcType','group','role','city','address','colType','orgType','prType','themeType','life','dates','period','year','curators','author','publisher','pubplace','def'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
     await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({title:g('f-title'),payload})});
     await refreshData();toast('Сохранено — объект обновлён во всех разделах');render();
   }catch(e){toast('Ошибка: '+e.message);}
@@ -1634,15 +1668,21 @@ function adminNew(){
   const inp=(label,key,ph)=>`<div class="field"><label>${label}</label><input class="inp" style="width:100%;color:var(--ink)" placeholder="${ph||''}" value="${esc(NEWF[key]||'')}" oninput="NEWF['${key}']=this.value"></div>`;
   const sel=(label,key,vals)=>`<div class="field"><label>${label}</label><select class="sel" style="width:100%" onchange="NEWF['${key}']=this.value">
       <option value="">— не задано —</option>${vals.map(v=>`<option ${NEWF[key]===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>`;
+  // единый порядок полей: Сущность → Название → Тип → Подтип → Дата → специфичные (Figma #14)
+  const tk=TYPEKEY[t]||'subtype',sk=SUBKEY[t]||'subtype',dk=DATEKEY[t]||'date',rec=t==='source'&&NEWF.srcKind==='record';
+  const typeVals=t==='person'&&!dictValues('group').length?['Конструктивисты','Связанные личности']:dictValues(tk);
+  const common=(t==='source'?`<div class="field"><label>Что это</label><div class="chips">${Object.entries(SRCKIND).map(([v,l])=>`<span class="fchip${(NEWF.srcKind||'text')===v?' on':''}" onclick="NEWF.srcKind='${v}';render()">${l}</span>`).join('')}</div>
+      <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>`:'')
+    +inp('Название','title','Название сущности')
+    +(t==='theme'?inp('Тип',tk,''):sel(TYPELABEL[t]||'Тип',tk,typeVals))
+    +(rec?'':inp(SUBLABEL[t]||'Подтип',sk,t==='material'?'например Фотография · Ч/б':''))
+    +inp(DATELABEL[t]||'Дата / период',dk,{person:'1891–1956',project:'12.05–30.09.1927',org:'1920 — 1930'}[t]||'например 1927');
   const extra={
-    material:sel('Тип материала','mtype',dictValues('mtype'))+inp('Подтип','subtype','например Фотография · Ч/б')
-      +`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
-    event:sel('Подтип (тип события)','evType',dictValues('evType')),
-    person:sel('Группа','group',dictValues('group').length?dictValues('group'):['Конструктивисты','Связанные личности'])+inp('Роль','role','например фотограф, художник')+inp('Годы жизни','life','1891–1956'),
-    place:inp('Город','city','Москва')+sel('Подтип (тип места)','placeType',dictValues('placeType')),
-    source:sel('Подтип (тип источника)','srcType',dictValues('srcType')),
+    material:`<div class="field"><label>Уровень доступа</label><div class="chips">${Object.entries(ACCESS).map(([v,l])=>`<span class="fchip${NEWF.access===v?' on':''}" onclick="NEWF.access=NEWF.access==='${v}'?'':'${v}';render()">${l}</span>`).join('')}</div></div>`,
+    place:inp('Город','city','Москва')+inp('Адрес','address',''),
+    source:inp('Автор','author','')+inp('Издательство','publisher','')+inp('Место издания','pubplace',''),
     theme:inp('Краткое определение','def',''),
-    project:inp('Даты проведения','dates','12.05–30.09.1927')+inp('Кураторы','curators',''),
+    project:inp('Кураторы','curators',''),
   }[t]||'';
   const linkChips=[...NEWLINKS].map(id=>DB[id]).filter(Boolean)
     .map(x=>`<span class="chip">${esc(x.title)} <span class="muted" style="font-size:11px">· ${TYPES[x.type].l}</span> <span class="muted" style="cursor:pointer" onclick="NEWLINKS.delete('${x.id}');render()">✕</span></span>`).join('');
@@ -1650,11 +1690,10 @@ function adminNew(){
     <h1 style="font-size:26px">Создать сущность</h1>
     <div class="two" style="grid-template-columns:1fr 380px;gap:40px;margin-top:10px;max-width:960px">
       <div>
-        <div class="field"><label>Тип</label><select class="sel" style="width:100%" onchange="NEWF.type=this.value;render()">${Object.keys(TYPES).filter(x=>x!=='media').map(x=>`<option value="${x}" ${t===x?'selected':''}>${TYPES[x].l}</option>`).join('')}</select></div>
-        ${inp('Название','title','Название сущности')}
-        ${inp('Дата / период','date','например 1927')}
+        <div class="field"><label>Сущность</label><select class="sel" style="width:100%" onchange="NEWF.type=this.value;render()">${Object.keys(TYPES).filter(x=>x!=='media').map(x=>`<option value="${x}" ${t===x?'selected':''}>${TYPES[x].l}</option>`).join('')}</select></div>
+        ${common}
         ${extra}
-        <div class="field"><label>Описание</label><textarea class="inp" style="width:100%" oninput="NEWF.desc=this.value" placeholder="Редакторское описание с научным аппаратом…">${esc(NEWF.desc||'')}</textarea></div>
+        ${rec?'':`<div class="field"><label>Описание</label><textarea class="inp" style="width:100%" oninput="NEWF.desc=this.value" placeholder="Редакторское описание с научным аппаратом…">${esc(NEWF.desc||'')}</textarea></div>`}
         <div class="field"><label>Публикация</label><div class="chips">${[['published','Опубликовать сразу'],['draft','Создать черновиком']].map(([v,l])=>`<span class="fchip${(NEWF.status||'published')===v?' on':''}" onclick="NEWF.status='${v}';render()">${l}</span>`).join('')}</div>
           <div class="muted" style="font-size:12px;margin-top:4px">Черновик не виден на публичном сайте — можно доработать и опубликовать позже.</div></div>
         <div style="display:flex;gap:10px;margin-top:20px">
@@ -1670,14 +1709,14 @@ function adminNew(){
         <h3>Теги <span class="muted" style="font-size:12px;font-weight:400">— служебные, для поиска</span></h3>
         <div class="chips">${NEWTAGS.map(t=>`<span class="chip">#${esc(t)} <span class="muted" style="cursor:pointer" onclick="NEWTAGS=NEWTAGS.filter(x=>x!=='${esc(t)}');render()">✕</span></span>`).join('')}
         <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer" onclick="newTag()">＋ тег</span></div>
-        <h3>Медиа</h3>
+        ${(NEWF.type==='source'&&NEWF.srcKind==='record')?'':`<h3>Медиа</h3>
         <input type="file" id="n-file" accept="image/*,application/pdf,video/*,audio/*" style="display:none" onchange="NEWFILE=this.files[0];render()">
         ${NEWFILE?`<div style="font-size:13px;margin-bottom:8px">${esc(NEWFILE.name)} · ${fmtSize(NEWFILE.size)} <span class="lnk" style="cursor:pointer" onclick="NEWFILE=null;render()">✕</span></div>`:''}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <span class="btn sm" onclick="document.getElementById('n-file').click()">＋ Загрузить файл</span>
           <span class="btn sm" onclick="admPickMedia('__new')">＋ из медиатеки</span>
         </div>
-        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности.</div>
+        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности.</div>`}
       </div>
     </div>`);
 }

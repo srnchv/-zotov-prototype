@@ -71,9 +71,13 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
     id: `md-${id}`, type: "media", title: filename,
     payload, links: entityId ? [entityId] : [],
   });
-  // родительская сущность получает картинку для карточек и страниц
-  if (kind === "image" && entityId)
-    await repo.updateEntity(entityId, { payload: { img: payload.thumb, imgBig: payload.med } });
+  // родительская сущность получает картинку для карточек и страниц — только если обложки ещё нет
+  // (выбранную редактором обложку новая загрузка не перебивает)
+  if (kind === "image" && entityId) {
+    const parent = await repo.getEntity(entityId);
+    if (parent && !parent.cover && !parent.img)
+      await repo.updateEntity(entityId, { payload: { img: payload.thumb, imgBig: payload.med } });
+  }
   return media;
 }
 
