@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "next": "15.5.26",
+    "pdfjs-dist": "^4.10.38",
+    "plyr": "^3.8.4",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },
@@ -19,5 +21,7 @@
     "@types/react": "^19.1.0",
     "typescript": "^5.7.2"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

@@ -170,6 +170,37 @@ export function createApp() {
     res.json(await media.selftest());
   }));
 
+  // файл целиком через бэкенд (для читалки PDF и плееров): Range поддерживается
+  app.get("/api/media/:id/file", ah(async (req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    const m = await repo.getEntity(String(req.params.id));
+    if (!m || m.type !== "media") return res.status(404).json({ error: "not found" });
+    // доступ «по запросу» / ограниченный — только владельцам токена (личный кабинет появится позже)
+    const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
+    const access = String((parent?.access ?? m.access) || "open");
+    if (access !== "open" && req.headers.authorization !== `Bearer ${ADMIN_TOKEN}`) return res.status(403).json({ error: "access restricted" });
+    const s = await media.streamOriginal(m.id, req.headers.range as string | undefined);
+    if (!s) return res.status(404).json({ error: "not found" });
+    res.status(s.status).set(s.headers);
+    s.body.pipe(res);
+  }));
+
+  // субтитры к видео/аудио: .vtt или .srt (конвертируем), язык — в поле lang
+  app.post("/api/media/:id/subtitles", auth, upload.single("file"), ah(async (req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    const { lang, label } = z.object({ lang: z.string().optional(), label: z.string().optional() }).parse(req.body);
+    const m = await media.addSubtitles(String(req.params.id), { filename: req.file.originalname, buffer: req.file.buffer, lang, label });
+    if (!m) return res.status(404).json({ error: "not found" });
+    await repo.logAct("media", m.id, m.title, actor(req));
+    res.status(201).json(m);
+  }));
+  app.delete("/api/media/:id/subtitles/:lang", auth, ah(async (req, res) => {
+    const m = await media.removeSubtitles(String(req.params.id), String(req.params.lang));
+    if (!m) return res.status(404).json({ error: "not found" });
+    res.json(m);
+  }));
+
   app.get("/api/media/:id/original", ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
     const url = await media.originalUrl(String(req.params.id));

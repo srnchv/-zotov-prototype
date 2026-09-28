@@ -1302,7 +1302,8 @@ function adminEdit(id){
         <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
         <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(m.title)}<br><span class="muted" style="font-size:11px">${esc(m.format||'')} · ${fmtSize(m.size)}</span></span>
         ${k==='image'?(isCover(m)?'<span class="statbadge" title="Показывается в карточках и на странице">Обложка</span>':`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" onclick="admSetCover('${o.id}','${m.id}')">Сделать обложкой</span>`):''}
-        <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>`).join('')}
+        <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>
+        ${k==='video'||k==='audio'?`<div style="margin:4px 0 0 34px;font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted">Субтитры:</span>${(m.subtitles||[]).map(t=>`<span class="chip" style="font-size:12px">${esc(t.label||t.lang)} <span class="muted" style="cursor:pointer" onclick="admSubsRm('${m.id}','${esc(t.lang)}')">✕</span></span>`).join('')}<span class="lnk" style="cursor:pointer" onclick="admSubsUpload('${m.id}')">＋ .vtt / .srt</span></div>`:''}`).join('')}
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><span class="btn sm" onclick="admUploadKind('${o.id}','${accept}')">＋ Загрузить</span>${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}</div>
     </div>`;}).join('');
   const s=AUDS&&AUDS.summary&&AUDS.summary[o.id];
@@ -1335,7 +1336,7 @@ function adminEdit(id){
       <div>
         ${rec?'':`<h3 style="margin-top:0">Медиа</h3>
         <div class="media" style="aspect-ratio:4/3;${o.type==='media'&&(o.med||o.thumb)?`background-image:url('${o.med||o.thumb}');background-size:cover;background-position:center`:bgs(o,true)}"></div>
-        <input type="file" id="f-file" style="display:none" onchange="admUpload('${o.id}')">
+        <input type="file" id="f-file" style="display:none" onchange="admUpload('${o.id}')"><input type="file" id="f-subs" accept=".vtt,.srt,text/vtt" style="display:none">
         <span class="muted" id="upl-status" style="font-size:12px"></span>
         ${floors}`}
         <h3 ${rec?'style="margin-top:0"':''}>Служебная информация</h3>
@@ -1353,6 +1354,22 @@ function adminEdit(id){
       </div>
     </div>`);
 }
+// субтитры к видео/аудио: WebVTT или SRT (бэкенд сконвертирует), язык спрашиваем
+window.admSubsUpload=mid=>{
+  const i=document.getElementById('f-subs');if(!i)return;
+  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;
+    const lang=(window.prompt('Язык субтитров (код: ru, en…):','ru')||'ru').trim();
+    try{const fd=new FormData();fd.append('file',f);fd.append('lang',lang);
+      const r=await fetch(API+'/media/'+mid+'/subtitles',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
+      if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'HTTP '+r.status);}
+      await refreshData();toast('Субтитры загружены');render();}
+    catch(e){toast('Ошибка: '+e.message);}};
+  i.click();
+};
+window.admSubsRm=async(mid,lang)=>{
+  if(!confirm('Убрать субтитры?'))return;
+  try{await api('/media/'+mid+'/subtitles/'+lang,{method:'DELETE'});await refreshData();toast('Убрано');render();}catch(e){toast('Ошибка: '+e.message);}
+};
 // обложка карточки — выбранное фото из прикреплённых
 window.admSetCover=(id,mid)=>{const m=DB[mid];if(!m)return;admPatch(id,{payload:{cover:mid,img:m.thumb||'',imgBig:m.med||m.thumb||''}});};
 // загрузка на конкретный «этаж»: ограничиваем выбор файлов по виду

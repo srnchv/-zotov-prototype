@@ -46,7 +46,7 @@ async function put(key: string, body: Buffer, contentType: string) {
 export async function uploadMedia(opts: { entityId?: string; filename: string; mime: string; buffer: Buffer }) {
   const { entityId, filename, mime, buffer } = opts;
   const id = randomUUID().slice(0, 8);
-  const kind = mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime.startsWith("video/") ? "video" : "file";
+  const kind = mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "file";
   const origKey = `orig/${id}/${filename.replace(/[^\wа-яА-ЯёЁ.\-]+/g, "_")}`;
 
   const payload: Record<string, unknown> = {
@@ -115,4 +115,51 @@ export async function deleteMediaFiles(mediaId: string) {
   if (!m || m.type !== "media") return;
   const keys = [m.origKey, ...["thumb", "med", "big"].filter((r) => m[r]).map((r) => `media/${mediaId.replace(/^md-/, "")}/${r}.webp`)].filter(Boolean) as string[];
   for (const Key of keys) await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key })).catch(() => {});
+}
+
+// ---- Субтитры к видео/аудио: WebVTT (SRT конвертируем), лежат публично рядом с производными ----
+export function srtToVtt(src: string) {
+  const body = src.replace(/^\uFEFF/, "").replace(/\r/g, "")
+    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2"); // запятая в таймкодах → точка
+  return "WEBVTT\n\n" + body.trim() + "\n";
+}
+export async function addSubtitles(mediaId: string, opts: { filename: string; buffer: Buffer; lang?: string; label?: string }) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || m.type !== "media") return null;
+  const text = opts.buffer.toString("utf8");
+  const vtt = /^\s*WEBVTT/.test(text) ? text : srtToVtt(text);
+  const lang = (opts.lang || "ru").toLowerCase().slice(0, 5);
+  const key = `media/${mediaId.replace(/^md-/, "")}/subs-${lang}.vtt`;
+  await put(key, Buffer.from(vtt, "utf8"), "text/vtt; charset=utf-8");
+  const url = `${PUBLIC_URL}/${key}`;
+  const tracks = ((m.subtitles as { lang: string; label: string; url: string }[]) || []).filter((t) => t.lang !== lang);
+  tracks.push({ lang, label: opts.label || ({ ru: "Русский", en: "English" } as Record<string, string>)[lang] || lang.toUpperCase(), url });
+  return repo.updateEntity(mediaId, { payload: { subtitles: tracks } });
+}
+export async function removeSubtitles(mediaId: string, lang: string) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || m.type !== "media") return null;
+  const tracks = ((m.subtitles as { lang: string }[]) || []).filter((t) => t.lang !== lang);
+  await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: `media/${mediaId.replace(/^md-/, "")}/subs-${lang}.vtt` })).catch(() => {});
+  return repo.updateEntity(mediaId, { payload: { subtitles: tracks } });
+}
+
+// ---- Прокси оригинала для встроенных просмотрщиков (PDF.js читает файл XHR-ом — напрямую из S3 мешает CORS).
+// Поддерживает Range — плееры могут перематывать.
+export async function streamOriginal(mediaId: string, range?: string) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || m.type !== "media" || !m.origKey) return null;
+  const r = await s3().send(new GetObjectCommand({ Bucket: BUCKET, Key: String(m.origKey), Range: range }));
+  return {
+    status: range ? 206 : 200,
+    headers: {
+      "content-type": r.ContentType || String(m.mime || "application/octet-stream"),
+      ...(r.ContentLength != null ? { "content-length": String(r.ContentLength) } : {}),
+      ...(r.ContentRange ? { "content-range": r.ContentRange } : {}),
+      "accept-ranges": "bytes",
+      "cache-control": "private, max-age=600",
+      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(String(m.filename || m.title || "file"))}`,
+    },
+    body: r.Body as NodeJS.ReadableStream,
+  };
 }

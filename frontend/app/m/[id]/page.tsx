@@ -1,4 +1,7 @@
 import "../material.css";
+import "../media.css";
+import Player from "@/components/Player";
+import PdfReader from "@/components/PdfReader";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
@@ -7,7 +10,7 @@ import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
-import { getEntity, loadArchive, linked, TYPES, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, TYPES, type Entity } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -61,6 +64,11 @@ export default async function EntityPage({ params }: Props) {
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
   const docs = media.filter((m) => m.kind !== "image");
+  // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
+  const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
+  const video = media.find((m) => m.kind === "video"), audio = media.find((m) => m.kind === "audio"), pdf = media.find((m) => m.kind === "pdf");
+  const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []);
+  const isOpen = (s(e, "access") || "open") === "open";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
   const groups = REL_ORDER.filter((t) => t !== "source").map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
@@ -107,9 +115,10 @@ export default async function EntityPage({ params }: Props) {
         <div id="rest" className="mat">
           <div id="rightcol">
             <div className="embed">
-              <div className="imgbox">
-                {cover ? <img src={cover.src} alt={e.title} /> : <span className="ph">Изображение материала</span>}
-              </div>
+              {video && isOpen ? <Player kind="video" src={fileUrl(video)} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
+                : <div className="imgbox">{cover ? <img src={cover.src} alt={e.title} /> : <span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span>}</div>}
+              {audio && isOpen ? <Player kind="audio" src={fileUrl(audio)} tracks={tracks(audio)} title={String(audio.title)} /> : null}
+              {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               <div>{e.title}</div>
               <div className="grey">{[linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ")}</div>
             </div>
@@ -124,7 +133,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="tsm">Документы</div>
             <div className="sec">
               {docs.length ? docs.map((d) => (
-                <a className="doc" key={d.id} href={`${process.env.NEXT_PUBLIC_API_URL || ""}/media/${d.id}/original`} target="_blank" rel="noreferrer">
+                <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
                   <div className="t">{d.title}</div><div>{String(d.format || "").toUpperCase()}.</div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626" /></svg>
                 </a>

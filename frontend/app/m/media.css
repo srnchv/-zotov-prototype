@@ -1,0 +1,17 @@
+/* Встроенные просмотрщики: плеер (Plyr) и читалка PDF. Дизайн — через переменные, под фирменный стиль подгоняется здесь. */
+.player{--plyr-color-main:#F43C3A;--plyr-video-background:#262626;--plyr-font-family:'PT Root UI',system-ui,sans-serif;--plyr-control-radius:0;--plyr-range-thumb-height:12px;--plyr-captions-background:rgba(38,38,38,.85);--plyr-captions-text-color:#fff;--plyr-font-size-captions-large:20px;width:100%}
+.player .plyr{width:100%;max-height:560px;background:#262626}
+.player.audio .plyr{--plyr-audio-controls-background:#ebebeb;--plyr-audio-control-color:#262626;border-radius:0}
+.player .plyr__caption{font-family:'PT Root UI',sans-serif;letter-spacing:.01em}
+.pdf{background:var(--grey5);width:100%}
+.pdf-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--ink);color:#fff;font-size:13px;line-height:16px}
+.pdf-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pdf-nav{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.pdf-nav button{background:#fff;color:var(--ink);border:0;width:28px;height:24px;cursor:pointer;font:inherit}
+.pdf-nav button:disabled{opacity:.4;cursor:default}
+.pdf-nav button:hover:not(:disabled){background:var(--red);color:#fff}
+.pdf-nav a{margin-left:8px;text-decoration:underline}
+.pdf-page{max-height:720px;overflow:auto;display:flex;justify-content:center;padding:16px}
+.pdf-page canvas{box-shadow:0 2px 12px rgba(0,0,0,.15);background:#fff}
+.pdf-err{padding:40px 16px;color:var(--grey2)}
+@media (max-width:1023px){.pdf-page{max-height:70vh;padding:8px}.player .plyr{max-height:none}}
