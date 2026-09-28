@@ -10,6 +10,9 @@ export const dynamic = "force-dynamic";
 const LETTERS = ["a", "r", "h", "i", "v"];
 const s = (e: Entity, k: string) => String(e[k] ?? "");
 const cnt = (e: Entity) => `(${(e.links || []).length} связей)`;
+const plural = (n: number, f: [string, string, string]) => { const a = n % 10, b = n % 100; return f[b >= 11 && b <= 14 ? 2 : a === 1 ? 0 : a >= 2 && a <= 4 ? 1 : 2]; };
+let DB: Record<string, Entity> = {};
+const mats = (e: Entity) => { const n = linked(DB, e, "material").length; return `${n} ${plural(n, ["материал", "материала", "материалов"])}`; };
 // пока фото не загружено в архив — заглушки из вёрстки, чтобы сетка держала форму
 const ph = (list: string[], i: number) => `/assets/${list[i % list.length]}`;
 const PH_TH = ["th1.jpg", "th2.jpg", "th3.jpg", "th4.jpg", "th5.jpg"];
@@ -23,35 +26,37 @@ const img = (e: Entity, fb: string, big = false) => String((big ? e.imgBig : e.i
 const MOSAIC = [[3, 2, 1, 2], [5, 1, 1, 1], [9, 1, 1, 1], [1, 1, 2, 1], [8, 1, 2, 1], [10, 2, 2, 2], [2, 1, 3, 1], [5, 1, 3, 1], [6, 2, 3, 2], [9, 1, 3, 1], [12, 1, 3, 1], [1, 1, 4, 1], [10, 1, 4, 1]];
 
 export default async function Home() {
-  const db = await loadArchive();
+  const db = await loadArchive(); DB = db;
   const themes = ofType(db, "theme");
   const projects = ofType(db, "project").sort((a, b) => yearOf(b.dates) - yearOf(a.dates)).slice(0, 3);
   const chrono = ofType(db, "event").filter((e) => e.inChrono).sort((a, b) => yearOf(a.date) - yearOf(b.date)).slice(0, 6);
   const persons = ofType(db, "person").slice(0, 13);
   const colls = ofType(db, "collection").slice(0, 2);
-  const themesRow = [...themes, ...themes].slice(0, 6);
+  const themesRow = [...themes, ...themes].slice(0, 5);
   const projClass = ["p-big", "p-mid", "p-tall"];
 
   return (
     <>
       <HomeChoreo />
       <div id="stage">
-        <Sidebar active="/" />
+        <Sidebar />
         <section id="hero">
           <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
           <div id="barcode"><img src="/assets/union.svg" alt="" /></div>
-          <p id="lede">Уникальный архив о&nbsp;конструктивизме, медиа и&nbsp;городской истории: материалы, личности, события, места и&nbsp;проекты, объединённые в&nbsp;единую систему связей</p>
+          <div id="lede"><span>Первый в мире цифровой архив,</span><span>объединяющий источники и исследования,</span><span>посвященные конструктивизму</span></div>
           <a id="search" href="/search">
-            <div className="box" />
-            <div className="ph">Поиск в архиве: события, люди, места и т.д.</div>
-            <svg className="ic" viewBox="0 0 24 24" fill="none"><path fillRule="evenodd" clipRule="evenodd" d="M11 2a9 9 0 1 1-5.6 16.05l-3.28 3.27-1.44-1.44 3.27-3.28A9 9 0 0 1 11 2Zm0 2.3a6.7 6.7 0 1 0 0 13.4 6.7 6.7 0 0 0 0-13.4Z" fill="#262626" /></svg>
+            <div className="lbl">Поиск в каталоге</div>
+            <div className="box">
+              <div className="ph">Материалы, личности, темы и тд</div>
+              <svg className="ic" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>
+            </div>
           </a>
           <div id="themes">
             <div className="t-title" />
             <div className="row">
               {themesRow.map((t, i) => (
                 <a className="theme" key={t.id + i} href={`/m/${t.id}`}>
-                  <div className="tx"><h4>{t.title}</h4><div className="cnt">{cnt(t)}</div></div>
+                  <div className="tx"><h4>{t.title}</h4><div className="vb" /><div className="cnt">{mats(t)}</div></div>
                   <div className="im"><img src={img(t, ph(PH_TH, i))} alt="" /></div>
                 </a>
               ))}

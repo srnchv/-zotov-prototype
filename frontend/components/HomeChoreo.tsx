@@ -7,7 +7,7 @@ import { useEffect } from "react";
 export default function HomeChoreo() {
   useEffect(() => {
     const DESIGN_W = 1920, D1 = 800;
-    const WORD_W0 = 1720, WORD_W1 = 856, BAR_W1 = 856, SEARCH_Y1 = 460, THEMES_Y1 = 548, COMPACT_H = 676, WORD_BOTTOM = 328;
+    const WORD_W0 = 1716, WORD_W1 = 856, BAR_W1 = 856, SEARCH_Y1 = 460, THEMES_Y1 = 548, COMPACT_H = 676, WORD_BOTTOM = 328;
     let D2 = 500, D = D1 + D2, HERO_H = 1080, THEMES_Y0 = 944, SEARCH_Y0 = 618, k = 1;
     const $ = (id: string) => document.getElementById(id)!;
     const stage = $("stage"), hero = $("hero"), word = $("word"), barcode = $("barcode"), search = $("search"),
@@ -31,12 +31,12 @@ export default function HomeChoreo() {
     function layout() {
       k = window.innerWidth / DESIGN_W;
       HERO_H = Math.max(900, window.innerHeight / k);
-      THEMES_Y0 = HERO_H - 136; SEARCH_Y0 = THEMES_Y0 - 326;
+      THEMES_Y0 = HERO_H - 148; SEARCH_Y0 = THEMES_Y0 - 232;
       D2 = THEMES_Y0 - THEMES_Y1; D = D1 + D2;
       stage.style.height = HERO_H + "px"; sidebar.style.height = HERO_H + "px"; hero.style.height = HERO_H + "px";
       stage.style.transform = `scale(${k})`;
       space.style.height = (COMPACT_H + D) * k + "px";
-      rest.style.transform = `translateX(${184 * k}px) scale(${k})`;
+      rest.style.transform = `translateX(${180 * k}px) scale(${k})`;
       restWrap.style.height = rest.offsetHeight * k + "px";
       search.style.top = SEARCH_Y0 + "px"; themes.style.top = THEMES_Y0 + "px";
       const r = document.documentElement.style;

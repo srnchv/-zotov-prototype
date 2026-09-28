@@ -10,7 +10,7 @@ import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
-import { API, getEntity, loadArchive, linked, TYPES, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, TYPES, type Entity } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -59,14 +59,14 @@ export default async function EntityPage({ params }: Props) {
   const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
   const media: Entity[] = (e.links || []).filter((x) => x.type === "media");
-  const coverMedia = media.find((m) => m.kind === "image");
+  const coverMedia = media.find((m) => mediaKind(m) === "image");
   const cover: { src: string; title: string } | null = coverMedia
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
-  const docs = media.filter((m) => m.kind !== "image");
+  const docs = media.filter((m) => mediaKind(m) !== "image");
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
-  const video = media.find((m) => m.kind === "video"), audio = media.find((m) => m.kind === "audio"), pdf = media.find((m) => m.kind === "pdf");
+  const video = media.find((m) => mediaKind(m) === "video"), audio = media.find((m) => mediaKind(m) === "audio"), pdf = media.find((m) => mediaKind(m) === "pdf");
   const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []);
   const isOpen = (s(e, "access") || "open") === "open";
   const sources = rel.filter((x) => x.type === "source");

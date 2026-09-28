@@ -63,3 +63,15 @@ export async function searchApi(q: string): Promise<SearchHit[]> {
     return ((await r.json()).items || []) as SearchHit[];
   } catch { return []; }
 }
+
+// вид медиафайла: kind с сервера, иначе по mime/расширению (файлы, загруженные до появления kind)
+export const mediaKind = (m: Entity) => {
+  const k = String(m.kind || "");
+  if (["image", "video", "audio", "pdf"].includes(k)) return k;
+  const mime = String(m.mime || ""), ext = String(m.format || m.title || "").toLowerCase().split(".").pop() || "";
+  if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext)) return "audio";
+  if (mime.startsWith("video/") || ["mp4", "mov", "webm"].includes(ext)) return "video";
+  if (mime === "application/pdf" || ext === "pdf") return "pdf";
+  if (mime.startsWith("image/")) return "image";
+  return "file";
+};

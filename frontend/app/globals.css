@@ -21,20 +21,20 @@ a{color:inherit;text-decoration:none}
 #rest{transform-origin:0 0}
 
 /* ==== сайдбар (главная: 184, материал: 180 с серой линией) ==== */
-#sidebar{position:absolute;left:0;top:0;width:184px;height:1080px;background:#fff;z-index:30}
-#sidebar.mat{width:180px;border-right:8px solid var(--grey4)}
-#sidebar .logo{position:absolute;left:8px;top:8px;width:136px}
-#sidebar .logo img{width:136px;height:auto}
-#mini-arhiv{position:absolute;left:8px;top:100px;width:136px;height:16px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .45s ease}
+#sidebar{position:absolute;left:0;top:0;width:180px;height:1080px;background:#fff;z-index:30;border-right:8px solid var(--grey4);box-sizing:border-box}
+#sidebar .logo{position:absolute;left:12px;top:12px;width:148px}
+#sidebar .logo img{width:148px;height:auto}
+#mini-arhiv{position:absolute;left:12px;top:116px;width:148px;height:20px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .45s ease}
 #mini-arhiv.on{opacity:1}
-#mini-arhiv img{height:16px;width:auto}
-#menu{position:absolute;left:8px;top:128px;width:136px}
-#menu .rule{height:4px;background:var(--ink)}
-#menu a{display:block;padding:4px 0;font-size:14px;line-height:16px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
-#menu a:hover,#menu a.active{color:var(--red)}
-#soc{position:absolute;left:8px;bottom:8px;width:136px;display:flex;gap:4px}
-#soc span{flex:1;background:var(--ink);color:#fff;border-radius:24px;padding:6px 0;text-align:center;font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;cursor:pointer}
-#soc span:hover{background:var(--red)}
+#mini-arhiv img{height:20px;width:auto}
+#menu.mat{position:absolute;left:0;top:50%;margin-top:-222px;width:172px;background:var(--grey4);padding:4px 0;display:flex;flex-direction:column;gap:4px}
+#menu.mat a{display:block;background:#fff;width:172px;padding:8px 12px;text-align:center;font-size:14.3px;line-height:16px;letter-spacing:.143px;text-transform:uppercase;font-weight:500;box-sizing:border-box}
+#menu.mat a:hover,#menu.mat a.active{color:var(--red)}
+#center-link{position:absolute;left:12px;bottom:12px;width:148px;background:var(--grey4);display:flex;justify-content:space-between;padding:4px 8px;font-size:14.3px;line-height:16px;font-weight:500;letter-spacing:.143px;box-sizing:border-box}
+#center-link:hover{color:var(--red)}
+/* правая часть скроллится поверх сцены; её прозрачные поля не должны перекрывать клики по меню */
+#restWrap{pointer-events:none}
+#rest{pointer-events:auto}
 
 /* ==== леттеринг-заголовки секций (Zotov Bold, разрядка по ширине) ==== */
 .sec-title{display:flex;align-items:flex-start;justify-content:space-between;height:144px}
@@ -57,6 +57,7 @@ a{color:inherit;text-decoration:none}
   html.mob #sidebar .logo{position:static;width:64px;flex:0 0 auto}
   html.mob #sidebar .logo img{width:64px}
   html.mob #mini-arhiv{display:none}
+  html.mob #center-link{display:none}
   html.mob #menu,html.mob #menu.mat{position:static;margin:0;width:auto;flex:1 1 auto;display:flex;gap:12px;overflow-x:auto;background:none;padding:0;scrollbar-width:none}
   html.mob #menu::-webkit-scrollbar{display:none}
   html.mob #menu .rule{display:none}

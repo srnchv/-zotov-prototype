@@ -1,28 +1,35 @@
 /* Стили главной — из main-page/index.html */
-#hero{position:absolute;left:184px;top:0;width:1736px;height:1080px;background:#fff;overflow:hidden}
-#word{position:absolute;left:8px;top:8px;height:320px;width:1720px;display:flex;align-items:flex-start;justify-content:space-between}
+#hero{position:absolute;left:180px;top:0;width:1740px;height:1080px;background:#fff;overflow:hidden}
+#word{position:absolute;left:12px;top:12px;height:320px;width:1716px;display:flex;align-items:flex-start;justify-content:space-between}
 #word img{height:320px;width:auto;flex:0 0 auto}
-#barcode{position:absolute;right:8px;top:8px;height:320px;width:0;overflow:hidden}
+#barcode{position:absolute;right:12px;top:12px;height:320px;width:0;overflow:hidden}
 #barcode img{position:absolute;right:0;top:0;width:856px;height:320px;max-width:none}
-#lede{position:absolute;left:8px;top:336px;width:1720px;font-size:40px;line-height:38px;letter-spacing:-1.2px;font-weight:500;color:rgba(0,0,0,.85)}
-#search{position:absolute;left:315px;top:618px;width:1106px;height:80px;display:block}
-#search .box{position:absolute;inset:0;border:4px solid var(--ink);border-radius:56px}
-#search .ph{position:absolute;left:32px;top:50%;transform:translateY(-50%);font-size:20px;line-height:20px;letter-spacing:-0.2px;font-weight:500;color:var(--grey3);white-space:nowrap}
-#search .ic{position:absolute;right:28px;top:50%;transform:translateY(-50%);width:24px;height:24px}
-#themes{position:absolute;left:8px;top:944px;width:1728px}
+/* подзаголовок-лесенка: первая строка слева, остальные прижаты вправо (макет «Frame 4») */
+#lede{position:absolute;left:12px;top:336px;width:1716px;display:flex;flex-direction:column;font-size:48px;line-height:46px;letter-spacing:-1.4px;font-weight:700;text-transform:uppercase;color:var(--ink)}
+#lede span{align-self:flex-end;white-space:nowrap}
+#lede span:first-child{align-self:flex-start}
+/* поисковая форма — как на странице поиска: подпись + рамка без верха, 1140 по центру */
+#search{position:absolute;left:300px;top:700px;width:1140px;height:64px;display:flex;flex-direction:column;gap:4px}
+#search .lbl{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
+#search .box{position:relative;height:44px;border:4px solid var(--ink);border-top:0;box-sizing:border-box}
+#search .ph{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:20px;line-height:20px;letter-spacing:-0.2px;font-weight:500;color:var(--grey3);white-space:nowrap}
+#search .ic{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:24px;height:24px}
+#themes{position:absolute;left:12px;top:932px;width:1716px}
 #themes .t-title{width:856px;height:24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;visibility:hidden}
-#themes .row{display:flex;gap:8px}
-.theme{width:320px;height:88px;flex:0 0 auto;background:#fff;border-left:2px solid var(--ink);border-top:2px solid var(--ink);padding:8px 0 0 8px;display:flex;gap:8px;cursor:pointer}
-.theme .tx{flex:1 1 auto;min-width:1px;display:flex;flex-direction:column;gap:8px;padding-right:8px}
-.theme h4{font-size:14px;line-height:16px;font-weight:700;text-transform:uppercase}
-.theme .cnt{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
-.theme .im{width:80px;height:78px;background:var(--ink);overflow:hidden}
+#themes .row{display:flex;gap:12px}
+/* карточка темы: чёрная линия сверху, заголовок, вертикальная линия, «N материалов», картинка справа */
+.theme{width:334px;height:128px;flex:0 0 auto;background:#fff;border-top:8px solid var(--ink);padding-top:8px;display:flex;gap:12px;cursor:pointer;box-sizing:border-box}
+.theme .tx{flex:1 1 auto;min-width:1px;display:flex;flex-direction:column;gap:4px}
+.theme h4{font-size:20px;line-height:20px;font-weight:700;text-transform:uppercase;letter-spacing:-.2px}
+.theme .vb{flex:1 1 auto;min-height:24px;border-left:4px solid var(--ink)}
+.theme .cnt{font-size:14.1px;line-height:16px;font-weight:500}
+.theme .im{width:112px;height:112px;background:var(--grey5);overflow:hidden;flex:0 0 auto}
 .theme .im img{width:100%;height:100%;object-fit:cover}
 .theme:hover h4{color:var(--red)}
 .theme:hover{border-color:var(--red)}
 
 #scrollspace{width:1px}
-#rest.home{width:1736px;background:#fff;padding:80px 8px 8px 8px}
+#rest.home{width:1740px;background:#fff;padding:80px 12px 8px 12px}
 
 #projects .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0 8px;grid-auto-rows:866px}
 .project{display:flex;flex-direction:column;cursor:pointer}
