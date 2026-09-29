@@ -163,3 +163,12 @@
   #about .cols>div{width:276px;flex:0 0 276px;height:144px;min-height:0;box-sizing:border-box}
   #foot{margin-top:40px}
 }
+
+/* листалка коллекции: кадр во всю карточку, индикатор внизу справа */
+.gal{position:relative;width:100%;height:100%}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.gal-nav{position:absolute;right:12px;bottom:12px;display:flex;gap:4px}
+.gal-nav button{background:#fff;color:var(--ink);border:0;height:32px;min-width:32px;padding:0 8px;display:flex;align-items:center;gap:8px;font:inherit;font-size:14.1px;line-height:16px;font-weight:700;text-transform:uppercase;letter-spacing:.423px;cursor:pointer}
+.gal-nav button span{font-weight:700}
+.gal-nav button:hover{color:var(--red)}
+@media (max-width:1023px){.gal-nav{right:8px;bottom:8px}.gal-nav button{height:28px;min-width:28px;font-size:12px}}

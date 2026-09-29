@@ -117,10 +117,10 @@ export default async function EntityPage({ params }: Props) {
           </div>
           <nav id="secmenu">
             <ScrollTo to="a-desc">Описание</ScrollTo>
-            <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo>
-            <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo>
-            <ScrollTo to="a-rel"><span>Связанные материалы</span><span className="num">({relCount})</span><span className="sp" /></ScrollTo>
-            <ScrollTo to="a-sim">Похожее</ScrollTo>
+            {docs.length ? <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo> : null}
+            {sources.length ? <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo> : null}
+            {relCount ? <ScrollTo to="a-rel"><span>Связанные материалы</span><span className="num">({relCount})</span><span className="sp" /></ScrollTo> : null}
+            {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
           </nav>
           <button id="saveBtn" type="button">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>
@@ -147,42 +147,41 @@ export default async function EntityPage({ params }: Props) {
               {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
             </div>
 
-            <div className="div8" id="a-docs" />
+            {docs.length ? <><div className="div8" id="a-docs" />
             <div className="tsm">Документы</div>
             <div className="sec">
-              {docs.length ? docs.map((d) => (
+              {docs.map((d) => (
                 <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
                   <div className="t">{d.title}</div><div>{String(d.format || "").toUpperCase()}.</div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626" /></svg>
                 </a>
-              )) : <div className="empty">—</div>}
-            </div>
+              ))}
+            </div></> : null}
 
-            <div className="div8" id="a-src" />
+            {sources.length ? <><div className="div8" id="a-src" />
             <div className="tsm">Источники</div>
             <div className="sec">
-              {sources.length ? sources.map((x, i) => <div className="src" key={x.id}><div className="n">{String(i + 1).padStart(2, "0")}.</div><a href={`/m/${x.id}`}>{x.title}{s(x, "year") ? `, ${s(x, "year")}` : ""}</a></div>) : <div className="empty">—</div>}
-            </div>
+              {sources.map((x, i) => <div className="src" key={x.id}><div className="n">{String(i + 1).padStart(2, "0")}.</div><a href={`/m/${x.id}`}>{x.title}{s(x, "year") ? `, ${s(x, "year")}` : ""}</a></div>)}
+            </div></> : null}
 
-            <div className="div8" id="a-rel" />
+            {relCount ? <><div className="div8" id="a-rel" />
             <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
             <div id="relmats">
               {groups.map(([t, arr]) => (
                 <div key={t}>
                   <div className="subhead"><span className="tsm" id={gid(t)}>{REL_HEAD[t]}</span><span className="tsm grey">({arr.length})</span></div>
                   {arr.map((x) => (
-                    <a className="rel-item" key={x.id} href={`/m/${x.id}`}>
+                    <a className={"rel-item" + (x.img ? "" : " noimg")} key={x.id} href={`/m/${x.id}`}>
                       <h3>{x.title}</h3><div className="sub">{meta(x, db)}</div>
                       {x.img ? <div className="im"><img src={String(x.img)} alt="" style={imgPos(db, x)} /></div> : null}
                     </a>
                   ))}
                 </div>
               ))}
-              {!groups.length && <div className="empty grey" style={{ padding: "12px 0" }}>Связи ещё не добавлены.</div>}
-            </div>
+            </div></> : null}
           </div>
 
-          <section id="similar">
+          {similar.length ? <section id="similar">
             <div id="a-sim"><SectionTitle text="похожее" small /></div>
             <div className="cards">
               {similar.map((x, i) => (
@@ -194,7 +193,7 @@ export default async function EntityPage({ params }: Props) {
                 </a>
               ))}
             </div>
-          </section>
+          </section> : null}
 
           <div id="matfoot"><Footer site={site} /></div>
         </div>

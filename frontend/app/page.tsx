@@ -4,7 +4,8 @@ import MobileMenu from "@/components/MobileMenu";
 import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
-import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, type Entity } from "@/lib/api";
+import Gallery from "@/components/Gallery";
+import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaKind, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ const PH_TH = ["th1.jpg", "th2.jpg", "th3.jpg", "th4.jpg", "th5.jpg"];
 const PH_PR = ["proj-interior.jpg", "proj-mayak.jpg", "proj-kino.jpg"];
 const PH_CH = ["ch1910.jpg", "ch1933.jpg", "ch1947.jpg", "ch1960.jpg"];
 const PH_P = Array.from({ length: 13 }, (_, i) => `p${i + 1}.jpg`);
-const PH_C = ["coll1.jpg", "coll2.jpg"];
+const PH_C = ["proj-interior.jpg", "proj-kino.jpg"];
 
 // леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине; пробел — отдельный слот
 const Lettering = ({ text, cream }: { text: string; cream?: boolean }) => (
@@ -144,7 +145,22 @@ export default async function Home() {
           <section id="collections" className="sec">
             <Lettering text="коллекции" />
             <div className="feat">
-              {colls.map((c, i) => card(c, "big tall", i, PH_C, s(c, "period")))}
+              {colls.map((c, i) => {
+                // листалка: фото, прикреплённые к коллекции в админке (в порядке загрузки), затем обложки её материалов — до 5
+                const own = (c.links || []).map((id) => db[id]).filter((m) => m && m.type === "media" && mediaKind(m) === "image" && m.med)
+                  .map((m) => ({ src: String(m.med), title: c.title, pos: m.focus ? String(m.focus) : undefined }));
+                const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true))
+                  .map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m)?.objectPosition as string | undefined }));
+                const slides: { src: string; title: string; pos?: string }[] = [...own, ...fromMats].slice(0, 5);
+                if (!slides.length) slides.push({ src: ph(PH_C, i), title: c.title });
+                return (
+                  <a className="vcard big tall" key={c.id} href={`/m/${c.id}`}>
+                    <div className="dv" />
+                    <div className="tx"><h3>{c.title}</h3>{s(c, "period") ? <div className="sub">{s(c, "period")}</div> : null}<div className="vb" /></div>
+                    <div className="im"><Gallery slides={slides} alt={c.title} /></div>
+                  </a>
+                );
+              })}
             </div>
             <SectionLink href="/cat/collection" text="Все коллекции" />
           </section>
