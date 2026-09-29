@@ -73,13 +73,13 @@ export default async function Home() {
               <p>{site.hero1} {site.hero2}</p>
               <p className="r">{site.hero3} {site.hero4}</p>
             </div>
-            <a id="search" href="/search">
-              <div className="lbl">Поиск в каталоге</div>
+            <form id="search" action="/search" method="get">
+              <label className="lbl" htmlFor="home-q">Поиск в каталоге</label>
               <div className="box">
-                <div className="ph">{site.searchPh}</div>
-                <svg className="ic" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>
+                <input id="home-q" name="q" placeholder={site.searchPh} autoComplete="off" />
+                <button type="submit" aria-label="Найти"><svg className="ic" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg></button>
               </div>
-            </a>
+            </form>
           </section>
 
           {/* ---- темы: горизонтальная лента ---- */}

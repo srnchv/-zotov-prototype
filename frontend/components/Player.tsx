@@ -22,6 +22,6 @@ export default function Player({ kind, src, poster, tracks = [], title }: { kind
   }, [src, tracks]);
   const trackEls = tracks.map((t, i) => <track key={t.lang} kind="captions" label={t.label} srcLang={t.lang} src={t.url} default={i === 0} />);
   return kind === "video"
-    ? <div className="player"><video ref={ref} playsInline controls preload="metadata" poster={poster} title={title}><source src={src} />{trackEls}</video></div>
+    ? <div className="player video"><video ref={ref} playsInline controls preload="metadata" poster={poster} title={title}><source src={src} />{trackEls}</video></div>
     : <div className="player audio"><audio ref={ref} controls preload="metadata" title={title}><source src={src} />{trackEls}</audio></div>;
 }
