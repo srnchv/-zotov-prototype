@@ -6,7 +6,7 @@
 .hrow>*{flex:0 0 auto}
 
 /* ==== первый экран (Frame 8: 1216) ==== */
-#hero{position:relative;width:1740px;height:1216px}
+#hero{position:relative;width:1740px;height:1264px}
 .mhead{display:none}
 #word{position:absolute;left:12px;top:12px;height:320px;width:1716px;display:flex;align-items:flex-start;justify-content:space-between}
 #word img{height:320px;width:auto;flex:0 0 auto}
@@ -38,10 +38,11 @@
 .theme .im{width:120px;height:120px;flex:0 0 auto;overflow:hidden;background:var(--grey5)}
 .theme .im img{width:100%;height:100%;object-fit:cover}
 .theme:hover h4{color:var(--red)}
-#themes .slink{margin-top:8px}
+#themes .slink{margin-top:8px;margin-bottom:0}
 
 /* ==== ссылка «Все …» (section-link 60) ==== */
-.slink{display:flex;align-items:center;gap:8px;margin:0 12px;border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
+/* единый ритм этажей: карточки → 12 → ссылка «Все …» (линия 8 + 20 + кружок 40) → 96 → серый разделитель следующего этажа */
+.slink{display:flex;align-items:center;gap:8px;margin:0 12px 96px;border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
 .slink span{flex:1 1 auto;text-align:right}
 .slink i{width:40px;height:40px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .slink:hover{color:var(--red)}
@@ -92,7 +93,7 @@
 .tile:hover{border-color:var(--red)}
 
 /* ==== об архиве (desktop/about 1080): фото + затемнение, песочный текст ==== */
-#about{position:relative;width:1740px;height:1080px;margin-top:20px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden;box-sizing:content-box}
+#about{position:relative;width:1740px;height:1080px;margin-top:0;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden;box-sizing:content-box}
 #about .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#d9d9d9}
 #about .shade{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 #about .lt{position:absolute;left:0;right:0;top:12px}
@@ -137,7 +138,9 @@
   #themes .hrow{flex-direction:column;gap:8px;overflow:visible}
   .theme{width:auto;height:96px}
   .theme .im{width:80px;height:80px}
-  .slink{padding-top:20px;height:52px;box-sizing:border-box}
+  .slink{padding-top:20px;height:52px;box-sizing:border-box;margin-bottom:80px}
+  #themes .slink{margin-bottom:0}
+  #themes{padding-bottom:80px}
   .slink i{width:32px;height:32px}
   .lt{height:64px;font-size:57px;line-height:48px;align-items:flex-end;padding:0 8px 11px;box-sizing:border-box}
   .lt span{width:auto;min-width:19px}
