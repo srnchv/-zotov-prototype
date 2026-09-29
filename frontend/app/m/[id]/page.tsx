@@ -66,6 +66,7 @@ export default async function EntityPage({ params }: Props) {
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
   const docs = media.filter((m) => mediaKind(m) !== "image");
+  const isOpen = (s(e, "access") || "open") === "open";
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
   const video = media.find((m) => mediaKind(m) === "video"), audio = media.find((m) => mediaKind(m) === "audio"), pdf = media.find((m) => mediaKind(m) === "pdf");
@@ -85,7 +86,6 @@ export default async function EntityPage({ params }: Props) {
     ...(video ? [{ kind: "video" as const, src: videoSrc, title: String(video.title), poster: cover?.src, tracks: tracks(video) }] : []),
     ...(audio ? [{ kind: "audio" as const, src: audioSrc, title: String(audio.title), tracks: tracks(audio) }] : []),
   ] : [];
-  const isOpen = (s(e, "access") || "open") === "open";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
   const groups = REL_ORDER.filter((t) => t !== "source").map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
