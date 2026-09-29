@@ -4,7 +4,7 @@ import MobileMenu from "@/components/MobileMenu";
 import Footer from "@/components/Footer";
 import StageScale from "@/components/StageScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
-import { loadArchive, ofType, linked, yearOf, imgOf, type Entity } from "@/lib/api";
+import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +47,7 @@ export default async function Home() {
     <a className={"vcard " + cls} key={e.id} href={`/m/${e.id}`}>
       <div className="dv" />
       <div className="tx"><h3>{e.title}</h3>{meta ? <div className="sub">{meta}</div> : null}<div className="vb" /></div>
-      <div className="im"><img src={img(e, ph(fb, i), true)} alt="" /></div>
+      <div className="im"><img src={img(e, ph(fb, i), true)} alt="" style={imgPos(db, e)} /></div>
     </a>
   );
 
@@ -90,7 +90,7 @@ export default async function Home() {
                   <div className="dv" />
                   <div className="row">
                     <div className="tx"><h4>{t.title}</h4><div className="vb" /><div className="cnt">{mats(t)}</div></div>
-                    <div className="im"><img src={img(t, ph(PH_TH, i))} alt="" /></div>
+                    <div className="im"><img src={img(t, ph(PH_TH, i))} alt="" style={imgPos(db, t)} /></div>
                   </div>
                 </a>
               ))}
@@ -131,7 +131,7 @@ export default async function Home() {
                   return (
                     <a className={"tile" + (d[2] === 2 ? " big" : "")} key={p.id} href={`/m/${p.id}`} title={p.title}
                       style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
-                      <img src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} />
+                      <img src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
                     </a>
                   );
                 })}

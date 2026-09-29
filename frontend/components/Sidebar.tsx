@@ -19,7 +19,7 @@ export default function Sidebar({ variant = "home", active, centerUrl = CENTER_U
       </div>
       <nav id="menu" className="mat">
         {NAV.map(([t, h]) => <a key={t} href={h} className={active === h ? "active" : undefined}>{t}</a>)}
-        <a className="sec" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+        <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
       </nav>
       <a id="login-btn" href={LOGIN_URL}>Войти</a>
     </aside>

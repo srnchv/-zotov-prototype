@@ -1,3 +1,4 @@
+import type React from "react";
 // Слой данных: единственное место, где фронт знает про API стенда.
 // Все страницы рендерятся на сервере (SSR) — карточки индексируются поисковиками.
 export const API = process.env.NEXT_PUBLIC_API_URL || "https://srnchv-zotov-prototype-27ea.twc1.net/api";
@@ -74,4 +75,12 @@ export const mediaKind = (m: Entity) => {
   if (mime === "application/pdf" || ext === "pdf") return "pdf";
   if (mime.startsWith("image/")) return "image";
   return "file";
+};
+
+// точка кадра для карточек (задаётся в админке, «Кадр»): своя у сущности или у обложки-медиафайла
+export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperties | undefined => {
+  const own = e.imgPos as string | undefined;
+  if (own) return { objectPosition: own };
+  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image" && x.focus);
+  return m ? { objectPosition: String(m.focus) } : undefined;
 };

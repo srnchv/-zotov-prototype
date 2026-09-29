@@ -5,7 +5,8 @@ import SectionTitle from "@/components/SectionTitle";
 import Footer from "@/components/Footer";
 import { getSite } from "@/lib/site";
 import StageScale from "@/components/StageScale";
-import { loadArchive, ofType, published, searchApi, entityYear, imgOf, TYPES, type Entity } from "@/lib/api";
+import { loadArchive, ofType, published, searchApi, entityYear, imgOf, imgPos, TYPES, type Entity } from "@/lib/api";
+import SoftNav from "@/components/SoftNav";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Поиск — ЗОТОВ. Архив" };
@@ -111,6 +112,7 @@ export default async function SearchPage({ searchParams }: Props) {
       <div id="restWrap">
         <div id="rest" className="srch">
           <div id="srch">
+            <SoftNav />
             <SectionTitle text="поиск" bare />
 
             <div id="sform">
@@ -184,7 +186,7 @@ export default async function SearchPage({ searchParams }: Props) {
                           <div className="vb" />
                           <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}{extra ? <span className="grey">{extra}</span> : null}</div>
                         </div>
-                        {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" /></div> : null}
+                        {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
                       </a>
                     );
                   })}

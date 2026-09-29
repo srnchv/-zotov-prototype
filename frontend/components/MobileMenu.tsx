@@ -21,7 +21,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
           </div>
           <nav className="mnav">
             {NAV.map(([t, h]) => <a key={t} href={h}>{t}</a>)}
-            <a className="sec" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+            <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
           </nav>
           <a className="mlogin" href={LOGIN_URL}>Войти</a>
         </div>

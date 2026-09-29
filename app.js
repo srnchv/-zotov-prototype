@@ -1301,7 +1301,7 @@ function adminEdit(id){
       ${fs.map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
         <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
         <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(m.title)}<br><span class="muted" style="font-size:11px">${esc(m.format||'')} · ${fmtSize(m.size)}</span></span>
-        ${k==='image'?(isCover(m)?'<span class="statbadge" title="Показывается в карточках и на странице">Обложка</span>':`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" onclick="admSetCover('${o.id}','${m.id}')">Сделать обложкой</span>`):''}
+        ${k==='image'?`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" title="Какая область фото попадёт в карточки" onclick="admCrop('${m.id}','${o.id}')">Кадр</span> `+(isCover(m)?'<span class="statbadge" title="Показывается в карточках и на странице">Обложка</span>':`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" onclick="admSetCover('${o.id}','${m.id}')">Сделать обложкой</span>`):''}
         <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>
         ${k==='video'||k==='audio'?`<div style="margin:4px 0 0 34px;font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted">Субтитры:</span>${(m.subtitles||[]).map(t=>`<span class="chip" style="font-size:12px">${esc(t.label||t.lang)} <span class="muted" style="cursor:pointer" onclick="admSubsRm('${m.id}','${esc(t.lang)}')">✕</span></span>`).join('')}<span class="lnk" style="cursor:pointer" onclick="admSubsUpload('${m.id}')">＋ .vtt / .srt</span></div>`:''}`).join('')}
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><span class="btn sm" onclick="admUploadKind('${o.id}','${accept}')">＋ Загрузить</span>${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}</div>
@@ -1370,8 +1370,46 @@ window.admSubsRm=async(mid,lang)=>{
   if(!confirm('Убрать субтитры?'))return;
   try{await api('/media/'+mid+'/subtitles/'+lang,{method:'DELETE'});await refreshData();toast('Убрано');render();}catch(e){toast('Ошибка: '+e.message);}
 };
+// кадрирование: точка фокуса фото (в % от ширины/высоты) — карточки на сайте обрезают фото вокруг неё
+let cropFocus='50% 50%';
+window.admCrop=(mid,pid)=>{
+  const m=DB[mid];if(!m)return;
+  cropFocus=m.focus||'50% 50%';
+  const src=m.med||m.big||m.thumb;
+  const draw=()=>{document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal" style="width:min(1040px,94vw)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Кадр для карточек</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div class="muted" style="font-size:13px;margin:8px 0 14px">Кликните по фото — это точка, вокруг которой карточки обрезают снимок. Справа — как он ляжет в разные пропорции.</div>
+    <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+      <div style="position:relative;flex:1 1 520px;min-width:280px;cursor:crosshair;line-height:0" onclick="admCropPick(event,this)">
+        <img src="${src}" style="width:100%;display:block;user-select:none" draggable="false">
+        <span id="crop-dot" style="position:absolute;left:${cropFocus.split(' ')[0]};top:${cropFocus.split(' ')[1]};width:22px;height:22px;margin:-11px 0 0 -11px;border:3px solid #fff;border-radius:50%;background:rgba(244,60,58,.85);box-shadow:0 0 0 2px rgba(0,0,0,.35);pointer-events:none"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;flex:0 0 300px">
+        ${[['Квадрат 1:1 — поиск, темы',184,184],['Горизонталь 3:2 — проекты, коллекции',276,184],['Вертикаль 4:5 — личности',132,165]].map(([l,w,h])=>`<div><div class="kicker" style="margin-bottom:6px">${l}</div><div class="crop-prev" style="width:${w}px;height:${h}px;background:#e5e5e5 url('${src}') center/cover no-repeat;background-position:${cropFocus}"></div></div>`).join('')}
+      </div>
+    </div>
+    <div class="right" style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end"><span class="btn" onclick="cropFocus='50% 50%';admCropDraw()">По центру</span><span class="btn dark" onclick="admCropSave('${mid}','${pid}')">Сохранить</span></div>
+  </div></div>`;};
+  window.admCropDraw=draw;draw();
+};
+window.admCropPick=(ev,box)=>{
+  const r=box.getBoundingClientRect();
+  const x=Math.round(Math.min(100,Math.max(0,(ev.clientX-r.left)/r.width*100)));
+  const y=Math.round(Math.min(100,Math.max(0,(ev.clientY-r.top)/r.height*100)));
+  cropFocus=`${x}% ${y}%`;
+  const d=document.getElementById('crop-dot');if(d){d.style.left=x+'%';d.style.top=y+'%';}
+  document.querySelectorAll('.crop-prev').forEach(el=>{el.style.backgroundPosition=cropFocus;});
+};
+window.admCropSave=async(mid,pid)=>{
+  try{
+    await api('/entities/'+mid,{method:'PATCH',body:JSON.stringify({payload:{focus:cropFocus}})});
+    const p=DB[pid],m=DB[mid];
+    if(p&&m&&(p.cover===mid||(!p.cover&&p.img===m.thumb)))await api('/entities/'+pid,{method:'PATCH',body:JSON.stringify({payload:{imgPos:cropFocus}})});
+    await refreshData();admCloseLp();toast('Кадр сохранён — карточки обновятся на сайте');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
 // обложка карточки — выбранное фото из прикреплённых
-window.admSetCover=(id,mid)=>{const m=DB[mid];if(!m)return;admPatch(id,{payload:{cover:mid,img:m.thumb||'',imgBig:m.med||m.thumb||''}});};
+window.admSetCover=(id,mid)=>{const m=DB[mid];if(!m)return;admPatch(id,{payload:{cover:mid,img:m.thumb||'',imgBig:m.med||m.thumb||'',imgPos:m.focus||'50% 50%'}});};
 // загрузка на конкретный «этаж»: ограничиваем выбор файлов по виду
 window.admUploadKind=(id,accept)=>{const i=document.getElementById('f-file');if(!i)return;i.accept=accept;i.click();};
 function adminModeration(){

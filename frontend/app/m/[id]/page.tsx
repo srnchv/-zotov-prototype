@@ -11,7 +11,7 @@ import { getSite } from "@/lib/site";
 import StageScale from "@/components/StageScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
-import { API, getEntity, loadArchive, linked, mediaKind, published, TYPES, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, type Entity } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -173,7 +173,7 @@ export default async function EntityPage({ params }: Props) {
                   {arr.map((x) => (
                     <a className="rel-item" key={x.id} href={`/m/${x.id}`}>
                       <h3>{x.title}</h3><div className="sub">{meta(x, db)}</div>
-                      {x.img ? <div className="im"><img src={String(x.img)} alt="" /></div> : null}
+                      {x.img ? <div className="im"><img src={String(x.img)} alt="" style={imgPos(db, x)} /></div> : null}
                     </a>
                   ))}
                 </div>
@@ -190,7 +190,7 @@ export default async function EntityPage({ params }: Props) {
                   <h3>{x.title}</h3><div className="year">{meta(x, db)}</div>
                   <div className="vbar" />
                   <div className="type">{TYPES[x.type]?.l}</div><div className="cat">{s(x, "mtype") || s(x, "colType") || s(x, "prType") || ""}</div>
-                  {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" /></div> : null}
+                  {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" style={imgPos(db, x)} /></div> : null}
                 </a>
               ))}
             </div>

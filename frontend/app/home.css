@@ -121,7 +121,7 @@
   .mmenu.open{position:static;margin-bottom:24px}
   .mnav{display:flex;flex-direction:column;gap:8px;padding:0 4px}
   .mnav a{border-top:4px solid var(--grey5);padding-top:12px;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase;display:flex;justify-content:space-between}
-  .mnav a.sec{font-weight:500;letter-spacing:0;text-transform:none}
+  .mnav a.mext{font-weight:500;letter-spacing:0;text-transform:none}
   .mlogin{position:absolute;left:12px;right:12px;bottom:12px;background:var(--grey5);padding:12px;text-align:center;font-size:14.1px;line-height:16px;font-weight:500}
   #word{position:static;height:120px;width:auto;padding:12px;margin:0;box-sizing:border-box}
   #word img{height:96px}
