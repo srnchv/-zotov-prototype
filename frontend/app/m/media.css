@@ -18,3 +18,16 @@
 .pdf-page canvas{box-shadow:0 2px 12px rgba(0,0,0,.15);background:#fff}
 .pdf-err{padding:40px 16px;color:var(--grey2)}
 @media (max-width:1023px){.pdf-page{max-height:70vh;padding:8px}}
+
+/* листалка медиа на странице сущности */
+.mgal{position:relative;background:var(--grey5);margin-bottom:8px}
+.mgal-view{height:560px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mgal-view img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.mgal-view .player{width:100%;height:100%}
+.mgal-view .player.video{aspect-ratio:auto;height:100%}
+.mgal-view .player.audio{align-self:flex-end}
+.mgal-nav{position:absolute;right:12px;bottom:12px;display:flex;gap:4px;z-index:2}
+.mgal-nav button{background:#fff;color:var(--ink);border:0;height:32px;min-width:32px;padding:0 8px;display:flex;align-items:center;gap:8px;font:inherit;font-size:14.1px;line-height:16px;font-weight:700;text-transform:uppercase;letter-spacing:.423px;cursor:pointer;max-width:420px}
+.mgal-nav button span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgal-nav button:hover{color:var(--red)}
+@media (max-width:1023px){.mgal-view{height:auto;aspect-ratio:4/3}.mgal-nav{right:8px;bottom:8px}.mgal-nav button{height:28px;min-width:28px;font-size:12px;max-width:220px}}

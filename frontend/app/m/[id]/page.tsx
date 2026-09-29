@@ -2,6 +2,7 @@ import "../material.css";
 import "../media.css";
 import Player from "@/components/Player";
 import PdfReader from "@/components/PdfReader";
+import MediaGallery, { type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
@@ -77,6 +78,13 @@ export default async function EntityPage({ params }: Props) {
     return fileUrl(m);
   };
   const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
+  // несколько медиа → листалка: все фото + видео + аудио в одном окне
+  const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
+  const slides: MSlide[] = isOpen ? [
+    ...images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: m.focus ? String(m.focus) : undefined })),
+    ...(video ? [{ kind: "video" as const, src: videoSrc, title: String(video.title), poster: cover?.src, tracks: tracks(video) }] : []),
+    ...(audio ? [{ kind: "audio" as const, src: audioSrc, title: String(audio.title), tracks: tracks(audio) }] : []),
+  ] : [];
   const isOpen = (s(e, "access") || "open") === "open";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
@@ -133,9 +141,10 @@ export default async function EntityPage({ params }: Props) {
         <div id="rest" className="mat">
           <div id="rightcol">
             <div className="embed">
-              {video && isOpen ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
+              {slides.length > 1 ? <MediaGallery slides={slides} />
+                : video && isOpen ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
                 : <div className="imgbox">{cover ? <img src={cover.src} alt={e.title} /> : <span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span>}</div>}
-              {audio && isOpen ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
+              {slides.length <= 1 && audio && isOpen ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
               {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               <div>{e.title}</div>
               <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div>
