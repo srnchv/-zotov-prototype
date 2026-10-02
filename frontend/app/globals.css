@@ -105,6 +105,60 @@ a{color:inherit;text-decoration:none}
 .ditem{display:flex;flex-direction:column;gap:4px;width:276px}
 .ditem .year{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase;white-space:nowrap}
 
+
+/* ==== фильтры (поиск, хронограф): ячейки «+ Название (N)» и панель 480 справа (макет 02.10) ==== */
+#fbar{display:grid;gap:4px}
+.fcell{min-width:0;display:flex;gap:4px;align-items:center;background:var(--grey5);padding:12px;height:40px;cursor:pointer;border:0;font:inherit;color:inherit;text-align:left}
+.fcell:hover{color:var(--red)}
+.fcell .t{flex:1 1 auto;min-width:0;display:flex;gap:4px;padding:0 4px;font-size:14.1px;line-height:16px;white-space:nowrap;overflow:hidden}
+.fcell .t b{font-weight:500}
+.fcell .t i{font-style:normal;color:var(--grey2);font-variant-numeric:tabular-nums}
+.fcell.tog{justify-content:space-between}
+.sw{width:24px;height:16px;border-radius:8px;background:var(--grey3);position:relative;flex:0 0 auto}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff}
+.sw.on{background:var(--ink)}
+.sw.on::after{left:10px}
+.fpanel-wrap{position:fixed;inset:0;z-index:110}
+.fpanel{position:absolute;right:0;top:0;width:480px;max-width:100%;height:100%;background:#fff;border-left:4px solid var(--ink);display:flex;flex-direction:column;padding:12px 12px 0 16px}
+.fp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.fp-head h2{font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.24px;font-weight:500;text-transform:uppercase}
+.fp-close{display:flex;gap:4px;align-items:center;border:0;background:none;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:inherit;cursor:pointer;padding:0}
+.fp-close:hover{color:var(--red)}
+.fp-search{display:flex;flex-direction:column;gap:4px;margin-top:48px;font-size:14.1px;line-height:16px;font-weight:500}
+.fp-search .in{display:flex;align-items:center;gap:12px;border:4px solid var(--ink);border-top:0;padding:8px 8px 8px 12px;height:44px}
+.fp-search input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;color:var(--ink)}
+.fp-search input::placeholder{color:var(--grey3)}
+.fp-only{margin-top:12px;display:flex;justify-content:space-between;align-items:center;background:var(--grey5);padding:12px;height:40px;border:0;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:inherit;cursor:pointer;text-align:left}
+.fp-list{flex:1 1 auto;overflow:auto;margin-top:24px;padding-bottom:12px;padding-right:4px;display:flex;flex-direction:column;gap:8px}
+.fp-gt{display:flex;gap:8px;align-items:center;border-top:8px solid var(--grey4);padding-top:16px}
+.fp-gtl{flex:1 1 auto;display:flex;gap:4px;align-items:center;border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:0;text-align:left}
+.fp-gtl b{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase}
+.fp-gtl i{font-style:normal;color:var(--grey2);font-size:14.1px;line-height:16px}
+.fp-gtl .ic{margin-left:auto}
+.fp-items{display:flex;flex-direction:column;gap:4px;padding:8px 0 4px 24px}
+.fp-items.flat{padding-left:0}
+.fp-item{display:flex;gap:8px;align-items:center;border:0;border-top:4px solid #f2f2f2;padding:8px 0 0;background:none;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:inherit;cursor:pointer;text-align:left;min-height:24px}
+.fp-item:hover{color:var(--red)}
+.cb{width:16px;height:16px;flex:0 0 auto;border:1.2px solid var(--grey2);border-radius:2px;background:#fff;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+.cb.on{background:var(--ink);border-color:var(--ink)}
+.cb.half{background:var(--grey3);border-color:var(--grey3)}
+.fp-empty{color:var(--grey2);font-size:14.1px;line-height:16px;padding:8px 0}
+.fp-foot{flex:0 0 auto;padding:8px 0 12px;display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff}
+.fp-apply{width:100%;height:40px;background:var(--ink);color:#fff;border:0;font:inherit;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase;cursor:pointer}
+.fp-apply:hover{background:var(--red)}
+.fp-clear{border:0;background:none;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:inherit;padding:8px 12px;cursor:pointer}
+.fp-clear:hover{color:var(--red)}
+/* чипы выбранных фильтров */
+#chips{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+.chg{display:flex;align-items:center;gap:12px;background:var(--grey5);padding:4px 4px 4px 12px;font-size:14.1px;line-height:16px}
+.chg .l{color:var(--grey2)}
+.chg .tags{display:flex;gap:4px;flex-wrap:wrap}
+.chg .tags a{display:flex;align-items:center;gap:4px;background:#fff;padding:4px 4px 4px 8px;height:24px}
+.chg .tags a:hover{color:var(--red)}
+.chg .tags .more{font-style:normal;color:var(--grey2);align-self:center;padding:0 4px}
+#chips .clr{font-size:14.1px;line-height:16px;font-weight:500}
+#chips .clr:hover{color:var(--red)}
+
 /* ==== футер (Section 5): квадраты-баркоды + ссылки сеткой в 6 колонок ==== */
 .ft{border-top:8px solid var(--grey5);background:#fff;min-height:800px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
 .ft .bars{display:flex;width:100%}

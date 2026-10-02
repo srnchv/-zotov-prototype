@@ -19,15 +19,26 @@
 .pdf-err{padding:40px 16px;color:var(--grey2)}
 @media (max-width:1023px){.pdf-page{max-height:70vh;padding:8px}}
 
-/* листалка медиа на странице сущности */
-.mgal{position:relative;background:var(--grey5);margin-bottom:8px}
-.mgal-view{aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;overflow:hidden}
+/* галерея на странице сущности (02.10): кадр 3:2, стрелки 36 по бокам, подпись и счётчик «2/18» под кадром */
+.mgal{position:relative;margin-bottom:8px}
+.mgal-view{position:relative;aspect-ratio:3/2;background:var(--grey5);display:flex;align-items:center;justify-content:center;overflow:hidden}
 .mgal-view img{max-width:100%;max-height:100%;object-fit:contain;display:block}
 .mgal-view .player{width:100%;height:100%}
 .mgal-view .player.video{aspect-ratio:auto;height:100%}
 .mgal-view .player.audio{align-self:flex-end}
-.mgal-nav{position:absolute;right:12px;bottom:12px;display:flex;gap:4px;z-index:2}
-.mgal-nav button{background:#fff;color:var(--ink);border:0;height:32px;min-width:32px;padding:0 8px;display:flex;align-items:center;gap:8px;font:inherit;font-size:14.1px;line-height:16px;font-weight:700;text-transform:uppercase;letter-spacing:.423px;cursor:pointer;max-width:420px}
-.mgal-nav button span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mgal-nav button:hover{color:var(--red)}
-@media (max-width:1023px){.mgal-view{aspect-ratio:3/2}.mgal-nav{right:8px;bottom:8px}.mgal-nav button{height:28px;min-width:28px;font-size:12px;max-width:220px}}
+.mgal-arr{position:absolute;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;background:#fff;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.mgal-arr.l{left:8px}
+.mgal-arr.r{right:8px}
+.mgal-arr:hover{background:var(--red)}
+.mgal-arr:hover svg path{fill:#fff}
+.mgal-cap{display:flex;justify-content:space-between;gap:12px;padding-top:8px;font-size:14.1px;line-height:16px}
+.mgal-cap b{font-weight:500;font-size:14.3px;letter-spacing:.143px;font-variant-numeric:tabular-nums;flex:0 0 48px;text-align:right}
+/* блок медиа после описания: видео 16:9, аудио — тёмная плашка 80 со скруглением 8, PDF-читалка */
+.embed2{display:flex;flex-direction:column;gap:8px;padding:8px 0}
+.player.audio{background:#303030;border-radius:8px;padding:16px;min-height:80px;display:flex;align-items:center;--plyr-audio-controls-background:transparent;--plyr-audio-control-color:#fff;--plyr-audio-control-color-hover:#fff;--plyr-audio-control-background-hover:#F43C3A;--plyr-audio-progress-buffered-background:rgba(255,255,255,.25)}
+.player.audio .plyr{width:100%}
+/* подменю «Связанные материалы» в навигации */
+.navrel{position:relative}
+.navrel .pm{position:absolute;right:0;top:12px;width:16px;height:16px;border:0;background:none;padding:0;cursor:pointer}
+.navrel .tert{margin-top:8px;border-left:4px solid var(--grey4);padding-left:48px;display:flex;flex-direction:column;gap:4px}
+.navrel .tert a{display:flex;gap:4px;border:0;padding:0;height:auto}

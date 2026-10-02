@@ -7,6 +7,8 @@ import Footer from "@/components/Footer";
 import HomeScale from "@/components/HomeScale";
 import SoftNav from "@/components/SoftNav";
 import ChronoClient from "@/components/ChronoClient";
+import FilterBar, { type Filter } from "@/components/FilterBar";
+import { groupItems } from "@/lib/filters";
 import { getSite } from "@/lib/site";
 import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, type Entity } from "@/lib/api";
 
@@ -28,7 +30,6 @@ function mk(sp: Record<string, string>, patch: Record<string, string | undefined
   const q = p.toString();
   return "/chrono" + (q ? "?" + q : "");
 }
-const Plus = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="#262626" /></svg>;
 const X = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2.4 8 6.9l4.5-4.5 1.1 1.1L9.1 8l4.5 4.5-1.1 1.1L8 9.1l-4.5 4.5-1.1-1.1L6.9 8 2.4 3.5l1.1-1.1Z" fill="#262626" /></svg>;
 
 export default async function ChronoPage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -61,12 +62,11 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
   if (evs.length) chips.push({ label: "Тип события", tags: evs.map((v) => ({ t: v, href: mk(sp, { ev: toggle(evs, v) }) })) });
   for (const [param, , label] of LINK_FILTERS) if (linkSel[param].length) chips.push({ label, tags: linkSel[param].map((id) => ({ t: db[id]?.title || id, href: mk(sp, { [param]: toggle(linkSel[param], id) }) })) });
 
-  const cell = (label: string, n: number, items: { key: string; t: string; on: boolean; href: string }[]) => (
-    <details className="fdd" key={label}>
-      <summary>{Plus}<span className="t"><b>{label}</b>{n ? <i>({n})</i> : null}</span></summary>
-      <div className="dd">{items.length ? items.map((o) => <a key={o.key} className={o.on ? "on" : undefined} href={o.href}>{o.t}</a>) : <div className="no">Нет значений</div>}</div>
-    </details>
-  );
+  const filters: Filter[] = [
+    { param: "dec", label: "Период", selected: decs, groups: [{ title: "", items: decades.map((d) => ({ id: String(d), title: `${d}-е` })) }] },
+    { param: "ev", label: "Тип события", selected: evs, groups: [{ title: "", items: evTypes.map((v) => ({ id: v, title: v })) }] },
+    ...LINK_FILTERS.map(([param, t, label]) => ({ param, label, selected: linkSel[param], groups: groupItems(options(t), t), ph: t === "person" ? "Имя, фамилия" : "Название" })),
+  ];
 
   return (
     <div className="pg">
@@ -83,11 +83,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
           {/* панель: чёрная линия → фильтры → лента лет (липкая при скролле) → чипы */}
           <div id="panel">
             <div className="div8" />
-            <div id="fbar">
-              {cell("Период", decs.length, decades.map((d) => ({ key: String(d), t: `${d}-е`, on: decs.includes(String(d)), href: mk(sp, { dec: toggle(decs, String(d)) }) })))}
-              {cell("Тип события", evs.length, evTypes.map((v) => ({ key: v, t: v, on: evs.includes(v), href: mk(sp, { ev: toggle(evs, v) }) })))}
-              {LINK_FILTERS.map(([param, t, label]) => cell(label, linkSel[param].length, options(t).map((o) => ({ key: o.id, t: o.title, on: linkSel[param].includes(o.id), href: mk(sp, { [param]: toggle(linkSel[param], o.id) }) }))))}
-            </div>
+            <FilterBar prefix="/chrono" sp={sp} filters={filters} />
           </div>
           <div id="ystrip">
             {allYears.map((y) => <a key={y} className={(year === y ? "on" : "") + (years.includes(y) ? "" : " dim")} href={mk(sp, { y: String(y) })}>{y}</a>)}

@@ -36,23 +36,30 @@
 #themes .slink{margin:8px 12px 0}
 #chrono .slink{margin-bottom:96px}
 
-/* мозаика личностей: 12 колонок, ячейка 4:5 (132×165 на 1740, 79×98 на 1100), плитки в рамке 12px */
+/* мозаика личностей: 12 колонок, ячейка 4:5 (132×165 на 1740, 79×98 на 1100), фото без рамки */
 .mosaic{--col:calc((100cqw - 156px)/12);--row:calc(var(--col)*1.25);display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:var(--row);gap:12px;width:100%}
-.tile{position:relative;grid-column:var(--dc) / span var(--ds);grid-row:var(--dr) / span var(--ds);background:var(--grey5);border:12px solid var(--grey5);overflow:visible}
+.tile{position:relative;grid-column:var(--dc) / span var(--ds);grid-row:var(--dr) / span var(--ds);background:var(--grey5);overflow:visible}
 .tile>img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
-.tile:hover{border-color:var(--red);z-index:5}
-/* карточка при наведении (person-hover/horz-right): 3 ячейки в ширину, 1 в высоту, фото + имя + роль */
-.tile .hc{display:none;position:absolute;left:-12px;top:-12px;width:calc(var(--col)*3 + 24px);height:var(--row);background:var(--red);padding:12px;gap:12px;grid-template-columns:calc(var(--col) - 24px) 1fr;color:var(--ink)}
-.tile.fl .hc{left:auto;right:-12px;grid-template-columns:1fr calc(var(--col) - 24px)}
+.tile:hover{z-index:5}
+/* карточка при наведении (person-hover): красное поле 12 вокруг фото, справа имя и роль;
+   ширина не меньше трёх ячеек и растёт по длине имени, чтобы фамилия не выходила за красное */
+.tile .hc{display:none;position:absolute;left:-12px;top:-12px;min-width:calc(var(--col)*3 + 24px);width:max-content;max-width:calc(var(--col)*6 + 60px);height:calc(var(--row) + 24px);background:var(--red);padding:12px;gap:12px;grid-template-columns:var(--col) auto;color:var(--ink)}
+.tile.fl .hc{left:auto;right:-12px;grid-template-columns:auto var(--col)}
 .tile.fl .hc>img{order:2}
 .tile:hover .hc{display:grid}
-/* большая плитка (2×2): карточка во всю её высоту, фото — во всю ширину плитки, текст в колонке справа */
-.tile.big .hc{height:calc(var(--row)*2 + 12px);width:calc(var(--col)*3 + 24px);grid-template-columns:calc(var(--col)*2 - 12px) 1fr}
-.tile.big.fl .hc{grid-template-columns:1fr calc(var(--col)*2 - 12px)}
 .tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom}
-.tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0}
-.tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
-.tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px}
+.tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:4px}
+.tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase;white-space:nowrap}
+.tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px;white-space:nowrap}
+/* большая плитка (2×2): карточка вертикальная — фото во всю плитку, текст блоком под ним (или над, если плитка у нижнего края) */
+.tile.big .hc{display:none;flex-direction:column;width:calc(var(--col)*2 + 36px);min-width:0;max-width:none;height:auto}
+.tile.big:hover .hc{display:flex}
+.tile.big .hc>img{width:calc(var(--col)*2 + 12px);height:calc(var(--row)*2 + 12px);flex:0 0 auto}
+.tile.big .hct{height:calc(var(--row) - 24px);flex:0 0 auto;padding-right:0}
+.tile.big .hct b,.tile.big .hct small{white-space:normal}
+.tile.big.up .hc{top:auto;bottom:-12px;flex-direction:column-reverse}
+.tile.big.fl .hc{left:-12px;right:auto}
+.tile.big.fl .hc>img{order:0}
 
 /* карта: коллаж из макета (десктоп 1740×800, леттеринг «карта» вписан в коллаж), ссылка «Вся карта» */
 #map.sec{padding-top:12px}
@@ -107,8 +114,7 @@
   #themes{padding:0 0 80px}
   .mosaic{--col:calc((100cqw - 108px)/8);--row:calc(var(--col)*1.285);grid-template-columns:repeat(8,1fr)}
   .tile{grid-column:var(--tc) / span var(--ds);grid-row:var(--tr) / span var(--ds)}
-  .tile .hc,.tile:hover .hc{display:none}
-  .tile:hover{border-color:var(--grey5)}
+  .tile .hc,.tile:hover .hc,.tile.big:hover .hc{display:none}
   #map.sec{padding-top:20px}
   #map .lt{display:flex}
   #map .canvas{margin-top:12px;aspect-ratio:768/638;display:flex;align-items:center;justify-content:center}

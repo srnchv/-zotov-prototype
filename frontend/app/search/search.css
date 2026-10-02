@@ -15,43 +15,11 @@
 #sform button{border:0;background:none;padding:0;width:24px;height:24px;cursor:pointer;display:flex}
 
 /* фильтры-ячейки: серые, 40 высотой, «+» слева; один ряд из 8 на широком десктопе */
-#fbar{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:24px 12px 0}
-.fdd{min-width:0;position:relative}
-.fdd summary,.fdd .sm{list-style:none;display:flex;gap:4px;align-items:center;background:var(--grey5);padding:12px;height:40px;cursor:pointer;user-select:none}
-.fdd .sm:hover,.fdd summary:hover{color:var(--red)}
-.fdd summary::-webkit-details-marker{display:none}
-.fdd summary .t,.fdd .sm .t{flex:1 1 auto;min-width:0;display:flex;gap:4px;padding:0 4px;font-size:14.1px;line-height:16px;white-space:nowrap;overflow:hidden}
-.fdd summary .t b,.fdd .sm .t b{font-weight:500}
-.fdd summary .t i{font-style:normal;color:var(--grey2);font-variant-numeric:tabular-nums}
-.fdd summary svg{flex:0 0 auto}
-.fdd[open] summary{color:var(--red)}
-.fdd .dd{position:absolute;left:0;top:100%;z-index:40;min-width:100%;max-height:360px;overflow:auto;background:#fff;border:4px solid var(--ink);margin-top:4px;padding:4px 0}
-.fdd .dd a{display:block;padding:6px 12px;font-size:14.1px;line-height:16px;white-space:nowrap}
-.fdd .dd a:hover{color:var(--red)}
-.fdd .dd a.on{background:var(--grey4);font-weight:700}
-.fdd .dd .no{padding:6px 12px;color:var(--grey2)}
-.fdd.tog .sm{justify-content:space-between}
-.sw{width:24px;height:16px;border-radius:8px;background:var(--grey3);position:relative;flex:0 0 auto}
-.sw::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff}
-.sw.on{background:var(--ink)}
-.sw.on::after{left:10px}
+#fbar{grid-template-columns:repeat(8,1fr);padding:24px 12px 0}
 
-/* лента лет (широкий десктоп): серая полоса, годы с линией слева, активный — красный */
-#years{margin:12px 12px 0;background:var(--grey5);padding:8px 0;display:flex;justify-content:space-between;overflow:hidden}
-#years a{border-left:4px solid var(--ink);padding:4px 8px;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase;white-space:nowrap}
-#years a:hover{color:var(--red)}
-#years a.on{color:var(--red);border-color:var(--red)}
 
 /* активные фильтры — чипы */
-#chips{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:24px 12px 0}
-#chips:empty{padding:0}
-.chg{display:flex;align-items:center;gap:12px;background:var(--grey5);padding:4px 4px 4px 12px;font-size:14.1px;line-height:16px}
-.chg .l{color:var(--grey2)}
-.chg .tags{display:flex;gap:4px;flex-wrap:wrap}
-.chg .tags a{display:flex;align-items:center;gap:4px;background:#fff;padding:4px 4px 4px 8px;height:24px}
-.chg .tags a:hover{color:var(--red)}
-#chips .clr{font-size:14.1px;line-height:16px;font-weight:500}
-#chips .clr:hover{color:var(--red)}
+#chips{padding:24px 12px 0}
 
 /* результаты: серая линия во всю ширину → заголовок → вкладки/действия → сетка */
 #res{border-top:8px solid var(--grey5);margin-top:24px;padding:12px 12px 0}
@@ -97,7 +65,6 @@
 /* ==== desktop-1280 (1024–1599): фильтры 2×4, действия отдельной строкой, сетка 4 ==== */
 @media (max-width:1599px){
   #fbar{grid-template-columns:repeat(4,1fr)}
-  #years{display:none}
   #tabs{flex-direction:column;gap:16px;padding-top:12px}
   #grid{grid-template-columns:repeat(4,1fr)}
   #res .end{margin-bottom:96px}
@@ -116,7 +83,6 @@
 @media (max-width:599px){
   #intro{padding:64px 12px 16px;max-width:none;font-size:20px;line-height:20px;letter-spacing:0}
   #fbar{grid-template-columns:1fr 1fr}
-  .fdd .dd{position:static;border-width:0 0 4px;margin:0}
   #res h2{font-size:24.1px;line-height:24px;letter-spacing:-.24px;padding-bottom:12px}
   #tabs{gap:12px;padding-top:12px}
   #tabs .l{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none;padding-bottom:4px}

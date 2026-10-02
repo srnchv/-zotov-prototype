@@ -13,6 +13,7 @@ import { getSite } from "@/lib/site";
 import HomeScale from "@/components/HomeScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
+import NavRel from "@/components/NavRel";
 import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, type Entity } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
@@ -80,13 +81,11 @@ export default async function EntityPage({ params }: Props) {
     return fileUrl(m);
   };
   const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
-  // несколько медиа → листалка: все фото + видео + аудио в одном окне
+  // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
-  const slides: MSlide[] = isOpen ? [
-    ...images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: m.focus ? String(m.focus) : undefined })),
-    ...(video ? [{ kind: "video" as const, src: videoSrc, title: String(video.title), poster: cover?.src, tracks: tracks(video) }] : []),
-    ...(audio ? [{ kind: "audio" as const, src: audioSrc, title: String(audio.title), tracks: tracks(audio) }] : []),
-  ] : [];
+  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || m.title || e.title), pos: m.focus ? String(m.focus) : undefined })) : [];
+  if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
+  const topKind: "images" | "video" | "audio" | "none" = slides.length ? "images" : video && isOpen ? "video" : audio && isOpen ? "audio" : "none";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
   const groups = REL_ORDER.filter((t) => t !== "source").map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
@@ -132,7 +131,7 @@ export default async function EntityPage({ params }: Props) {
               <ScrollTo to="a-desc">Описание</ScrollTo>
               {docs.length ? <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo> : null}
               {sources.length ? <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo> : null}
-              {relCount ? <ScrollTo to="a-rel"><span>Связанные материалы</span><span className="num">({relCount})</span><span className="sp" /></ScrollTo> : null}
+              {relCount ? <NavRel total={relCount} groups={groups.map(([t, arr]) => ({ id: gid(t), label: REL_HEAD[t], n: arr.length }))} /> : null}
               {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
             </nav>
             <button id="saveBtn" type="button">
@@ -144,13 +143,13 @@ export default async function EntityPage({ params }: Props) {
           {/* правая колонка: медиа, описание, документы, источники, связанные */}
           <div id="rightcol">
             <div className="embed">
-              {slides.length > 1 ? <MediaGallery slides={slides} />
-                : video && isOpen ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} />
-                : <div className="imgbox">{cover ? <img src={cover.src} alt={e.title} /> : <span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span>}</div>}
-              {slides.length <= 1 && audio && isOpen ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
-              {pdf && isOpen && !video ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
-              <div>{e.title}</div>
-              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div>
+              {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
+                : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" && slides[0].pos ? { objectPosition: slides[0].pos } : undefined} /></div>
+                : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
+                : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
+                : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}
+              {topKind !== "images" || slides.length <= 1 ? <><div>{e.title}</div>
+              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div></> : null}
             </div>
 
             <div className="div8" id="a-desc" />
@@ -158,6 +157,13 @@ export default async function EntityPage({ params }: Props) {
             <div className="msec">
               {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
             </div>
+            {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
+              <div className="embed2">
+                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
+                {audio && topKind !== "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
+                {pdf ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
+              </div>
+            ) : null}
 
             {docs.length ? <><div className="div8" id="a-docs" />
             <div className="tsm">Документы</div>

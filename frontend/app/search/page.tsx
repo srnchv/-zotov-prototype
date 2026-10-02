@@ -8,6 +8,8 @@ import { getSite } from "@/lib/site";
 import HomeScale from "@/components/HomeScale";
 import { loadArchive, ofType, published, searchApi, entityYear, imgOf, imgPos, TYPES, type Entity } from "@/lib/api";
 import SoftNav from "@/components/SoftNav";
+import FilterBar, { type Filter } from "@/components/FilterBar";
+import { groupItems } from "@/lib/filters";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Поиск — ЗОТОВ. Архив" };
@@ -50,7 +52,6 @@ const kind = (e: Entity, db: Record<string, Entity>) => {
 };
 const yearLabel = (e: Entity) => s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period") || s(e, "year") || (entityYear(e) ? String(entityYear(e)) : "");
 
-const Plus = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="#262626" /></svg>;
 const X = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2.4 8 6.9l4.5-4.5 1.1 1.1L9.1 8l4.5 4.5-1.1 1.1L8 9.1l-4.5 4.5-1.1-1.1L6.9 8 2.4 3.5l1.1-1.1Z" fill="#262626" /></svg>;
 const Chev = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 6l5 5 5-5" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>;
 
@@ -109,6 +110,11 @@ export default async function SearchPage({ searchParams }: Props) {
     chipGroups.push({ label: label + ":", tags: linkSel[param].map((id) => ({ t: db[id]?.title || id, href: mk(sp, { [param]: toggle(linkSel[param], id) }) })) });
   if (sp.proj) chipGroups.push({ label: "Проекты Центра", tags: [{ t: "только связанное", href: mk(sp, { proj: undefined }) }] });
   const hasFilters = chipGroups.length > 0;
+  const filters: Filter[] = [
+    { param: "dec", label: "Период", selected: decs, groups: [{ title: "", items: decades.map((d) => ({ id: String(d), title: `${d}-е` })) }] },
+    ...LINK_FILTERS.map(([param, t, label]) => ({ param, label, selected: linkSel[param], groups: groupItems(options(t), t), ph: t === "person" ? "Имя, фамилия" : "Название" })),
+    { param: "sort", label: "Разное", selected: [sort], multi: false, groups: [{ title: "", items: Object.entries(SORTS).map(([k, v]) => ({ id: k, title: `Сортировать ${v}` })) }] },
+  ];
 
   return (
     <div className="pg">
@@ -135,33 +141,15 @@ export default async function SearchPage({ searchParams }: Props) {
             </form>
           </div>
 
-          {/* фильтры-ячейки: 1 ряд на широком десктопе, 2×4 на 1280 и планшете, 4×2 на мобайле */}
-          <div id="fbar">
-            <details className="fdd">
-              <summary>{Plus}<span className="t"><b>Период</b>{decs.length ? <i>({decs.length})</i> : null}</span></summary>
-              <div className="dd">{decades.length ? decades.map((d) => <a key={d} className={decs.includes(String(d)) ? "on" : undefined} href={mk(sp, { dec: toggle(decs, String(d)) })}>{d}-е</a>) : <div className="no">Нет датированных объектов</div>}</div>
-            </details>
-            {LINK_FILTERS.map(([param, t, label]) => (
-              <details className="fdd" key={param}>
-                <summary>{Plus}<span className="t"><b>{label}</b>{linkSel[param].length ? <i>({linkSel[param].length})</i> : null}</span></summary>
-                <div className="dd">{options(t).map((o) => <a key={o.id} className={linkSel[param].includes(o.id) ? "on" : undefined} href={mk(sp, { [param]: toggle(linkSel[param], o.id) })}>{o.title}</a>)}</div>
-              </details>
-            ))}
-            <details className="fdd">
-              <summary>{Plus}<span className="t"><b>Разное</b></span></summary>
-              <div className="dd">{Object.entries(SORTS).map(([k, v]) => <a key={k} className={sort === k ? "on" : undefined} href={mk(sp, { sort: k })}>Сортировать {v}</a>)}</div>
-            </details>
-            <div className="fdd tog">
-              <a className="sm" href={mk(sp, { proj: sp.proj ? undefined : "1" })}><span className="t"><b>Проекты Центра</b></span><span className={"sw" + (sp.proj ? " on" : "")} /></a>
-            </div>
-          </div>
+          {/* фильтры-ячейки (клик открывает панель со списком): 1 ряд на широком десктопе, 2×4 на 1280 и планшете, 4×2 на мобайле */}
+          <FilterBar prefix="/search" sp={sp} filters={filters}>
+            <a className="fcell tog" href={mk(sp, { proj: sp.proj ? undefined : "1" })}><span className="t"><b>Проекты Центра</b></span><span className={"sw" + (sp.proj ? " on" : "")} /></a>
+          </FilterBar>
 
-          {/* лента лет (только широкий десктоп): год из данных, активный — красный */}
-          {years.length > 1 ? <div id="years">{years.map((y) => <a key={y} className={year === y ? "on" : undefined} href={mk(sp, { y: year === y ? undefined : String(y) })}>{y}</a>)}</div> : null}
 
           <div id="chips">
             {chipGroups.map((g) => (
-              <div className="chg" key={g.label}><span className="l">{g.label}</span><span className="tags">{g.tags.map((t) => <a key={t.href} href={t.href}>{t.t}{X}</a>)}</span></div>
+              <div className="chg" key={g.label}><span className="l">{g.label}</span><span className="tags">{g.tags.slice(0, 5).map((t) => <a key={t.href} href={t.href}>{t.t}{X}</a>)}{g.tags.length > 5 ? <i className="more">(+{g.tags.length - 5})</i> : null}</span></div>
             ))}
             {hasFilters ? <a className="clr" href="/search">Очистить</a> : null}
           </div>
