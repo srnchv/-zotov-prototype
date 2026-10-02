@@ -60,7 +60,7 @@ a{color:inherit;text-decoration:none}
 
 /* ==== леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине ==== */
 .lt{display:flex;justify-content:space-between;align-items:center;height:var(--lt-h);padding:0 8px;font-family:'Zotov Bold',sans-serif;font-size:var(--lt-fs);line-height:var(--lt-lh);color:var(--ink);overflow:hidden}
-.lt span{display:inline-block;width:55px;text-align:center}
+.lt span{display:inline-block;min-width:55px;text-align:center} /* широкие буквы (ф, ш) шире ячейки 55 — ячейка растёт, крайняя не вылезает за край */
 .lt.cream{color:#fffadc}
 /* ссылка «Все …» (section-link): линия 8 + 20 + кружок; после неё — отступ этажа */
 .slink{display:flex;align-items:center;gap:8px;margin:0 12px var(--pb);border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
