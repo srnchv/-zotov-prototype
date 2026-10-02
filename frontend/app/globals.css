@@ -30,7 +30,7 @@ a{color:inherit;text-decoration:none}
 #mini-arhiv img{height:20px;width:auto}
 /* меню по макету left-menu: пункты 148×28 с линией сверху 4px, «Зотов Центр ↗», внизу «Войти» */
 #menu.mat{position:absolute;left:12px;top:152px;width:148px;display:flex;flex-direction:column;gap:8px}
-#menu.mat a{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:4px solid var(--grey5);padding-top:12px;height:28px;box-sizing:border-box;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase}
+#menu.mat a{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:4px solid var(--grey5);padding-top:12px;height:32px;box-sizing:border-box;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase}
 #menu.mat a.mext{font-weight:500;letter-spacing:0;text-transform:none}
 #menu.mat a:hover,#menu.mat a.active{color:var(--red)}
 #login-btn{position:absolute;left:12px;bottom:12px;width:148px;height:40px;box-sizing:border-box;background:var(--grey5);display:flex;align-items:center;justify-content:center;font-size:14.1px;line-height:16px;font-weight:500}
@@ -71,14 +71,34 @@ a{color:inherit;text-decoration:none}
   .sec-title .ch{font-size:min(13vw,96px);line-height:1;margin-top:0}
   .sec-title .circle{width:48px;height:48px;margin-left:16px}
   .sec-title .sp{width:16px}
-  .foot .flinks{flex-wrap:wrap;gap:8px 24px;font-size:12px}
-  .foot .flinks a{margin:0}
-  .foot .flinks .cop{width:100%}
 }
 
-/* ==== футер: большой баркод + строка ссылок ==== */
-.foot img{width:100%;height:auto;display:block}
-.foot .flinks{display:flex;align-items:center;padding:12px 0 4px;font-size:13px;line-height:16px;font-weight:500}
-.foot .flinks a{margin-right:32px}
-.foot .flinks a:hover{color:var(--red)}
-.foot .flinks .cop{margin-left:auto;margin-right:0}
+/* ==== футер (Section 5): квадраты-баркоды + ссылки сеткой в 6 колонок ==== */
+.ft{border-top:8px solid var(--grey5);background:#fff;min-height:800px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.ft .bars{display:flex;width:100%}
+.ft .bars img{flex:1 1 0;width:33.333%;height:auto;aspect-ratio:1/1;display:block}
+.ft .flinks{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:12px;font-size:14.1px;line-height:16px;font-weight:500;align-items:end}
+.ft .flinks>div{display:flex;flex-direction:column;min-width:0}
+.ft .flinks a:hover{color:var(--red)}
+.ft .c1{grid-column:1}
+.ft .c2{grid-column:2}
+.ft .c5{grid-column:5}
+.ft .c6{grid-column:6;text-align:right}
+@media (max-width:1599px){
+  .ft{min-height:690px}
+  .ft .bars img:nth-child(3){display:none}
+  .ft .bars img{width:50%}
+}
+@media (max-width:1023px){
+  .ft{min-height:520px}
+}
+@media (max-width:599px){
+  .ft{min-height:640px}
+  .ft .bars img:nth-child(2){display:none}
+  .ft .bars img{width:100%}
+  .ft .flinks{display:flex;flex-direction:column;gap:16px;align-items:stretch}
+  .ft .c5{flex-direction:row;justify-content:space-between;align-items:flex-end}
+  .ft .c6{text-align:left}
+  .ft .flinks{position:relative}
+  .ft .c6{position:absolute;right:12px;bottom:12px;text-align:right;max-width:45%}
+}

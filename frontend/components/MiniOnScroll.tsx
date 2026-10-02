@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 export default function MiniOnScroll() {
   useEffect(() => {
-    const el = document.getElementById("mini-arhiv");
-    const on = () => { if (el) el.classList.toggle("on", window.scrollY > 340 * (window.innerWidth / 1920)); };
+    const el = document.getElementById("mini-arhiv"), word = document.getElementById("word");
+    const on = () => { if (el) el.classList.toggle("on", word ? word.getBoundingClientRect().bottom < 0 : window.scrollY > 340); };
     window.addEventListener("scroll", on, { passive: true }); on();
     return () => window.removeEventListener("scroll", on);
   }, []);
