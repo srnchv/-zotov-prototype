@@ -36,8 +36,11 @@ function YearSpy() {
       }
     };
     const on = () => { if (!raf) raf = requestAnimationFrame(f); };
+    // колесо мыши над лентой листает её вбок, если лет больше, чем влезает
+    const wheel = (e: WheelEvent) => { if (strip.scrollWidth > strip.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); strip.scrollLeft += e.deltaY; } };
+    strip.addEventListener("wheel", wheel, { passive: false });
     f(); window.addEventListener("scroll", on, { passive: true }); window.addEventListener("resize", on);
-    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", on); if (raf) cancelAnimationFrame(raf); };
+    return () => { strip.removeEventListener("wheel", wheel); window.removeEventListener("scroll", on); window.removeEventListener("resize", on); if (raf) cancelAnimationFrame(raf); };
   }, []);
   return null;
 }

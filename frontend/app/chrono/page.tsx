@@ -19,6 +19,7 @@ type SP = Record<string, string | string[] | undefined>;
 const s = (e: Entity, k: string) => String(e[k] ?? "");
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
 const list = (v: string | string[] | undefined) => first(v).split(",").filter(Boolean);
+const plural = (n: number) => { const a = n % 10, b = n % 100; return b >= 11 && b <= 14 ? "событий" : a === 1 ? "событие" : a >= 2 && a <= 4 ? "события" : "событий"; };
 const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]).join(",");
 // фильтры по связям (макет: Период · Тип события · Тема · Место · Личности · Выставки)
 const LINK_FILTERS: [string, string, string][] = [["theme", "theme", "Тема"], ["place", "place", "Место"], ["person", "person", "Личности"], ["proj", "project", "Выставки"]];
@@ -99,7 +100,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
           <div id="years">
             {years.map((y) => (
               <section className="yblock" key={y} id={"y-" + y}>
-                <div className="ylab"><div className="div8" /><div className="yn">{y}</div></div>
+                <div className="ylab"><div className="div8" /><div className="yn">{y}</div><div className="yc">{(() => { const n = events.filter((e) => yearOf(e.date) === y).length; return `${n} ${plural(n)}`; })()}</div></div>
                 <div className="ygrid">
                   {events.filter((e) => yearOf(e.date) === y).map((e) => {
                     const im = imgOf(db, e);
