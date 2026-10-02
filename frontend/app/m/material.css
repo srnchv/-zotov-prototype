@@ -1,95 +1,88 @@
-/* Стили страницы материала — из material/index.html */
-body.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
-#cover{position:absolute;left:180px;top:0;width:864px;height:100%;background:#fff}
-#cover .top{position:absolute;left:12px;top:12px;width:852px;display:flex;flex-direction:column;gap:8px}
+/* Страница сущности — по макетам Figma «материал»: desktop 1920 (колонки 864 + 876), desktop-1280 (544 + 556),
+   tablet 768 и mobile 360 одной колонкой. Каркас, леттеринг, карточки «Похожего» и футер — в globals.css. */
+#rest.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px;--ind:144px}
+#matgrid{display:grid;grid-template-columns:minmax(0,864fr) minmax(0,876fr);align-items:start}
+
+/* левая колонка: липкая, высотой в окно; паспорт сверху, навигация и «Сохранить» прижаты к низу */
+#cover{position:sticky;top:0;height:100vh;min-height:720px;background:#fff;padding:12px;display:flex;flex-direction:column}
+#cover .top{display:flex;flex-direction:column;gap:8px}
 #cover .crumbs{display:flex;gap:4px;align-items:center}
-#cover .kicker{font-size:11.4px;line-height:12px;font-weight:600;letter-spacing:.02em;text-transform:uppercase;color:var(--grey2)}
 #cover h1{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
 #cover .info .row{display:flex}
-#cover .info .row .h{width:144px;color:var(--grey2);flex:0 0 auto}
-#secmenu{position:absolute;right:0;bottom:12px;width:276px;display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey4);padding-bottom:12px}
-#secmenu a{display:flex;gap:4px;align-items:flex-start;border-top:4px solid var(--grey4);padding-top:12px;width:100%;cursor:pointer}
+#cover .info .row .h{width:142px;color:var(--grey2);flex:0 0 auto}
+#cover .bottom{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding-top:24px}
+#secmenu{position:absolute;right:0;bottom:12px;width:max(276px,calc(33.33% - 4px));display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey5);padding-bottom:8px}
+#secmenu a{display:flex;gap:4px;align-items:flex-start;border-top:4px solid var(--grey5);padding-top:12px;height:28px;cursor:pointer}
 #secmenu a:hover{color:var(--red)}
 #secmenu .num{color:var(--grey2)}
 #secmenu .sp{flex:1 1 auto}
-#saveBtn{position:absolute;left:12px;bottom:12px;background:var(--grey4);display:flex;gap:8px;align-items:center;justify-content:center;padding:12px 16px 12px 12px;cursor:pointer;border:0;font:inherit;color:inherit}
+#saveBtn{position:absolute;left:12px;bottom:12px;height:40px;background:var(--grey5);display:flex;gap:4px;align-items:center;justify-content:center;padding:12px;cursor:pointer;border:0;font:inherit;color:inherit}
+#saveBtn span{padding:0 4px}
 #saveBtn:hover{color:var(--red)}
 
-#rest.mat{width:1740px;pointer-events:none}
-#rest.mat>*{pointer-events:auto}
-#rightcol{margin-left:864px;width:876px;background:#fff;padding:12px 12px 0 12px;display:flex;flex-direction:column;gap:8px}
+/* правая колонка */
+#rightcol{background:#fff;padding:12px 12px 0;display:flex;flex-direction:column;gap:8px;min-width:0}
 .embed .player,.embed .pdf{margin-bottom:8px}
-.embed .imgbox{background:var(--grey5);height:560px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
+.embed .imgbox{background:var(--grey5);aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
 .embed .imgbox img{max-height:100%;max-width:100%;object-fit:contain}
-.embed .imgbox video{max-height:100%;max-width:100%}
 .embed .ph{color:var(--grey2)}
-.sec{border-left:4px solid var(--ink);padding:0 0 24px 144px}
-.sec .para{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px;white-space:pre-line}
-.sec .para + .para{margin-top:20px;text-indent:48px}
-.sec .empty{color:var(--grey2);font-size:18px;line-height:20px}
+.msec{border-left:4px solid var(--ink);padding:0 0 24px var(--ind)}
+.msec .para{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px;white-space:pre-line}
+.msec .para + .para{margin-top:20px;text-indent:48px}
+.msec .empty{color:var(--grey2);font-size:18px;line-height:20px}
 .doc{background:var(--grey4);display:flex;gap:8px;padding:8px;cursor:pointer;color:inherit}
 .doc:hover{color:var(--red)}
 .doc .t{flex:1 1 auto}
-.sec .doc + .doc{margin-top:4px}
+.msec .doc + .doc{margin-top:4px}
 .src{display:flex}
-.src .n{width:48px}
-#relmats{padding-bottom:12px}
-#relmats .subhead{display:flex;justify-content:center;gap:4px;padding:26px 0 14px}
-.rel-item{position:relative;border-top:4px solid var(--ink);min-height:136px;cursor:pointer;display:block;padding-right:184px}
-.rel-item + .rel-item{margin-top:8px}
-.rel-item.noimg{min-height:0;padding:0 0 12px}
-.rel-item h3{padding-top:10px;font-family:var(--hf);font-size:20px;line-height:24px;font-weight:500;letter-spacing:-.2px;text-transform:uppercase;max-width:640px}
-.rel-item .sub{margin-top:2px;color:var(--grey2)}
-.rel-item .im{position:absolute;right:0;top:12px;width:168px;height:112px;background:var(--grey5);overflow:hidden}
-.rel-item .im img{width:100%;height:100%;object-fit:cover}
-.rel-item:hover h3{color:var(--red)}
-#similar{width:1740px;background:#fff;padding:80px 12px 40px 12px}
-#similar .cards{display:flex;gap:12px}
-.sim{cursor:pointer;display:flex;flex-direction:column}
-.sim.big{width:852px}
-.sim.small{width:420px}
-.sim h3{border-top:4px solid var(--ink);padding-top:10px;font-family:var(--hf);font-size:20px;line-height:24px;font-weight:500;letter-spacing:-.2px;text-transform:uppercase}
-.sim .year{margin-top:2px}
-.sim .vbar{width:4px;background:var(--ink);flex:1 1 auto;min-height:40px;margin:8px 0}
-.sim .type{font-weight:700;font-size:14.3px;letter-spacing:.143px}
-.sim .cat{color:var(--grey2)}
-.sim .im{margin-top:8px;overflow:hidden;background:var(--grey5)}
-.sim.big .im{height:560px}
-.sim.small .im{height:460px}
-.sim .im img{width:100%;height:100%;object-fit:cover}
-.sim:hover h3{color:var(--red)}
-#matfoot{width:1740px;background:#fff;padding:80px 12px 4px 12px}
+.src .n{width:48px;flex:0 0 48px}
 
-/* ==== планшет 834 / мобайл 375 (Figma «Единый шаблон — респонсивы»): одна колонка, шапка сверху ==== */
-@media (max-width:1023px){
-  html.mob #cover{position:static;width:auto;height:auto;padding:12px 12px 16px}
-  html.mob #cover .top{position:static;width:auto}
-  html.mob #cover h1{font-size:32px;line-height:32px;letter-spacing:-.8px}
-  html.mob #cover .info .row .h{width:112px}
-  html.mob #secmenu{position:static;width:auto;margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;border:0;padding:0}
-  html.mob #secmenu a{border-top:4px solid var(--grey4);padding-top:8px}
-  html.mob #saveBtn{position:static;margin-top:16px;display:inline-flex}
-  html.mob #rest.mat{width:auto}
-  html.mob #rightcol{margin:0;width:auto;padding:0 12px}
-  html.mob .embed .imgbox{height:auto;aspect-ratio:4/3;max-height:560px}
-  html.mob .sec{padding-left:16px;padding-bottom:16px}
-  html.mob .sec .para{font-size:16px;line-height:19px;letter-spacing:-.1px;padding-right:0}
-  html.mob .sec .para + .para{margin-top:12px;text-indent:24px}
-  html.mob .rel-item{padding-right:104px;min-height:96px}
-  html.mob .rel-item h3{font-size:16px;line-height:18px}
-  html.mob .rel-item .im{width:92px;height:72px}
-  html.mob #similar{width:auto;padding:40px 12px 24px}
-  html.mob #similar .cards{flex-direction:column;gap:24px}
-  html.mob .sim.big,html.mob .sim.small{width:auto}
-  html.mob .sim.big .im,html.mob .sim.small .im{height:auto;aspect-ratio:3/2}
-  html.mob #matfoot{width:auto;padding:40px 12px 4px}
+/* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, фото 120×120 справа) */
+#relmats{padding:12px 0}
+#relmats .subhead{display:flex;justify-content:center;gap:4px;padding:12px 0 8px}
+#relmats>div{display:flex;flex-direction:column;gap:8px}
+#relmats>div+div{margin-top:16px}
+.rel-item{display:flex;flex-direction:column;gap:8px;cursor:pointer}
+.rel-item .dv{height:8px;background:var(--ink)}
+.rel-item .row{display:flex;gap:12px;min-height:120px}
+.rel-item .tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.rel-item h3{font-family:var(--hf);font-size:24.1px;line-height:24px;font-weight:500;letter-spacing:-.24px;text-transform:uppercase}
+.rel-item .sub{padding-top:2px;font-size:16px;line-height:18px;letter-spacing:-.08px}
+.rel-item .vb{flex:1 1 auto;min-height:12px;border-left:4px solid var(--ink)}
+.rel-item .im{width:120px;height:120px;flex:0 0 auto;background:var(--grey5);overflow:hidden}
+.rel-item .im img{width:100%;height:100%;object-fit:cover}
+.rel-item.noimg .row{min-height:0}
+.rel-item.noimg .vb{min-height:12px}
+.rel-item:hover h3{color:var(--red)}
+
+/* «Похожее» */
+#similar{padding-top:80px}
+#similar .feat{padding-bottom:144px}
+
+/* ==== desktop-1280 (1024–1599): отступ описания 48 ==== */
+@media (max-width:1599px){
+  #rest.mat{--ind:48px}
+  #similar .feat{padding-bottom:144px}
 }
-@media (min-width:600px) and (max-width:1023px){
-  html.mob #cover{padding:16px 16px 24px}
-  html.mob #cover h1{font-size:40px;line-height:40px;letter-spacing:-1.2px}
-  html.mob #rightcol,html.mob #similar,html.mob #matfoot{padding-left:16px;padding-right:16px}
-  html.mob #similar .cards{flex-direction:row;flex-wrap:wrap;gap:12px}
-  html.mob .sim.big{width:100%}
-  html.mob .sim.small{width:calc(50% - 6px)}
-  html.mob .sec{padding-left:112px}
+
+/* ==== планшет (600–1023): одна колонка, шапка с «Меню», без навигации по странице ==== */
+@media (max-width:1023px){
+  #rest.mat{--ind:144px;padding-top:110px}
+  #matgrid{grid-template-columns:1fr}
+  #cover{position:static;height:auto;min-height:0;padding:12px 12px 32px;gap:24px}
+  #secmenu{display:none}
+  #saveBtn{position:static;align-self:flex-start}
+  #similar{padding-top:80px}
+  #similar .feat{padding-bottom:144px}
+}
+
+/* ==== мобайл (<600): заголовок 37, отступ описания 12, карточки связанных 96 с фото 80 ==== */
+@media (max-width:599px){
+  #rest.mat{--ind:12px}
+  #cover h1{font-size:37px;line-height:36px;letter-spacing:-1.11px}
+  .rel-item .row{min-height:80px}
+  .rel-item h3{font-size:20px;line-height:20px;letter-spacing:0}
+  .rel-item .im{width:80px;height:80px;align-self:center}
+  .rel-item .vb{flex:0 0 auto;height:36px}
+  #similar .feat{gap:32px;padding-bottom:96px}
 }

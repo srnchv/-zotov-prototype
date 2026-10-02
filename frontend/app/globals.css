@@ -1,4 +1,7 @@
-/* Токены и базовые стили — перенесены из HTML-вёрстки (main-page, material) без изменений */
+/* Токены, шрифты и общий каркас страниц (макеты Figma «ЦЕНТР ЗОТОВ WIP», Section 5/6, материал).
+   Все страницы резиновые: меню 180 прибито слева, контент — остаток окна.
+   Брейкпоинты: ≥1600 — спецификации 1920, 1024–1599 — спецификации 1280, 600–1023 — планшет 768, <600 — мобайл 360.
+   Шире 1920 — zoom (HomeScale). Единицы cqw — от ширины колонки контента (#rest — контейнер). */
 @font-face{font-family:'PT Root UI';src:url('/assets/fonts/pt-root-ui.woff2') format('woff2');font-weight:300 700;font-display:swap}
 @font-face{font-family:'Roboto Flex';src:url('/assets/fonts/roboto-flex.woff2') format('woff2');font-weight:100 1000;font-display:swap}
 @font-face{font-family:'Algorytm';src:url('/assets/fonts/algorytm-medium.woff2') format('woff2');font-weight:500;font-display:swap}
@@ -16,62 +19,91 @@ a{color:inherit;text-decoration:none}
 .tsm{font-weight:700;font-size:14.3px;line-height:16px;letter-spacing:.143px;text-transform:uppercase}
 .div8{height:8px;background:var(--ink)}
 
-/* ==== масштабируемая сцена 1920 (общая механика обеих страниц) ==== */
-#stage{position:fixed;top:0;left:0;width:1920px;transform-origin:0 0;z-index:5}
-#restWrap{position:relative;z-index:10}
-#rest{transform-origin:0 0}
-
-/* ==== сайдбар (главная: 184, материал: 180 с серой линией) ==== */
-#sidebar{position:absolute;left:0;top:0;width:180px;height:1080px;background:#fff;z-index:30;border-right:8px solid var(--grey4);box-sizing:border-box}
+/* ==== каркас: сайдбар 180 фикс + резиновый контент ==== */
+.pg #stage{position:fixed;left:0;top:0;width:180px;height:100vh;z-index:40}
+.pg #rest{margin-left:180px;background:#fff;container-type:inline-size;
+  --pb:144px;--lt-h:120px;--lt-fs:137px;--lt-lh:106px;--feat-pt:64px;--ico:40px}
+#sidebar{position:absolute;inset:0;width:180px;height:100%;background:#fff;z-index:30;border-right:8px solid var(--grey4)}
 #sidebar .logo{position:absolute;left:12px;top:12px;width:148px;height:96px;overflow:hidden}
 #sidebar .logo img{width:148px;height:96px;object-fit:contain;object-position:left top}
 #mini-arhiv{position:absolute;left:12px;top:118px;width:148px;height:20px;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:opacity .45s ease}
 #mini-arhiv.on{opacity:1}
 #mini-arhiv img{height:20px;width:auto}
-/* меню по макету left-menu: пункты 148×28 с линией сверху 4px, «Зотов Центр ↗», внизу «Войти» */
+/* меню по макету left-menu: пункты с линией сверху 4px (4+12+16=32), «Зотов Центр ↗», внизу «Войти» */
 #menu.mat{position:absolute;left:12px;top:152px;width:148px;display:flex;flex-direction:column;gap:8px}
-#menu.mat a{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:4px solid var(--grey5);padding-top:12px;height:32px;box-sizing:border-box;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase}
+#menu.mat a{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:4px solid var(--grey5);padding-top:12px;height:32px;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase}
 #menu.mat a.mext{font-weight:500;letter-spacing:0;text-transform:none}
 #menu.mat a:hover,#menu.mat a.active{color:var(--red)}
-#login-btn{position:absolute;left:12px;bottom:12px;width:148px;height:40px;box-sizing:border-box;background:var(--grey5);display:flex;align-items:center;justify-content:center;font-size:14.1px;line-height:16px;font-weight:500}
+#login-btn{position:absolute;left:12px;bottom:12px;width:148px;height:40px;background:var(--grey5);display:flex;align-items:center;justify-content:center;font-size:14.1px;line-height:16px;font-weight:500}
 #login-btn:hover{color:var(--red)}
-/* правая часть скроллится поверх сцены; её прозрачные поля не должны перекрывать клики по меню */
-#restWrap{pointer-events:none}
-#rest{pointer-events:auto}
 
-/* ==== леттеринг-заголовки секций (Zotov Bold, разрядка по ширине) ==== */
-.sec-title{display:flex;align-items:flex-start;justify-content:space-between;height:144px}
-.sec-title .ch{font-family:'Zotov Bold',sans-serif;font-weight:400;font-size:114.3px;line-height:114.3px;margin-top:-.154em;text-transform:uppercase;color:var(--ink)}
-.sec-title .sp{width:40px}
-.circle{border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.sec-title .circle{width:80px;height:80px;margin-left:40px;cursor:pointer}
-.sec-title .circle:hover{background:var(--red)}
-.sec-title.sm{height:116px}
+/* ==== шапка планшета/мобайла: блок «логотип + Меню» слева, «Зотов Центр ↗» справа; панель меню ==== */
+.mhead{display:none}
+.mmenu{position:absolute;left:8px;top:8px;width:88px;display:flex;flex-direction:column;z-index:5}
+.mlogo{display:block;background:#fff;border:4px solid var(--ink);border-bottom:0;padding:12px 12px 8px}
+.mlogo img{width:64px;height:auto;display:block}
+.mbtn{background:#fff;border:4px solid var(--ink);padding:8px 16px;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:var(--ink);cursor:pointer}
+.mcenter{position:absolute;right:12px;top:12px;display:flex;gap:8px;align-items:center;font-size:14.1px;line-height:16px;font-weight:500;z-index:5}
+.moverlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:100}
+.mpanel{position:absolute;left:8px;top:8px;width:384px;max-width:calc(100% - 16px);height:calc(100% - 16px);background:#fff;border:4px solid var(--ink);overflow:auto}
+.mclose{position:absolute;left:8px;top:8px;width:32px;height:32px;border:0;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mclose:hover{background:var(--red)}
+.mlogo2{position:absolute;right:8px;top:8px;width:148px;display:flex;flex-direction:column;gap:12px}
+.mlogo2>img{width:148px;height:96px;object-fit:contain;object-position:left top}
+.marh{display:flex;justify-content:space-between;height:20px}
+.marh img{height:20px;width:auto}
+.mnav{position:absolute;left:8px;right:8px;top:160px;display:flex;flex-direction:column;gap:8px}
+.mnav a{border-top:4px solid var(--grey5);padding-top:12px;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.mnav a:hover{color:var(--red)}
+.mnav a.mext{font-weight:500;letter-spacing:0;text-transform:none}
+.mlogin{position:absolute;left:8px;right:8px;bottom:8px;background:var(--grey5);padding:12px;text-align:center;font-size:14.1px;line-height:16px;font-weight:500}
 
-.sec-title.bare{justify-content:space-between}
+/* ==== леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине ==== */
+.lt{display:flex;justify-content:space-between;align-items:center;height:var(--lt-h);padding:0 8px;font-family:'Zotov Bold',sans-serif;font-size:var(--lt-fs);line-height:var(--lt-lh);color:var(--ink);overflow:hidden}
+.lt span{display:inline-block;width:55px;text-align:center}
+.lt.cream{color:#fffadc}
+/* ссылка «Все …» (section-link): линия 8 + 20 + кружок; после неё — отступ этажа */
+.slink{display:flex;align-items:center;gap:8px;margin:0 12px var(--pb);border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
+.slink span{flex:1 1 auto;text-align:right}
+.slink i{width:var(--ico);height:var(--ico);border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.slink:hover{color:var(--red)}
+.slink:hover i{background:var(--red)}
+.sec{padding-top:20px;border-top:8px solid var(--grey5)}
+.feat{padding:var(--feat-pt) 12px 12px;display:flex;gap:12px;align-items:flex-start}
+.feat.pgrid,.feat.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:stretch}
+.feat.cgrid{grid-template-columns:1fr 1fr}
+.feat.cgrid .vcard.big{grid-column:span 1}
+.hrow{display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hrow::-webkit-scrollbar{display:none}
+.hrow>*{flex:0 0 auto}
 
-/* ==== планшет / мобайл для внутренних страниц (html.mob ставит StageScale при ширине < 1024) ==== */
-@media (max-width:1023px){
-  html.mob #stage{position:static;width:auto;transform:none;height:auto}
-  html.mob #restWrap{height:auto}
-  html.mob #rest{transform:none;width:auto}
-  /* сайдбар → верхняя полоса: логотип + горизонтальное меню (Figma 375/834) */
-  html.mob #sidebar,html.mob #sidebar.mat{position:sticky;top:0;width:auto;height:auto;border:0;border-bottom:4px solid var(--grey4);display:flex;align-items:center;gap:12px;padding:8px 12px;background:#fff;z-index:50}
-  html.mob #sidebar .logo{position:static;width:64px;flex:0 0 auto}
-  html.mob #sidebar .logo img{width:64px}
-  html.mob #mini-arhiv{display:none}
-  html.mob #login-btn{display:none}
-  html.mob #menu,html.mob #menu.mat{position:static;margin:0;width:auto;flex:1 1 auto;display:flex;gap:12px;overflow-x:auto;background:none;padding:0;scrollbar-width:none}
-  html.mob #menu::-webkit-scrollbar{display:none}
-  html.mob #menu .rule{display:none}
-  html.mob #menu a,html.mob #menu.mat a{width:auto;height:auto;border:0;padding:4px 0;background:none;font-size:12px;line-height:14px;white-space:nowrap;text-align:left}
-  html.mob #menu.mat a.mext{display:none}
-  html.mob #soc{display:none}
-  .sec-title{height:auto}
-  .sec-title .ch{font-size:min(13vw,96px);line-height:1;margin-top:0}
-  .sec-title .circle{width:48px;height:48px;margin-left:16px}
-  .sec-title .sp{width:16px}
-}
+/* ==== карточки item/vertical: линия 8, текст, вертикальная линия, картинка ==== */
+.vcard{display:flex;flex-direction:column;gap:8px;min-width:0}
+.vcard .dv{height:8px;background:var(--ink);flex:0 0 8px}
+.vcard .tx{display:flex;flex-direction:column;gap:4px;min-height:0}
+.vcard h3{font-family:var(--hf);font-weight:500;text-transform:uppercase}
+.vcard .sub{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
+.vcard .vb{border-left:4px solid var(--ink);min-height:36px}
+.vcard .inf{font-size:14.1px;line-height:16px;font-weight:500}
+.vcard .inf b{display:block;font-weight:700}
+.vcard .im{overflow:hidden;background:var(--grey5);width:100%;position:relative}
+.vcard .im img{width:100%;height:100%;object-fit:cover;display:block}
+.vcard:hover h3{color:var(--red)}
+.vcard.big{grid-column:span 2}
+.vcard.big h3{font-size:37px;line-height:36px;letter-spacing:-.74px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcard.big .vb{height:36px}
+.vcard.big .im{aspect-ratio:3/2}
+.vcard.med h3{font-size:24.1px;line-height:24px;letter-spacing:-.24px;max-height:48px;overflow:hidden}
+.vcard.med .tx{flex:1 1 auto}
+.vcard.med .vb{flex:1 1 auto}
+.vcard.med .im{aspect-ratio:1/1;flex:0 0 auto}
+.vcard.small{width:276px;height:368px}
+.vcard.small h3{font-size:20px;line-height:20px}
+.vcard.small .tx{flex:1 1 auto}
+.vcard.small .vb{flex:1 1 auto}
+.vcard.small .im{width:184px;height:184px;flex:0 0 auto}
+.ditem{display:flex;flex-direction:column;gap:4px;width:276px}
+.ditem .year{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase;white-space:nowrap}
 
 /* ==== футер (Section 5): квадраты-баркоды + ссылки сеткой в 6 колонок ==== */
 .ft{border-top:8px solid var(--grey5);background:#fff;min-height:800px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
@@ -84,21 +116,43 @@ a{color:inherit;text-decoration:none}
 .ft .c2{grid-column:2}
 .ft .c5{grid-column:5}
 .ft .c6{grid-column:6;text-align:right}
+
+/* ==== desktop-1280 (окно 1024–1599) ==== */
 @media (max-width:1599px){
   .ft{min-height:690px}
   .ft .bars img:nth-child(3){display:none}
   .ft .bars img{width:50%}
 }
+
+/* ==== планшет (600–1023): без сайдбара, шапка с кнопкой «Меню» ==== */
 @media (max-width:1023px){
+  .pg #stage{display:none}
+  .pg #rest{margin-left:0;--pb:80px;--lt-h:86px;--lt-fs:97px;--lt-lh:86px;--feat-pt:48px;--ico:32px}
+  .mhead{display:block}
+  .lt span{width:auto;min-width:32px}
+  .feat.pgrid{grid-template-columns:1fr 1fr}
+  .vcard.med{margin-top:36px}
+  .vcard.coll h3{font-size:20px;line-height:20px;letter-spacing:0;white-space:normal}
+  .vcard.coll .tx{height:200px;flex:0 0 200px}
+  .vcard.coll .vb{flex:1 1 auto;height:auto}
   .ft{min-height:520px}
 }
+
+/* ==== мобайл (<600) ==== */
 @media (max-width:599px){
+  .pg #rest{--lt-h:64px;--lt-fs:57px;--lt-lh:48px;--feat-pt:32px}
+  .lt{align-items:flex-end;padding:0 8px 11px}
+  .lt span{min-width:19px}
+  .mpanel{width:calc(100% - 16px)}
+  .feat.pgrid,.feat.cgrid{grid-template-columns:1fr}
+  .vcard.big{grid-column:span 1}
+  .vcard.med{margin-top:0}
+  .vcard.big h3,.vcard.med h3{font-size:20px;line-height:20px;letter-spacing:0;max-height:none;white-space:normal}
+  .vcard.big .tx,.vcard.med .tx{height:200px;flex:0 0 200px}
+  .vcard.big .vb,.vcard.med .vb{flex:1 1 auto;height:auto}
   .ft{min-height:640px}
   .ft .bars img:nth-child(2){display:none}
   .ft .bars img{width:100%}
-  .ft .flinks{display:flex;flex-direction:column;gap:16px;align-items:stretch}
-  .ft .c5{flex-direction:row;justify-content:space-between;align-items:flex-end}
-  .ft .c6{text-align:left}
-  .ft .flinks{position:relative}
+  .ft .flinks{display:flex;flex-direction:column;gap:16px;align-items:stretch;position:relative}
   .ft .c6{position:absolute;right:12px;bottom:12px;text-align:right;max-width:45%}
 }

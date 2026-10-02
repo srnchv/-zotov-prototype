@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import HomeScale from "@/components/HomeScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
 import Gallery from "@/components/Gallery";
+import { Lettering, SectionLink } from "@/components/Lettering";
 import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaKind, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
@@ -21,14 +22,6 @@ const PH_CH = ["ch1910.jpg", "ch1933.jpg", "ch1947.jpg", "ch1960.jpg"];
 const PH_P = Array.from({ length: 13 }, (_, i) => `p${i + 1}.jpg`);
 const PH_C = ["proj-interior.jpg", "proj-kino.jpg"];
 
-// леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине; пробел — отдельный слот
-const Lettering = ({ text, cream }: { text: string; cream?: boolean }) => (
-  <div className={"lt" + (cream ? " cream" : "")}>{[...text].map((c, i) => <span key={i} className={c === " " ? "sp" : undefined}>{c}</span>)}</div>
-);
-// ссылка «Все …» под секцией (section-link): линия сверху 8, текст справа, кружок со стрелкой
-const SectionLink = ({ href, text }: { href: string; text: string }) => (
-  <a className="slink" href={href}><span>{text}</span><i><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#fff" /></svg></i></a>
-);
 
 // мозаика личностей: [колонка, ряд, размер] — desktop 12×4, tablet 8×5, mobile 4×8 (из макетов Section 5)
 const MOSAIC_D: [number, number, number][] = [[1, 1, 1], [3, 1, 2], [5, 1, 1], [9, 1, 1], [8, 2, 1], [2, 3, 1], [5, 3, 1], [6, 3, 2], [9, 3, 1], [10, 2, 2], [12, 3, 1], [1, 4, 1], [10, 4, 1]];
@@ -54,7 +47,7 @@ export default async function Home() {
   );
 
   return (
-    <div id="homeRoot">
+    <div className="pg">
       <HomeScale />
       <MiniOnScroll />
       <div id="stage"><Sidebar centerUrl={site.centerUrl} /></div>

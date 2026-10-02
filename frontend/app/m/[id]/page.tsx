@@ -6,10 +6,11 @@ import MediaGallery, { type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
-import SectionTitle from "@/components/SectionTitle";
+import MobileMenu from "@/components/MobileMenu";
+import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
 import { getSite } from "@/lib/site";
-import StageScale from "@/components/StageScale";
+import HomeScale from "@/components/HomeScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
 import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, type Entity } from "@/lib/api";
@@ -107,38 +108,40 @@ export default async function EntityPage({ params }: Props) {
   const gid = (t: string) => "g-" + t;
 
   return (
-    <>
-      <StageScale shift={180} />
+    <div className="pg">
+      <HomeScale />
       <ViewPing id={e.id} />
-      <div id="stage">
-        <Sidebar variant="mat" centerUrl={site.centerUrl} />
-        <section id="cover">
-          <div className="top">
-            <div className="div8" />
-            <div className="crumbs">
-              <a href="/">Архив</a>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>
-              <a href={`/cat/${e.type}`}>{TYPES[e.type]?.pl || e.type}</a>
-            </div>
-            <h1>{e.title}</h1>
-            <div className="info">{rows.map(([k, v]) => <div className="row" key={k}><div className="h">{k}</div><div>{v}</div></div>)}</div>
-          </div>
-          <nav id="secmenu">
-            <ScrollTo to="a-desc">Описание</ScrollTo>
-            {docs.length ? <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo> : null}
-            {sources.length ? <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo> : null}
-            {relCount ? <ScrollTo to="a-rel"><span>Связанные материалы</span><span className="num">({relCount})</span><span className="sp" /></ScrollTo> : null}
-            {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
-          </nav>
-          <button id="saveBtn" type="button">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>
-            <span>Сохранить</span>
-          </button>
-        </section>
-      </div>
+      <div id="stage"><Sidebar variant="mat" centerUrl={site.centerUrl} /></div>
 
-      <div id="restWrap">
-        <div id="rest" className="mat">
+      <div id="rest" className="mat">
+        <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
+        <div id="matgrid">
+          {/* левая колонка: хлебные крошки, заголовок, паспорт; внизу — навигация по странице и «Сохранить» */}
+          <section id="cover">
+            <div className="top">
+              <div className="div8" />
+              <div className="crumbs">
+                <a href="/">Архив</a>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>
+                <a href={`/cat/${e.type}`}>{TYPES[e.type]?.pl || e.type}</a>
+              </div>
+              <h1>{e.title}</h1>
+              <div className="info">{rows.map(([k, v]) => <div className="row" key={k}><div className="h">{k}</div><div>{v}</div></div>)}</div>
+            </div>
+            <nav id="secmenu">
+              <ScrollTo to="a-desc">Описание</ScrollTo>
+              {docs.length ? <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo> : null}
+              {sources.length ? <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo> : null}
+              {relCount ? <ScrollTo to="a-rel"><span>Связанные материалы</span><span className="num">({relCount})</span><span className="sp" /></ScrollTo> : null}
+              {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
+            </nav>
+            <button id="saveBtn" type="button">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>
+              <span>Сохранить</span>
+            </button>
+          </section>
+
+          {/* правая колонка: медиа, описание, документы, источники, связанные */}
           <div id="rightcol">
             <div className="embed">
               {slides.length > 1 ? <MediaGallery slides={slides} />
@@ -152,13 +155,13 @@ export default async function EntityPage({ params }: Props) {
 
             <div className="div8" id="a-desc" />
             <div className="tsm">Описание</div>
-            <div className="sec">
+            <div className="msec">
               {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
             </div>
 
             {docs.length ? <><div className="div8" id="a-docs" />
             <div className="tsm">Документы</div>
-            <div className="sec">
+            <div className="msec">
               {docs.map((d) => (
                 <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
                   <div className="t">{d.title}</div><div>{String(d.format || "").toUpperCase()}.</div>
@@ -169,7 +172,7 @@ export default async function EntityPage({ params }: Props) {
 
             {sources.length ? <><div className="div8" id="a-src" />
             <div className="tsm">Источники</div>
-            <div className="sec">
+            <div className="msec">
               {sources.map((x, i) => <div className="src" key={x.id}><div className="n">{String(i + 1).padStart(2, "0")}.</div><a href={`/m/${x.id}`}>{x.title}{s(x, "year") ? `, ${s(x, "year")}` : ""}</a></div>)}
             </div></> : null}
 
@@ -181,32 +184,40 @@ export default async function EntityPage({ params }: Props) {
                   <div className="subhead"><span className="tsm" id={gid(t)}>{REL_HEAD[t]}</span><span className="tsm grey">({arr.length})</span></div>
                   {arr.map((x) => (
                     <a className={"rel-item" + (x.img ? "" : " noimg")} key={x.id} href={`/m/${x.id}`}>
-                      <h3>{x.title}</h3><div className="sub">{meta(x, db)}</div>
-                      {x.img ? <div className="im"><img src={String(x.img)} alt="" style={imgPos(db, x)} /></div> : null}
+                      <div className="dv" />
+                      <div className="row">
+                        <div className="tx"><h3>{x.title}</h3><div className="sub">{meta(x, db)}</div><div className="vb" /></div>
+                        {x.img ? <div className="im"><img src={String(x.img)} alt="" style={imgPos(db, x)} /></div> : null}
+                      </div>
                     </a>
                   ))}
+                  <div className="div8" />
                 </div>
               ))}
             </div></> : null}
           </div>
-
-          {similar.length ? <section id="similar">
-            <div id="a-sim"><SectionTitle text="похожее" small /></div>
-            <div className="cards">
-              {similar.map((x, i) => (
-                <a className={"sim " + (i === 0 ? "big" : "small")} key={x.id} href={`/m/${x.id}`}>
-                  <h3>{x.title}</h3><div className="year">{meta(x, db)}</div>
-                  <div className="vbar" />
-                  <div className="type">{TYPES[x.type]?.l}</div><div className="cat">{s(x, "mtype") || s(x, "colType") || s(x, "prType") || ""}</div>
-                  {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" style={imgPos(db, x)} /></div> : null}
-                </a>
-              ))}
-            </div>
-          </section> : null}
-
-          <div id="matfoot"><Footer site={site} /></div>
         </div>
+
+        {/* «Похожее»: леттеринг + сетка как на главной (большая карточка 2 колонки + две средние) */}
+        {similar.length ? <section id="similar">
+          <div id="a-sim"><Lettering text="похожее" /></div>
+          <div className="feat pgrid">
+            {similar.map((x, i) => (
+              <a className={"vcard " + (i === 0 ? "big" : "med")} key={x.id} href={`/m/${x.id}`}>
+                <div className="dv" />
+                <div className="tx">
+                  <h3>{x.title}</h3>{meta(x, db) ? <div className="sub">{meta(x, db)}</div> : null}
+                  <div className="vb" />
+                  <div className="inf"><b>{TYPES[x.type]?.l}</b>{s(x, "mtype") || s(x, "colType") || s(x, "prType") ? <span>{s(x, "mtype") || s(x, "colType") || s(x, "prType")}</span> : null}</div>
+                </div>
+                {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" style={imgPos(db, x)} /></div> : <div className="im" />}
+              </a>
+            ))}
+          </div>
+        </section> : null}
+
+        <Footer site={site} />
       </div>
-    </>
+    </div>
   );
 }

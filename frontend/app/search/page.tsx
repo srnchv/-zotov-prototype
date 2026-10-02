@@ -1,10 +1,11 @@
 import "./search.css";
 import type { Metadata } from "next";
 import Sidebar from "@/components/Sidebar";
-import SectionTitle from "@/components/SectionTitle";
+import MobileMenu from "@/components/MobileMenu";
+import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
 import { getSite } from "@/lib/site";
-import StageScale from "@/components/StageScale";
+import HomeScale from "@/components/HomeScale";
 import { loadArchive, ofType, published, searchApi, entityYear, imgOf, imgPos, TYPES, type Entity } from "@/lib/api";
 import SoftNav from "@/components/SoftNav";
 
@@ -19,7 +20,7 @@ const PAGE = 18;
 // вкладки по типам — порядок как в макете
 const TABS = ["material", "theme", "place", "person", "event", "collection", "project", "org"];
 // фильтры-связи: параметр → тип сущности, подпись
-const LINK_FILTERS: [string, string, string][] = [["theme", "theme", "Темы"], ["person", "person", "Личности"], ["place", "place", "Места"], ["event", "event", "События"], ["coll", "collection", "Коллекции"]];
+const LINK_FILTERS: [string, string, string][] = [["person", "person", "Личности"], ["place", "place", "Места"], ["theme", "theme", "Темы"], ["event", "event", "События"], ["coll", "collection", "Коллекции"]];
 const SORTS: Record<string, string> = { rel: "по релевантности", title: "по названию", date: "по дате" };
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
@@ -56,7 +57,7 @@ const Chev = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d
 export default async function SearchPage({ searchParams }: Props) {
   const raw = await searchParams;
   const sp: Record<string, string> = {};
-  for (const k of ["q", "type", "dec", "theme", "person", "place", "event", "coll", "proj", "sort"]) if (first(raw[k])) sp[k] = first(raw[k]);
+  for (const k of ["q", "type", "dec", "y", "theme", "person", "place", "event", "coll", "proj", "sort"]) if (first(raw[k])) sp[k] = first(raw[k]);
   const q = sp.q?.trim() || "";
   const n = Math.max(PAGE, Number(first(raw.n)) || PAGE);
   const sort = SORTS[sp.sort] ? sp.sort : "rel";
@@ -77,7 +78,9 @@ export default async function SearchPage({ searchParams }: Props) {
   const decs = list(sp.dec);
   const linkSel: Record<string, string[]> = {};
   for (const [param] of LINK_FILTERS) linkSel[param] = list(sp[param]);
+  const year = Number(sp.y) || 0;
   const passes = (e: Entity) => {
+    if (year && entityYear(e) !== year) return false;
     if (decs.length) { const y = entityYear(e); if (!decs.includes(String(Math.floor(y / 10) * 10))) return false; }
     for (const [param] of LINK_FILTERS) {
       const sel = linkSel[param];
@@ -96,9 +99,11 @@ export default async function SearchPage({ searchParams }: Props) {
 
   // значения для выпадающих списков
   const decades = [...new Set(base.map(entityYear).filter(Boolean).map((y) => Math.floor(y / 10) * 10))].sort((a, b) => a - b);
+  const years = [...new Set(base.map(entityYear).filter(Boolean))].sort((a, b) => a - b);
   const options = (t: string) => ofType(db, t).sort((a, b) => a.title.localeCompare(b.title, "ru"));
   const chipGroups: { label: string; tags: { t: string; href: string }[] }[] = [];
   if (q) chipGroups.push({ label: "Запрос", tags: [{ t: q, href: mk(sp, { q: undefined }) }] });
+  if (year) chipGroups.push({ label: "Год:", tags: [{ t: String(year), href: mk(sp, { y: undefined }) }] });
   if (decs.length) chipGroups.push({ label: "Период:", tags: decs.map((d) => ({ t: `${d}-е`, href: mk(sp, { dec: toggle(decs, d) }) })) });
   for (const [param, , label] of LINK_FILTERS) if (linkSel[param].length)
     chipGroups.push({ label: label + ":", tags: linkSel[param].map((id) => ({ t: db[id]?.title || id, href: mk(sp, { [param]: toggle(linkSel[param], id) }) })) });
@@ -106,100 +111,108 @@ export default async function SearchPage({ searchParams }: Props) {
   const hasFilters = chipGroups.length > 0;
 
   return (
-    <>
-      <StageScale shift={180} />
+    <div className="pg">
+      <HomeScale />
       <div id="stage"><Sidebar variant="mat" active="/search" centerUrl={site.centerUrl} /></div>
-      <div id="restWrap">
-        <div id="rest" className="srch">
-          <div id="srch">
-            <SoftNav />
-            <SectionTitle text="поиск" bare />
+      <div id="rest" className="srch">
+        <div id="srch">
+          <SoftNav />
+          <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
+          <Lettering text="поиск" />
+          <div id="intro">{site.searchIntro}</div>
 
-            <div id="sform">
-              <form action="/search" method="get">
-                {Object.entries(sp).filter(([k]) => k !== "q").map(([k, v]) => <input type="hidden" name={k} value={v} key={k} />)}
-                <label htmlFor="q">Поиск в каталоге</label>
-                <div className="in">
-                  <input id="q" name="q" defaultValue={q} placeholder="Название, личность, место, год" autoComplete="off" />
-                  <button type="submit" aria-label="Найти">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <div id="fbar">
-              <details className="fdd">
-                <summary><span className="t"><b>Период</b>{decs.length ? <i>({decs.length})</i> : null}</span>{Plus}</summary>
-                <div className="dd">{decades.length ? decades.map((d) => <a key={d} className={decs.includes(String(d)) ? "on" : undefined} href={mk(sp, { dec: toggle(decs, String(d)) })}>{d}-е</a>) : <div className="no">Нет датированных объектов</div>}</div>
-              </details>
-              {LINK_FILTERS.map(([param, t, label]) => (
-                <details className="fdd" key={param}>
-                  <summary><span className="t"><b>{label}</b>{linkSel[param].length ? <i>({linkSel[param].length})</i> : null}</span>{Plus}</summary>
-                  <div className="dd">{options(t).map((o) => <a key={o.id} className={linkSel[param].includes(o.id) ? "on" : undefined} href={mk(sp, { [param]: toggle(linkSel[param], o.id) })}>{o.title}</a>)}</div>
-                </details>
-              ))}
-              <details className="fdd">
-                <summary><span className="t"><b>Дополнительно</b></span>{Plus}</summary>
-                <div className="dd">{Object.entries(SORTS).map(([k, v]) => <a key={k} className={sort === k ? "on" : undefined} href={mk(sp, { sort: k })}>Сортировать {v}</a>)}</div>
-              </details>
-              <div className="fdd tog">
-                <a className="sm" href={mk(sp, { proj: sp.proj ? undefined : "1" })}><span className="t"><b>Проекты Центра</b></span><span className={"sw" + (sp.proj ? " on" : "")} /></a>
+          <div id="sform">
+            <div className="div8" />
+            <form action="/search" method="get">
+              {Object.entries(sp).filter(([k]) => k !== "q").map(([k, v]) => <input type="hidden" name={k} value={v} key={k} />)}
+              <label htmlFor="q">Поиск в каталоге</label>
+              <div className="in">
+                <input id="q" name="q" defaultValue={q} placeholder={site.searchPh} autoComplete="off" />
+                <button type="submit" aria-label="Найти">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>
+                </button>
               </div>
-            </div>
+            </form>
+          </div>
 
-            <div id="chips">
-              {chipGroups.map((g) => (
-                <div className="chg" key={g.label}><span className="l">{g.label}</span><span className="tags">{g.tags.map((t) => <a key={t.href} href={t.href}>{t.t}{X}</a>)}</span></div>
-              ))}
-              {hasFilters ? <a className="clr" href="/search">Очистить все</a> : null}
+          {/* фильтры-ячейки: 1 ряд на широком десктопе, 2×4 на 1280 и планшете, 4×2 на мобайле */}
+          <div id="fbar">
+            <details className="fdd">
+              <summary>{Plus}<span className="t"><b>Период</b>{decs.length ? <i>({decs.length})</i> : null}</span></summary>
+              <div className="dd">{decades.length ? decades.map((d) => <a key={d} className={decs.includes(String(d)) ? "on" : undefined} href={mk(sp, { dec: toggle(decs, String(d)) })}>{d}-е</a>) : <div className="no">Нет датированных объектов</div>}</div>
+            </details>
+            {LINK_FILTERS.map(([param, t, label]) => (
+              <details className="fdd" key={param}>
+                <summary>{Plus}<span className="t"><b>{label}</b>{linkSel[param].length ? <i>({linkSel[param].length})</i> : null}</span></summary>
+                <div className="dd">{options(t).map((o) => <a key={o.id} className={linkSel[param].includes(o.id) ? "on" : undefined} href={mk(sp, { [param]: toggle(linkSel[param], o.id) })}>{o.title}</a>)}</div>
+              </details>
+            ))}
+            <details className="fdd">
+              <summary>{Plus}<span className="t"><b>Разное</b></span></summary>
+              <div className="dd">{Object.entries(SORTS).map(([k, v]) => <a key={k} className={sort === k ? "on" : undefined} href={mk(sp, { sort: k })}>Сортировать {v}</a>)}</div>
+            </details>
+            <div className="fdd tog">
+              <a className="sm" href={mk(sp, { proj: sp.proj ? undefined : "1" })}><span className="t"><b>Проекты Центра</b></span><span className={"sw" + (sp.proj ? " on" : "")} /></a>
             </div>
+          </div>
 
-            <div id="res">
-              <h2>{items.length} {plural(items.length)}</h2>
-              <div id="tabs">
-                <div className="l">
-                  <a className={!sp.type ? "on" : undefined} href={mk(sp, { type: undefined })}>Все <i>({filtered.length})</i></a>
-                  {TABS.filter((t) => counts[t]).map((t) => <a key={t} className={sp.type === t ? "on" : undefined} href={mk(sp, { type: t })}>{TYPES[t].pl} <i>({counts[t]})</i></a>)}
+          {/* лента лет (только широкий десктоп): год из данных, активный — красный */}
+          {years.length > 1 ? <div id="years">{years.map((y) => <a key={y} className={year === y ? "on" : undefined} href={mk(sp, { y: year === y ? undefined : String(y) })}>{y}</a>)}</div> : null}
+
+          <div id="chips">
+            {chipGroups.map((g) => (
+              <div className="chg" key={g.label}><span className="l">{g.label}</span><span className="tags">{g.tags.map((t) => <a key={t.href} href={t.href}>{t.t}{X}</a>)}</span></div>
+            ))}
+            {hasFilters ? <a className="clr" href="/search">Очистить</a> : null}
+          </div>
+
+          <div id="res">
+            <h2>{items.length} {plural(items.length)}</h2>
+            <div id="tabs">
+              <div className="l">
+                <a className={!sp.type ? "on" : undefined} href={mk(sp, { type: undefined })}>Все <i>({filtered.length})</i></a>
+                {TABS.filter((t) => counts[t]).map((t) => <a key={t} className={sp.type === t ? "on" : undefined} href={mk(sp, { type: t })}>{TYPES[t].pl} <i>({counts[t]})</i></a>)}
+              </div>
+              <div className="r">
+                <div className="sort"><span className="g">Сортировать:</span>
+                  <details><summary>{SORTS[sort]}{Chev}</summary>
+                    <div className="dd">{Object.entries(SORTS).map(([k, v]) => <a key={k} className={sort === k ? "on" : undefined} href={mk(sp, { sort: k })}>{v}</a>)}</div>
+                  </details>
                 </div>
-                <div className="r">
-                  <div className="sort"><span className="g">Сортировать:</span>
-                    <details><summary>{SORTS[sort]}{Chev}</summary>
-                      <div className="dd">{Object.entries(SORTS).map(([k, v]) => <a key={k} className={sort === k ? "on" : undefined} href={mk(sp, { sort: k })}>{v}</a>)}</div>
-                    </details>
-                  </div>
+                <div className="acts">
                   <span className="act"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 2h8v9H5V2Zm-2 3h1v9h8v1H3V5Z" stroke="#262626" fill="none" /></svg>Скопировать</span>
                   <span className="act"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626" /></svg>Скачать</span>
                 </div>
               </div>
-
-              {shown.length ? (
-                <div id="grid">
-                  {shown.map((e) => {
-                    const [t, sub, extra] = kind(e, db);
-                    const im = imgOf(db, e);
-                    return (
-                      <a className="rc" key={e.id} href={`/m/${e.id}`}>
-                        <div className="tx">
-                          <h3>{e.title}</h3>
-                          <div className="y">{yearLabel(e)}</div>
-                          <div className="vb" />
-                          <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}{extra ? <span className="grey">{extra}</span> : null}</div>
-                        </div>
-                        {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
-                      </a>
-                    );
-                  })}
-                </div>
-              ) : <div id="empty">{q ? `По запросу «${q}» ничего не найдено. Попробуйте другое написание или снимите фильтры.` : "Ничего не найдено."}</div>}
-
-              {items.length > n ? <div id="more"><a href={mk(sp, {}) + (Object.keys(sp).length ? "&" : "?") + "n=" + (n + PAGE)}>Показать ещё</a></div> : null}
             </div>
-            <div id="sfoot"><Footer site={site} /></div>
+
+            {shown.length ? (
+              <div id="grid">
+                {shown.map((e) => {
+                  const [t, sub, extra] = kind(e, db);
+                  const im = imgOf(db, e);
+                  return (
+                    <a className="rc" key={e.id} href={`/m/${e.id}`}>
+                      <div className="tx">
+                        <h3>{e.title}</h3>
+                        <div className="y">{yearLabel(e)}</div>
+                        <div className="vb" />
+                        <div className="k"><b>{t}</b>{sub ? <span>{sub}</span> : null}{extra ? <span className="grey">{extra}</span> : null}</div>
+                      </div>
+                      {im ? <div className={"im" + (e.type === "person" ? " p" : "")}><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
+                    </a>
+                  );
+                })}
+              </div>
+            ) : <div id="empty">{q ? `По запросу «${q}» ничего не найдено. Попробуйте другое написание или снимите фильтры.` : "Ничего не найдено."}</div>}
+
+            {items.length > n ? <div id="more"><a href={mk(sp, {}) + (Object.keys(sp).length ? "&" : "?") + "n=" + (n + PAGE)}>Показать ещё</a></div> : null}
+            <div className="div8 end" />
           </div>
         </div>
+        <Footer site={site} />
       </div>
-    </>
+    </div>
   );
 }
 
