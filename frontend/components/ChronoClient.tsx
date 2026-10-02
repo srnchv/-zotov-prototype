@@ -14,6 +14,34 @@ function YearJump() {
   return null;
 }
 
+// при прокрутке подсвечиваем в ленте год, чей блок сейчас под лентой
+function YearSpy() {
+  useEffect(() => {
+    const strip = document.getElementById("ystrip");
+    if (!strip) return;
+    const links = [...strip.querySelectorAll<HTMLAnchorElement>("a[data-y]")];
+    let raf = 0;
+    const f = () => {
+      raf = 0;
+      const blocks = [...document.querySelectorAll<HTMLElement>(".yblock")];
+      if (!blocks.length) return;
+      const line = 80; // низ липкой ленты
+      let cur = blocks[0];
+      for (const b of blocks) if (b.getBoundingClientRect().top <= line) cur = b;
+      const y = cur.id.replace("y-", "");
+      for (const a of links) {
+        a.classList.toggle("on", a.dataset.y === y);
+        if (a.dataset.y === y && a.offsetLeft + a.offsetWidth > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = a.offsetLeft - 12;
+        else if (a.dataset.y === y && a.offsetLeft < strip.scrollLeft) strip.scrollLeft = a.offsetLeft - 12;
+      }
+    };
+    const on = () => { if (!raf) raf = requestAnimationFrame(f); };
+    f(); window.addEventListener("scroll", on, { passive: true }); window.addEventListener("resize", on);
+    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", on); if (raf) cancelAnimationFrame(raf); };
+  }, []);
+  return null;
+}
+
 export function ToTop() {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -30,5 +58,5 @@ export function ToTop() {
 }
 
 export default function ChronoClient() {
-  return (<><Suspense fallback={null}><YearJump /></Suspense><ToTop /></>);
+  return (<><Suspense fallback={null}><YearJump /></Suspense><YearSpy /><ToTop /></>);
 }

@@ -86,7 +86,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
             <FilterBar prefix="/chrono" sp={sp} filters={filters} />
           </div>
           <div id="ystrip">
-            {allYears.map((y) => <a key={y} className={(year === y ? "on" : "") + (years.includes(y) ? "" : " dim")} href={mk(sp, { y: String(y) })}>{y}</a>)}
+            {allYears.map((y) => <a key={y} data-y={y} className={(year === y ? "on" : "") + (years.includes(y) ? "" : " dim")} href={mk(sp, { y: String(y) })}>{y}</a>)}
           </div>
           {chips.length ? (
             <div id="chips">
