@@ -101,6 +101,9 @@
 .tile.fl .hc{left:auto;right:-12px;grid-template-columns:1fr calc(var(--col) - 24px)}
 .tile.fl .hc>img{order:2}
 .tile:hover .hc{display:grid}
+/* большая плитка (2×2): карточка во всю её высоту, фото — во всю ширину плитки, текст в колонке справа */
+.tile.big .hc{height:calc(var(--row)*2 + 12px);width:calc(var(--col)*3 + 24px);grid-template-columns:calc(var(--col)*2 - 12px) 1fr}
+.tile.big.fl .hc{grid-template-columns:1fr calc(var(--col)*2 - 12px)}
 .tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom}
 .tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0}
 .tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}

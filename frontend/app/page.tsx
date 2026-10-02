@@ -132,7 +132,7 @@ export default async function Home() {
                 const flip = d[0] + d[2] > 10; // у правого края карточка раскрывается влево
                 const sub = [s(p, "role"), s(p, "life")].filter(Boolean).join(", ");
                 return (
-                  <a className={"tile" + (d[2] === 2 ? " big" : "") + (flip ? " fl" : "")} key={p.id} href={`/m/${p.id}`} title={p.title}
+                  <a className={"tile" + (d[2] === 2 ? " big" : "") + (flip ? " fl" : "")} key={p.id} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
                     <img src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
                     <span className="hc"><img src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
