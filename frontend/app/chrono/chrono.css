@@ -1,0 +1,81 @@
+/* Хронограф — по макету Figma 02.10 / Хронограф (десктоп 1740): леттеринг, вводный текст, панель фильтров с лентой лет,
+   годы столбиком: слева год с линией (276), справа сетка карточек 276×368. Планшет и мобайл — по аналогии с поиском.
+   Ячейки фильтров и чипы — те же, что в поиске (стили ниже продублированы, чтобы страница не зависела от search.css). */
+#chr{position:relative}
+#intro{padding:244px 12px 16px;max-width:588px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.24px;font-weight:500}
+#panel{padding:0 12px}
+#fbar{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding-top:24px}
+.fdd{min-width:0;position:relative}
+.fdd summary{list-style:none;display:flex;gap:4px;align-items:center;background:var(--grey5);padding:12px;height:40px;cursor:pointer;user-select:none}
+.fdd summary:hover{color:var(--red)}
+.fdd summary::-webkit-details-marker{display:none}
+.fdd summary .t{flex:1 1 auto;min-width:0;display:flex;gap:4px;padding:0 4px;font-size:14.1px;line-height:16px;white-space:nowrap;overflow:hidden}
+.fdd summary .t b{font-weight:500}
+.fdd summary .t i{font-style:normal;color:var(--grey2);font-variant-numeric:tabular-nums}
+.fdd[open] summary{color:var(--red)}
+.fdd .dd{position:absolute;left:0;top:100%;z-index:40;min-width:100%;max-height:360px;overflow:auto;background:#fff;border:4px solid var(--ink);margin-top:4px;padding:4px 0}
+.fdd .dd a{display:block;padding:6px 12px;font-size:14.1px;line-height:16px;white-space:nowrap}
+.fdd .dd a:hover{color:var(--red)}
+.fdd .dd a.on{background:var(--grey4);font-weight:700}
+.fdd .dd .no{padding:6px 12px;color:var(--grey2)}
+
+/* лента лет: серая полоса, годы с линией слева; при скролле прилипает к верху (макет: top 12) */
+#ystrip{position:sticky;top:12px;z-index:30;margin:12px 12px 0;background:var(--grey5);padding:8px 0;display:flex;justify-content:space-between;overflow-x:auto;scrollbar-width:none}
+#ystrip::-webkit-scrollbar{display:none}
+#ystrip a{border-left:4px solid var(--ink);padding:4px 8px;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase;white-space:nowrap;flex:0 0 auto}
+#ystrip a:hover{color:var(--red)}
+#ystrip a.on{color:var(--red);border-color:var(--red)}
+#ystrip a.dim{color:var(--grey3);border-color:var(--grey3)}
+
+#chips{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:12px 12px 0}
+.chg{display:flex;align-items:center;gap:12px;background:var(--grey5);padding:4px 4px 4px 12px;font-size:14.1px;line-height:16px}
+.chg .l{color:var(--grey2)}
+.chg .tags{display:flex;gap:4px;flex-wrap:wrap}
+.chg .tags a{display:flex;align-items:center;gap:4px;background:#fff;padding:4px 4px 4px 8px;height:24px}
+.chg .tags a:hover{color:var(--red)}
+#chips .clr{font-size:14.1px;line-height:16px;font-weight:500}
+#chips .clr:hover{color:var(--red)}
+
+/* годы */
+#years{padding:48px 12px 0;display:flex;flex-direction:column;gap:32px}
+.yblock{display:grid;grid-template-columns:276px 1fr;gap:12px;align-items:start;scroll-margin-top:76px}
+.ylab{display:flex;flex-direction:column;gap:8px}
+.ylab .yn{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500}
+.ygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px 12px}
+.vcard.ev{width:auto;height:368px}
+.vcard.ev h3{overflow:hidden}
+.vcard.ev .im{width:184px;height:184px}
+#empty{padding:40px 0;font-size:18px;line-height:20px;color:var(--grey2)}
+#chr::after{content:"";display:block;height:var(--pb)}
+
+/* кнопка «Наверх» (вариант 1): серая, с подписью и стрелкой, прибита к правому нижнему углу */
+#totop{position:fixed;right:12px;bottom:12px;z-index:50;display:none;align-items:center;gap:4px;height:40px;padding:12px;background:var(--grey5);border:0;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:var(--ink);cursor:pointer}
+#totop span{padding:0 4px}
+#totop.on{display:flex}
+#totop:hover{color:var(--red)}
+
+/* ==== desktop-1280 (1024–1599) ==== */
+@media (max-width:1599px){
+  #fbar{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ==== планшет (600–1023): шапка с «Меню», год сверху, сетка 3 ==== */
+@media (max-width:1023px){
+  #chr{padding-top:110px}
+  #intro{padding-top:120px}
+  .yblock{grid-template-columns:1fr;gap:16px}
+  .ygrid{grid-template-columns:repeat(3,1fr)}
+  #years{padding-top:32px}
+}
+
+/* ==== мобайл (<600): фильтры 2 колонки, лента лет скроллом, карточки столбиком ==== */
+@media (max-width:599px){
+  #intro{padding:64px 12px 16px;max-width:none;font-size:20px;line-height:20px;letter-spacing:0}
+  #fbar{grid-template-columns:1fr 1fr}
+  .fdd .dd{position:static;border-width:0 0 4px;margin:0}
+  #ystrip{justify-content:flex-start;gap:0}
+  .ygrid{grid-template-columns:1fr;gap:12px}
+  .ylab .yn{font-size:37px;line-height:36px;letter-spacing:-1.11px}
+  #totop span{display:none}
+  #totop{padding:12px}
+}
