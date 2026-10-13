@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import HomeScale from "@/components/HomeScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
 import Gallery from "@/components/Gallery";
+import Parallax from "@/components/Parallax";
 import { Lettering, SectionLink } from "@/components/Lettering";
 import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaKind, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
@@ -23,6 +24,20 @@ const PH_P = Array.from({ length: 13 }, (_, i) => `p${i + 1}.jpg`);
 const PH_C = ["proj-interior.jpg", "proj-kino.jpg"];
 
 
+// строки многострочного поля → до N строк макета (переносы строк в админке = строки макета)
+const lines = (t: string, n: number) => t.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, n);
+// случайный порядок (личности расставляются по фигуре заново при каждой загрузке)
+const shuffle = <T,>(a: T[]) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+// сценарий раскрытия ховера личности: маленькая плитка — вправо, если две ячейки справа свободны, иначе влево;
+// большая — вниз, если ряд под ней свободен, иначе вверх (по макетам hover-состояний)
+function hoverDir(m: [number, number, number][], i: number, cols: number, rows: number) {
+  const occ = new Set<string>();
+  m.forEach(([c, r, sz]) => { for (let dc = 0; dc < sz; dc++) for (let dr = 0; dr < sz; dr++) occ.add(`${c + dc},${r + dr}`); });
+  const [c, r, sz] = m[i];
+  const free = (x: number, y: number) => x >= 1 && x <= cols && y >= 1 && y <= rows && !occ.has(`${x},${y}`);
+  if (sz === 1) return free(c + 1, r) && free(c + 2, r) ? "hr" : "hl";
+  return free(c, r + 2) && free(c + 1, r + 2) ? "hd" : "hu";
+}
 // мозаика личностей: [колонка, ряд, размер] — desktop 12×4, tablet 8×5, mobile 4×8 (из макетов Section 5)
 const MOSAIC_D: [number, number, number][] = [[1, 1, 1], [3, 1, 2], [5, 1, 1], [9, 1, 1], [8, 2, 1], [2, 3, 1], [5, 3, 1], [6, 3, 2], [9, 3, 1], [10, 2, 2], [12, 3, 1], [1, 4, 1], [10, 4, 1]];
 const MOSAIC_T: [number, number, number][] = [[1, 1, 1], [2, 1, 2], [5, 1, 1], [8, 1, 1], [4, 2, 1], [1, 3, 1], [3, 3, 1], [6, 2, 2], [8, 3, 1], [4, 4, 2], [7, 4, 1], [2, 5, 1], [6, 5, 1]];
@@ -32,16 +47,25 @@ export default async function Home() {
   const [db, site] = await Promise.all([loadArchive(), getSite()]);
   const nMats = (e: Entity) => { const n = linked(db, e, "material").length; return `${n} ${plural(n, ["материал", "материала", "материалов"])}`; };
   const img = (e: Entity, fb: string, big = false) => imgOf(db, e, big) || fb;
-  const themes = ofType(db, "theme");
-  const projects = ofType(db, "project").sort((a, b) => yearOf(b.dates) - yearOf(a.dates)).slice(0, 3);
-  const chrono = ofType(db, "event").filter((e) => e.inChrono).sort((a, b) => yearOf(a.date) - yearOf(b.date));
-  const persons = ofType(db, "person").slice(0, 13);
-  const colls = ofType(db, "collection").slice(0, 2);
+  // состав главной — из админки (раздел «Главная страница» / галочки «Показывать на главной»);
+  // пока ничего не отмечено — показываем как раньше, чтобы главная не пустела
+  const pick = (t: string, key = "onHome") => { const all = ofType(db, t); const sel = all.filter((e) => e[key]); return sel.length ? sel : all; };
+  const themes = pick("theme").slice(0, 9);
+  let projects = pick("project");
+  projects = (projects.some((p) => p.onHome) ? projects : projects.sort((a, b) => yearOf(b.dates) - yearOf(a.dates)).slice(0, 3)).slice(0, 3);
+  projects.sort((a, b) => Number(!!b.featured) - Number(!!a.featured)); // фичер — первым, он большая карточка
+  const twoBig = projects.length === 2;
+  const chrono = ofType(db, "event").filter((e) => e.inChrono).sort((a, b) => yearOf(a.date) - yearOf(b.date) || a.title.localeCompare(b.title, "ru"));
+  const pool = shuffle(pick("person"));
+  const persons = pool.length ? Array.from({ length: 13 }, (_, i) => pool[i % pool.length]) : [];
+  const colls = pick("collection").slice(0, 2);
+  const heroL = lines(site.heroText, 4), aboutL = lines(site.aboutText, 3);
+  const HERO_AL = ["l", "l", "r", "c"], ABOUT_AL = ["l", "r", "c"];
 
-  const card = (e: Entity, cls: string, i: number, fb: string[], meta: string) => (
+  const card = (e: Entity, cls: string, i: number, fb: string[], meta: string, info?: string) => (
     <a className={"vcard " + cls} key={e.id} href={`/m/${e.id}`}>
       <div className="dv" />
-      <div className="tx"><h3>{e.title}</h3>{meta ? <div className="sub">{meta}</div> : null}<div className="vb" /></div>
+      <div className="tx"><h3>{e.title}</h3>{meta ? <div className="sub">{meta}</div> : null}<div className="vb" />{info ? <div className="inf"><b>{info}</b></div> : null}</div>
       <div className="im"><img src={img(e, ph(fb, i), true)} alt="" style={imgPos(db, e)} /></div>
     </a>
   );
@@ -57,15 +81,10 @@ export default async function Home() {
         <section id="hero">
           <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
           <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
-          <div id="lede">
-            <span className="l">{site.hero1}</span>
-            <span className="l">{site.hero2}</span>
-            <span className="r">{site.hero3}</span>
-            <span className="c">{site.hero4}</span>
-          </div>
+          <div id="lede">{heroL.map((t, i) => <span className={HERO_AL[i]} key={i}>{t}</span>)}</div>
           <div id="lede-m">
-            <p>{site.hero1} {site.hero2}</p>
-            <p className="r">{site.hero3} {site.hero4}</p>
+            <p>{heroL.slice(0, 2).join(" ")}</p>
+            {heroL.length > 2 ? <p className="r">{heroL.slice(2).join(" ")}</p> : null}
           </div>
           <form id="search" action="/search" method="get">
             <label className="lbl" htmlFor="home-q">Поиск в каталоге</label>
@@ -89,44 +108,43 @@ export default async function Home() {
               </a>
             ))}
           </div>
-          <SectionLink href="/cat/theme" text="Все темы" />
+          <SectionLink href="/cat/theme" text="Все материалы" />
         </section>
 
-        {/* ---- проекты центра: сетка 4 колонки (большая 2 + две средние) ---- */}
+        {/* ---- проекты центра: 3 → фичер большой + два средних; 2 → две большие ---- */}
         <section id="projects" className="sec">
           <Lettering text="проекты центра" />
-          <div className="feat pgrid">
-            {projects.map((p, i) => card(p, i === 0 ? "big" : "med", i, PH_PR, s(p, "dates")))}
+          <div className={"feat " + (twoBig ? "cgrid" : "pgrid")}>
+            {projects.map((p, i) => card(p, twoBig || i === 0 ? "big" : "med", i, PH_PR, s(p, "dates")))}
           </div>
-          <SectionLink href="/cat/project" text="Все проекты" />
+          <SectionLink href="/cat/project" text="Все материалы" />
         </section>
 
-        {/* ---- хронограф: горизонтальная лента ---- */}
+        {/* ---- хронограф: лента по годам по возрастанию; у события — только год и тип ---- */}
         <section id="chrono" className="sec">
           <Lettering text="хронограф" />
           <div className="feat hrow">
             {chrono.map((e, i) => (
               <div className="ditem" key={e.id}>
                 <div className="year">{yearOf(e.date) || s(e, "date")}</div>
-                {card(e, "small", i, PH_CH, s(e, "evType"))}
+                {card(e, "small", i, PH_CH, "", s(e, "evType"))}
               </div>
             ))}
           </div>
-          <SectionLink href="/chrono" text="Весь хронограф" />
+          <SectionLink href="/chrono" text="Все материалы" />
         </section>
 
-        {/* ---- личности: мозаика; на десктопе при наведении — красная карточка с именем и ролью ---- */}
+        {/* ---- личности: фигура из 13 ячеек, личности в ней — случайно из выбранных в админке; ховер по 4 сценариям ---- */}
         <section id="persons" className="sec">
           <Lettering text="личности" />
           <div className="feat">
             <div className="mosaic">
               {persons.map((p, i) => {
                 const d = MOSAIC_D[i], t = MOSAIC_T[i], m = MOSAIC_M[i];
-                const flip = d[0] + d[2] > 10; // у правого края карточка раскрывается влево
-                const up = d[2] === 2 && d[1] + d[2] > 4; // большая плитка у нижнего края — текст сверху
+                const dir = hoverDir(MOSAIC_D, i, 12, 4);
                 const sub = [s(p, "role"), s(p, "life")].filter(Boolean).join(", ");
                 return (
-                  <a className={"tile" + (d[2] === 2 ? " big" : "") + (flip ? " fl" : "") + (up ? " up" : "")} key={p.id} href={`/m/${p.id}`}
+                  <a className={"tile " + dir + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
                     <img src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
                     <span className="hc"><img src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
@@ -135,10 +153,10 @@ export default async function Home() {
               })}
             </div>
           </div>
-          <SectionLink href="/cat/person" text="Все личности" />
+          <SectionLink href="/cat/person" text="Все материалы" />
         </section>
 
-        {/* ---- карта: коллаж из макета, пока раздел карты не собран ---- */}
+        {/* ---- карта: статичный коллаж из макета, переход в раздел ---- */}
         <section id="map" className="sec">
           <Lettering text="карта" />
           <a className="canvas" href="/map" aria-label="Карта">
@@ -147,27 +165,28 @@ export default async function Home() {
               <img src="/assets/map-d.jpg" alt="" />
             </picture>
           </a>
-          <SectionLink href="/map" text="Вся карта" />
+          <SectionLink href="/map" text="Все материалы" />
         </section>
 
-        {/* ---- коллекции ---- */}
+        {/* ---- коллекции: галерея хайлайтов (фото и подпись из привязки «материал в коллекции») ---- */}
         <section id="collections" className="sec">
           <Lettering text="коллекции" />
           <div className="feat cgrid">
             {colls.map((c, i) => {
-              // листалка: фото, прикреплённые к коллекции в админке (в порядке загрузки), затем обложки её материалов — до 5
-              const own = (c.links || []).map((id) => db[id]).filter((m) => m && m.type === "media" && mediaKind(m) === "image" && m.med)
-                .map((m) => ({ src: String(m.med), title: c.title, pos: m.focus ? String(m.focus) : undefined }));
-              const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true))
-                .map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m)?.objectPosition as string | undefined }));
-              const slides: { src: string; title: string; pos?: string }[] = [...own, ...fromMats].slice(0, 5);
-              if (!slides.length) slides.push({ src: ph(PH_C, i), title: c.title });
+              const items = (c.items || {}) as Record<string, { img?: string; caption?: string; hl?: boolean }>;
+              const hl = linked(db, c, "material").filter((m) => items[m.id]?.hl).slice(0, 5);
+              const slides: { src: string; title: string; pos?: string }[] = hl.map((m) => {
+                const it = items[m.id] || {}; const med = it.img ? db[it.img] : undefined;
+                const src = med && med.type === "media" ? String(med.big || med.med || "") : imgOf(db, m, true);
+                return { src: src || ph(PH_C, i), title: it.caption || m.title, pos: med?.focus ? String(med.focus) : imgPos(db, m)?.objectPosition as string | undefined };
+              });
+              if (!slides.length) slides.push({ src: img(c, ph(PH_C, i), true), title: c.title, pos: imgPos(db, c)?.objectPosition as string | undefined }); // хайлайтов нет — обложка
               return (
                 <a className="vcard big coll" key={c.id} href={`/m/${c.id}`}>
                   <div className="dv" />
                   <div className="tx">
                     <h3>{c.title}</h3>
-                    {s(c, "period") ? <div className="sub">{s(c, "period")}</div> : null}
+                    {s(c, "desc") ? <div className="sub">{s(c, "desc").split("\n")[0]}</div> : s(c, "period") ? <div className="sub">{s(c, "period")}</div> : null}
                     <div className="vb" />
                     <div className="inf">{s(c, "colType") ? <b>{s(c, "colType")}</b> : null}<span>{nMats(c)}</span></div>
                   </div>
@@ -176,29 +195,26 @@ export default async function Home() {
               );
             })}
           </div>
-          <SectionLink href="/cat/collection" text="Все коллекции" />
+          <SectionLink href="/cat/collection" text="Все материалы" />
         </section>
 
-        {/* ---- об архиве ---- */}
+        {/* ---- об архиве: фон из админки, колонки с параллаксом ---- */}
         <section id="about">
-          <img className="bg" src="/assets/about-bg.jpg" alt="" />
+          <img className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" />
           <div className="shade" />
           <Lettering text="об архиве" cream />
-          <div className="lead">
-            <span className="l">{site.about1}</span>
-            <span className="r">{site.about2}</span>
-            <span className="c">{site.about3}</span>
-          </div>
+          <div className="lead">{aboutL.map((t, i) => <span className={ABOUT_AL[i]} key={i}>{t}</span>)}</div>
           <div className="lead-m">
-            <p>{site.about1}</p>
-            <p className="r">{site.about2} {site.about3}</p>
+            <p>{aboutL[0]}</p>
+            {aboutL.length > 1 ? <p className="r">{aboutL.slice(1).join(" ")}</p> : null}
           </div>
-          <div className="cols">
+          <div className="cols" id="about-cols">
             <div>{site.aboutCol1}</div>
             <div>{site.aboutCol2}</div>
             <div>{site.aboutCol3}</div>
             <div className="last"><span>{site.aboutCol4}</span><span>По вопросам сотрудничества:<br /><a href={`mailto:${site.aboutEmail}`}>{site.aboutEmail}</a></span></div>
           </div>
+          <Parallax target="about-cols" />
         </section>
 
         <Footer site={site} />

@@ -32,9 +32,12 @@
 .theme .cnt{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px}
 .theme .im{width:120px;height:120px;flex:0 0 auto;overflow:hidden;background:var(--grey5)}
 .theme .im img{width:100%;height:100%;object-fit:cover}
-.theme:hover h4{color:var(--red)}
+.theme:hover{color:var(--red)}
+.theme:hover .dv{background:var(--red)}
+.theme:hover .vb{border-color:var(--red)}
 #themes .slink{margin:8px 12px 0}
 #chrono .slink{margin-bottom:96px}
+.ditem:hover .year{color:var(--red)}
 
 /* мозаика личностей: 12 колонок, ячейка 4:5 (132×165 на 1740, 79×98 на 1100), фото без рамки */
 .mosaic{--col:calc((100cqw - 156px)/12);--row:calc(var(--col)*1.25);display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:var(--row);gap:12px;width:100%}
@@ -44,8 +47,8 @@
 /* карточка при наведении (person-hover): красное поле 12 вокруг фото, справа имя и роль;
    ширина не меньше трёх ячеек и растёт по длине имени, чтобы фамилия не выходила за красное */
 .tile .hc{display:none;position:absolute;left:-12px;top:-12px;min-width:calc(var(--col)*3 + 24px);width:max-content;max-width:calc(var(--col)*6 + 60px);height:calc(var(--row) + 24px);background:var(--red);padding:12px;gap:12px;grid-template-columns:var(--col) auto;color:var(--ink)}
-.tile.fl .hc{left:auto;right:-12px;grid-template-columns:auto var(--col)}
-.tile.fl .hc>img{order:2}
+.tile.hl .hc{left:auto;right:-12px;grid-template-columns:auto var(--col)}
+.tile.hl .hc>img{order:2}
 .tile:hover .hc{display:grid}
 .tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom}
 .tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:4px}
@@ -57,9 +60,7 @@
 .tile.big .hc>img{width:calc(var(--col)*2 + 12px);height:calc(var(--row)*2 + 12px);flex:0 0 auto}
 .tile.big .hct{height:calc(var(--row) - 24px);flex:0 0 auto;padding-right:0}
 .tile.big .hct b,.tile.big .hct small{white-space:normal}
-.tile.big.up .hc{top:auto;bottom:-12px;flex-direction:column-reverse}
-.tile.big.fl .hc{left:-12px;right:auto}
-.tile.big.fl .hc>img{order:0}
+.tile.hu .hc{top:auto;bottom:-12px;flex-direction:column-reverse}
 
 /* карта: коллаж из макета (десктоп 1740×800, леттеринг «карта» вписан в коллаж), ссылка «Вся карта» */
 #map.sec{padding-top:12px}
@@ -99,6 +100,7 @@
   #lede span{white-space:normal}
   #lede .r,#lede .c{align-self:flex-end;text-align:right}
   #search{width:min(800px,100% - 24px)}
+  .tile.big .hct small{font-size:12px;line-height:14px}
   #about .lead span{white-space:normal}
   #about .lead .r,#about .lead .c{text-align:right}
 }

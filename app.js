@@ -1132,7 +1132,7 @@ window.reqSent=()=>{document.getElementById('modal-root').innerHTML=`<div class=
 
 
 // ===== АДМИН-ПАНЕЛЬ (демо-контур по фазе 1: CRUD, справочники, медиа, модерация, права, дашборд) =====
-const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация · в разработке'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['site','Тексты сайта'],['roles','Пользователи']];
+const ADMIN_TABS=[['dash','Дашборд'],['entities','Сущности'],['moderation','Модерация · в разработке'],['dict','Справочники'],['media','Медиатека'],['stats','Статистика'],['home','Главная страница'],['site','Тексты сайта'],['roles','Пользователи']];
 const admRole=()=>localStorage.getItem('zotov_admrole')||'admin';
 let admType='all', admQ='';
 const PUBSTAT=o=>({draft:'Черновик',moderation:'На модерации',published:'Опубликовано'})[o.status]||'Опубликовано';
@@ -1325,6 +1325,7 @@ function adminEdit(id){
         ${F(DATELABEL[o.type]||'Дата / период',o[dk]||o.date,'f-'+dk)}
         ${specific}
         ${rec?'':`<div class="field"><label>Описание</label><textarea class="inp" id="f-desc" style="width:100%" placeholder="Редакторское описание с научным аппаратом…">${esc(o.desc||'')}</textarea></div>`}
+        ${homeBlock(o)}
         <h3>Связи <span class="muted" style="font-size:13px;font-weight:400">— двусторонние: появятся на карточках обеих сущностей</span></h3>
         ${relBlocks||'<div class="muted">Связей пока нет.</div>'}
         <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
@@ -1597,21 +1598,7 @@ function adminStats(){
 // Хранятся одной служебной сущностью `site` (type dict) — фронт читает её при рендере, изменения видны сразу.
 const SITE_DEF=[
   ['Первый экран',[
-    ['hero1','Подзаголовок, строка 1','Уникальный архив о конструктивизме,'],
-    ['hero2','Подзаголовок, строка 2','медиа и городской истории:'],
-    ['hero3','Подзаголовок, строка 3 (справа)','материалы, личности, события, места и проекты,'],
-    ['hero4','Подзаголовок, строка 4 (по центру)','объединённые в единую систему связей'],
     ['searchPh','Плейсхолдер строки поиска','Материалы, личности, темы и тд'],
-  ]],
-  ['Об архиве',[
-    ['about1','Заголовок, строка 1','Первый в мире цифровой архив,'],
-    ['about2','Заголовок, строка 2 (справа)','объединяющий источники и исследования,'],
-    ['about3','Заголовок, строка 3 (справа)','посвященные конструктивизму'],
-    ['aboutCol1','Колонка 1','Зотов. Архив объединит материалы и исследования, посвященные эпохе 1920-1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределенных по разным городам, организациям и изданиям.','ta'],
-    ['aboutCol2','Колонка 2','Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.','ta'],
-    ['aboutCol3','Колонка 3','Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.','ta'],
-    ['aboutCol4','Колонка 4','Зотов. Архив приглашает к сотрудничеству исследователей, проекты и институции, цели работы которых связаны с цифровизацией и сохранением наследия конструктивизма.','ta'],
-    ['aboutEmail','E-mail для сотрудничества','archive@centrezotov.ru'],
   ]],
   ['Хронограф',[
     ['chronoIntro','Вводный текст на странице хронографа','История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.','ta'],
@@ -1633,10 +1620,22 @@ const SITE_DEF=[
     ['dzen','Дзен (ссылка)',''],
   ]],
 ];
-const siteVal=k=>{const s=DB['site']||{};const def=SITE_DEF.flatMap(g=>g[1]).find(f=>f[0]===k);return s[k]!=null&&s[k]!==''?s[k]:(def?def[2]:'');};
+const HOME_DEF={heroText:'Уникальный архив о конструктивизме,\nмедиа и городской истории:\nматериалы, личности, события, места и проекты,\nобъединённые в единую систему связей',
+  aboutText:'Первый в мире цифровой архив,\nобъединяющий источники и исследования,\nпосвященные конструктивизму',
+  aboutCol1:'Зотов. Архив объединит материалы и исследования, посвященные эпохе 1920-1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределенных по разным городам, организациям и изданиям.',
+  aboutCol2:'Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.',
+  aboutCol3:'Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.',
+  aboutCol4:'Зотов. Архив приглашает к сотрудничеству исследователей, проекты и институции, цели работы которых связаны с цифровизацией и сохранением наследия конструктивизма.',
+  aboutEmail:'archive@centrezotov.ru',aboutBg:''};
+const siteVal=k=>{const s=DB['site']||{};if(s[k]!=null&&s[k]!=='')return s[k];
+  // старые построчные поля (hero1–4, about1–3) склеиваем в новые многострочные
+  if(k==='heroText'&&s.hero1)return [s.hero1,s.hero2,s.hero3,s.hero4].filter(Boolean).join('\n');
+  if(k==='aboutText'&&s.about1)return [s.about1,s.about2,s.about3].filter(Boolean).join('\n');
+  if(k in HOME_DEF)return HOME_DEF[k];
+  const def=SITE_DEF.flatMap(g=>g[1]).find(f=>f[0]===k);return def?def[2]:'';};
 function adminSite(){
   return adminLayout('site',`<h1 style="font-size:30px">Тексты сайта</h1>
-    <div class="muted" style="font-size:14px;margin:6px 0 18px;max-width:720px">Общие тексты главной страницы, блок «Об архиве», ссылки в меню и футере, соцсети. Сохранённое сразу появляется на сайте.</div>
+    <div class="muted" style="font-size:14px;margin:6px 0 18px;max-width:720px">Тексты поиска и хронографа, ссылки в меню и футере, соцсети. Тексты главной — в разделе «Главная страница». Сохранённое сразу появляется на сайте.</div>
     <div class="grid g2" style="gap:16px;align-items:start">
     ${SITE_DEF.map(([title,fields])=>`<div class="card"><b>${title}</b>
       ${fields.map(([k,l,,ta])=>`<div class="field" style="margin-top:10px"><label>${l}</label>${ta
@@ -1696,8 +1695,11 @@ window.admSave=async id=>{
   try{
     const g=x=>document.getElementById(x)?document.getElementById(x).value:undefined;
     const payload={};['mtype','subtype','date','desc','evType','placeType','srcType','group','role','city','address','colType','orgType','prType','themeType','life','dates','period','year','curators','author','publisher','pubplace','def'].forEach(k=>{const v=g('f-'+k);if(v!==undefined)payload[k]=v;});
+    const o=DB[id],d=homeDraft(o);const chk=homeCheck(d);
+    if(chk.errors.length){toast(chk.errors[0]);return;}
+    Object.keys(d).filter(k=>k!=='id').forEach(k=>payload[k]=d[k]);
     await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({title:g('f-title'),payload})});
-    await refreshData();toast('Сохранено — объект обновлён во всех разделах');render();
+    await refreshData();toast(chk.warnings[0]||'Сохранено — объект обновлён во всех разделах');render();
   }catch(e){toast('Ошибка: '+e.message);}
 };
 window.admPatch=async(id,patch)=>{
@@ -1913,11 +1915,190 @@ window.admCreate=async()=>{
   }catch(e){toast('Ошибка: '+e.message);}
 };
 
+// ===== Главная страница в админке (ТЗ DEV): что показывать на главной, фичер, хайлайты коллекций, тексты и фон =====
+// Единые данные: галочка «Показывать на главной» в карточке сущности и список в разделе «Главная страница» — одно поле (onHome;
+// у события — существующее inChrono). Лимиты: темы 5–9, проекты 2–3 (+ ровно один фичер при трёх), коллекции ≤2,
+// хайлайты коллекции 2–5, подзаголовок ≤500 знаков. Максимумы и фичер — не дают сохранить; минимумы — сохраняют, но предупреждают.
+const HOME_KEY=t=>t==='event'?'inChrono':'onHome';
+const onHome=o=>!!o[HOME_KEY(o.type)];
+const homeList=t=>all(t).filter(onHome);
+const HOME_LIM={theme:[5,9],project:[2,3],collection:[0,2]};
+const HOME_LABEL={theme:'тем',project:'проектов',collection:'коллекций',event:'событий',person:'личностей'};
+// хайлайты коллекции: настройки привязки «материал в коллекции» лежат в items[materialId]={img,caption,hl}
+const collItems=o=>o.items||{};
+const collMaterials=o=>(o.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='material');
+const collHighlights=o=>collMaterials(o).filter(m=>(collItems(o)[m.id]||{}).hl);
+// проверка состояния главной; state — DB с учётом черновика карточки (draft: {id, onHome, featured, items})
+function homeCheck(draft){
+  const get=o=>draft&&draft.id===o.id?{...o,...draft}:o;
+  const errors=[],warnings=[];
+  const list=t=>all(t).map(get).filter(onHome);
+  const th=list('theme');
+  if(th.length>9)errors.push('На главной может быть не больше 9 тем — уберите лишние.');
+  else if(th.length<5)warnings.push(`На главной будет показано ${th.length} ${plural(th.length,['тема','темы','тем'])}. По макету минимум 5 — если хотите больше, отметьте ещё.`);
+  const pr=list('project'),feat=pr.filter(o=>o.featured);
+  if(pr.length>3)errors.push('На главной может быть не больше 3 проектов.');
+  if(feat.length>1)errors.push('Фичером может быть только один проект.');
+  if(pr.length===3&&feat.length!==1)errors.push('Выберите один проект-фичер для главной: при трёх проектах он становится большой карточкой.');
+  if(pr.length<2&&pr.length>=0)warnings.push(`На главной будет показано ${pr.length} ${plural(pr.length,['проект','проекта','проектов'])}. По макету минимум 2.`);
+  const co=list('collection');
+  if(co.length>2)errors.push('На главной может быть не больше 2 коллекций.');
+  co.forEach(c=>{const n=collHighlights(c).length;
+    if(n>5)errors.push(`«${c.title}»: в хайлайтах не больше 5 материалов.`);
+    else if(n<2)warnings.push(`«${c.title}»: в хайлайтах ${n} ${plural(n,['материал','материала','материалов'])} — по макету галерея из 2–5, пока покажем обложку.`);});
+  const heroEl=document.getElementById('home-heroText');
+  if(heroEl&&heroEl.value.length>500)errors.push('Подзаголовок первого экрана длиннее 500 знаков.');
+  return {errors,warnings};
+}
+const plural=(n,f)=>{const a=n%10,b=n%100;return f[b>=11&&b<=14?2:a===1?0:a>=2&&a<=4?1:2];};
+// блок «Главная страница» в карточке сущности
+function homeBlock(o){
+  if(!['theme','project','event','person','collection'].includes(o.type))return '';
+  const k=HOME_KEY(o.type);
+  return `<h3>Главная страница</h3>
+    <label class="field" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="f-home" ${o[k]?'checked':''}> Показывать на главной</label>
+    ${o.type==='project'?`<label class="field" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="f-featured" ${o.featured?'checked':''}> Фичер — большая карточка (при трёх проектах на главной фичер должен быть ровно один)</label>`:''}
+    ${o.type==='collection'?collItemsEditor(o):''}
+    <div class="muted" style="font-size:12px">${o.type==='theme'?'На главной 5–9 тем.':o.type==='project'?'На главной 2–3 проекта.':o.type==='collection'?'На главной не больше 2 коллекций, в галерее хайлайтов 2–5 материалов.':o.type==='event'?'Отмеченные события попадают в ленту хронографа на главной.':'Из отмеченных личностей случайно собирается фигура на главной.'}</div>`;
+}
+// настройки материалов в коллекции: фото (из изображений материала), подпись, хайлайт
+function collItemsEditor(o){
+  const mats=collMaterials(o),items=collItems(o);
+  if(!mats.length)return '<div class="muted" style="font-size:13px;margin:8px 0">Добавьте материалы в коллекцию (блок «Связи») — здесь появятся их настройки.</div>';
+  return `<div class="kicker" style="margin:10px 0 6px">Материалы коллекции <span class="muted" style="font-weight:400">— фото и подпись для этой коллекции, галочка хайлайта для галереи на главной</span></div>
+    ${mats.map(m=>{const it=items[m.id]||{};const imgs=(m.links||[]).map(id=>DB[id]).filter(x=>x&&x.type==='media'&&kindOf(x)==='image');
+      const cur=it.img||m.cover||(imgs[0]&&imgs[0].id)||'';
+      return `<div class="citem" data-mid="${m.id}" style="display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)">
+        <span class="thumbmini" style="${(DB[cur]&&DB[cur].thumb)?`background-image:url('${DB[cur].thumb}');background-size:cover;background-position:center`:''}"></span>
+        <div style="min-width:0"><div style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.title)}</div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+            <select class="sel ci-img" style="font-size:12px;padding:2px 6px;max-width:220px" ${imgs.length?'':'disabled'}>${imgs.length?imgs.map(x=>`<option value="${x.id}" ${cur===x.id?'selected':''}>${esc(x.title)}</option>`).join(''):'<option value="">нет изображений</option>'}</select>
+            <input class="inp ci-cap" style="font-size:12px;padding:2px 6px;flex:1;min-width:160px" placeholder="Подпись (по умолчанию — название)" value="${esc(it.caption||'')}">
+          </div></div>
+        <label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap"><input type="checkbox" class="ci-hl" ${it.hl?'checked':''}> Хайлайт</label>
+      </div>`;}).join('')}`;
+}
+// собрать настройки материалов из формы
+function readCollItems(){
+  const out={};
+  document.querySelectorAll('.citem').forEach(el=>{const sel=el.querySelector('.ci-img'),cap=el.querySelector('.ci-cap'),hl=el.querySelector('.ci-hl');
+    out[el.dataset.mid]={img:sel&&sel.value||'',caption:cap?cap.value.trim():'',hl:!!(hl&&hl.checked)};});
+  return out;
+}
+// черновик полей главной из формы карточки
+function homeDraft(o){
+  const d={id:o.id};
+  const h=document.getElementById('f-home');if(h)d[HOME_KEY(o.type)]=h.checked;
+  const f=document.getElementById('f-featured');if(f)d.featured=f.checked;
+  if(o.type==='collection'&&document.querySelector('.citem'))d.items=readCollItems();
+  return d;
+}
+// раздел «Главная страница»
+function adminHome(){
+  const chk=homeCheck();
+  const msgs=[...chk.errors.map(e=>`<div class="admbar" style="background:#fbe5e4;color:#9a2e2e">${esc(e)}</div>`),...chk.warnings.map(w=>`<div class="admbar">${esc(w)}</div>`)].join('');
+  const list=(t,extra)=>{const L=homeList(t);return `<div class="chips" style="flex-direction:column;align-items:stretch;gap:6px">
+      ${L.length?L.map(o=>`<div style="display:flex;gap:10px;align-items:center;font-size:13px;border-top:1px solid var(--line);padding-top:6px"><a href="#/admin/edit/${o.id}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o.title)}</a>${extra?extra(o):''}<span class="muted" style="cursor:pointer" title="Убрать с главной" onclick="homeToggle('${o.id}',false)">✕</span></div>`).join(''):'<div class="muted" style="font-size:13px">Пока ничего не выбрано.</div>'}
+      <span class="chip" style="border:1px dashed #bbb;background:#fff;cursor:pointer;align-self:flex-start" onclick="homePick('${t}')">＋ Добавить из списка</span></div>`;};
+  const lim=t=>{const [a,b]=HOME_LIM[t]||[];const n=homeList(t).length;return `<span class="muted" style="font-weight:400;font-size:12px"> ${n}${b?` · ${a?a+'–':'до '}${b}`:''}</span>`;};
+  const heroText=siteVal('heroText'),aboutText=siteVal('aboutText'),bg=siteVal('aboutBg');
+  return adminLayout('home',`<h1 style="font-size:30px">Главная страница</h1>
+    <div class="muted" style="font-size:14px;margin:6px 0 14px;max-width:760px">Что показывать на главной. Те же галочки есть в карточках сущностей — это одни данные: отметили здесь — видно там, и наоборот. Сохранённое сразу появляется на сайте.</div>
+    ${msgs}
+    <div class="grid g2" style="gap:16px;align-items:start;margin-top:12px">
+      <div class="card"><b>Первый экран</b>
+        <div class="field" style="margin-top:10px"><label>Подзаголовок <span class="muted" style="font-weight:400">— до 500 знаков; каждая строка — отдельная строка в макете (1-я и 2-я слева, 3-я справа, 4-я по центру)</span></label>
+          <textarea class="inp" id="home-heroText" maxlength="500" style="width:100%;min-height:110px" oninput="document.getElementById('hero-cnt').textContent=this.value.length+' / 500'">${esc(heroText)}</textarea>
+          <div class="muted" id="hero-cnt" style="font-size:12px;text-align:right">${heroText.length} / 500</div></div>
+        <div style="display:flex;gap:10px"><span class="btn dark" onclick="homeSaveTexts()">Сохранить тексты</span></div>
+      </div>
+      <div class="card"><b>Об архиве</b>
+        <div class="field" style="margin-top:10px"><label>Фон — фотография</label>
+          <div class="media" style="aspect-ratio:3/1;${bg?`background-image:url('${bg}');background-size:cover;background-position:center`:''}"></div>
+          <input type="file" id="home-bg" accept="image/*" style="display:none" onchange="homeBgUpload()">
+          <div style="display:flex;gap:8px;margin-top:8px"><span class="btn sm" onclick="document.getElementById('home-bg').click()">＋ Загрузить фото</span>${bg?`<span class="btn sm" onclick="homePatchSite({aboutBg:''})">Убрать</span>`:''}</div></div>
+        <div class="field"><label>Подзаголовок <span class="muted" style="font-weight:400">— строки: 1-я слева, 2-я справа, 3-я по центру</span></label><textarea class="inp" id="home-aboutText" style="width:100%;min-height:80px">${esc(aboutText)}</textarea></div>
+        ${[1,2,3,4].map(i=>`<div class="field"><label>Колонка ${i}${i===4?' <span class="muted" style="font-weight:400">— под ней подпись «По вопросам сотрудничества» и e-mail</span>':''}</label><textarea class="inp" id="home-aboutCol${i}" style="width:100%;min-height:80px">${esc(siteVal('aboutCol'+i))}</textarea></div>`).join('')}
+        <div class="field"><label>E-mail для сотрудничества</label><input class="inp" id="home-aboutEmail" style="width:100%;color:var(--ink)" value="${esc(siteVal('aboutEmail'))}"></div>
+        <div style="display:flex;gap:10px"><span class="btn dark" onclick="homeSaveTexts()">Сохранить тексты</span></div>
+      </div>
+      <div class="card"><b>Темы</b>${lim('theme')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Лента на главной. Количество материалов считается по материалам в теме.</div>${list('theme')}</div>
+      <div class="card"><b>Проекты центра</b>${lim('project')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Два проекта — две большие карточки; три — фичер большой, два маленьких.</div>${list('project',o=>`<label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap"><input type="radio" name="feat" ${o.featured?'checked':''} onchange="homeFeature('${o.id}')"> фичер</label>`)}</div>
+      <div class="card"><b>Хронограф</b>${lim('event')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Лента событий на главной, по годам по возрастанию; выводится только год.</div>${list('event')}</div>
+      <div class="card"><b>Личности</b>${lim('person')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Фигура из 13 ячеек; при каждой загрузке личности расставляются случайно.</div>${list('person')}</div>
+      <div class="card" style="grid-column:1/-1"><b>Коллекции</b>${lim('collection')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Галерея хайлайтов: 2–5 материалов коллекции с фото и подписью, выбранными для этой коллекции.</div>
+        ${list('collection')}
+        ${homeList('collection').map(c=>`<div style="margin-top:14px"><div class="kicker">${esc(c.title)} — хайлайты <span class="muted" style="font-weight:400">${collHighlights(c).length} из 2–5</span></div>${collItemsEditor(c).replace(/class="citem"/g,`class="citem" data-coll="${c.id}"`)}
+          <div style="margin-top:8px"><span class="btn sm dark" onclick="homeSaveColl('${c.id}')">Сохранить хайлайты «${esc(c.title)}»</span></div></div>`).join('')}
+      </div>
+    </div>`);
+}
+// переключить «на главной» (одни данные с карточкой сущности)
+window.homeToggle=async(id,on)=>{
+  const o=DB[id];if(!o)return;
+  const chk=homeCheck({id,[HOME_KEY(o.type)]:on});
+  if(chk.errors.length){toast(chk.errors[0]);return;}
+  try{await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({payload:{[HOME_KEY(o.type)]:on}})});await refreshData();if(chk.warnings.length)toast(chk.warnings[0]);else toast('Сохранено');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+window.homeFeature=async id=>{
+  try{
+    for(const p of all('project'))if(p.featured&&p.id!==id)await api('/entities/'+p.id,{method:'PATCH',body:JSON.stringify({payload:{featured:false}})});
+    await api('/entities/'+id,{method:'PATCH',body:JSON.stringify({payload:{featured:true}})});
+    await refreshData();toast('Фичер выбран');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
+// выбор из общего списка сущностей типа
+window.homePick=t=>{
+  const pool=all(t).filter(o=>!onHome(o)).sort((a,b)=>a.title.localeCompare(b.title,'ru'));
+  document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${TYPES[t].pl}: добавить на главную</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div class="fmodal-top"><input class="secsearch" style="max-width:340px;margin:0" placeholder="Поиск…" oninput="document.querySelectorAll('#lp-list .fopt').forEach(el=>{el.style.display=!this.value||el.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none';})" autofocus></div>
+    <div class="fmodal-list" id="lp-list">${pool.length?pool.map(o=>`<span class="fopt" onclick="homeToggle('${o.id}',true);admCloseLp()">${esc(o.title)}</span>`).join(''):'<div class="muted" style="font-size:13px;padding:14px 0">Все уже на главной.</div>'}</div>
+    <div class="right" style="margin-top:18px"><span class="btn dark" onclick="admCloseLp()">Готово</span></div>
+  </div></div>`;
+};
+window.homeSaveColl=async cid=>{
+  const items={};
+  document.querySelectorAll(`.citem[data-coll="${cid}"]`).forEach(el=>{const sel=el.querySelector('.ci-img'),cap=el.querySelector('.ci-cap'),hl=el.querySelector('.ci-hl');items[el.dataset.mid]={img:sel&&sel.value||'',caption:cap?cap.value.trim():'',hl:!!(hl&&hl.checked)};});
+  const chk=homeCheck({id:cid,items});
+  if(chk.errors.length){toast(chk.errors[0]);return;}
+  try{await api('/entities/'+cid,{method:'PATCH',body:JSON.stringify({payload:{items}})});await refreshData();toast(chk.warnings.find(w=>w.startsWith('«'))||'Хайлайты сохранены');render();}
+  catch(e){toast('Ошибка: '+e.message);}
+};
+window.homePatchSite=async payload=>{
+  try{
+    if(DB['site'])await api('/entities/site',{method:'PATCH',body:JSON.stringify({payload})});
+    else await api('/entities',{method:'POST',body:JSON.stringify({id:'site',type:'dict',title:'Тексты сайта',payload})});
+    await refreshData();toast('Сохранено — обновлено на сайте');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
+window.homeSaveTexts=()=>{
+  const g=x=>{const e=document.getElementById('home-'+x);return e?e.value.trim():undefined;};
+  const heroText=g('heroText')||'';
+  if(heroText.length>500){toast('Подзаголовок длиннее 500 знаков — сократите.');return;}
+  const payload={heroText,aboutText:g('aboutText')||'',aboutEmail:g('aboutEmail')||''};
+  [1,2,3,4].forEach(i=>payload['aboutCol'+i]=g('aboutCol'+i)||'');
+  homePatchSite(payload);
+};
+// фон «Об архиве»: загружаем в медиатеку как файл сущности site и ставим ссылку на большой размер
+window.homeBgUpload=async()=>{
+  const inp=document.getElementById('home-bg');const f=inp.files&&inp.files[0];if(!f)return;
+  try{
+    if(!DB['site'])await api('/entities',{method:'POST',body:JSON.stringify({id:'site',type:'dict',title:'Тексты сайта',payload:{}})});
+    const fd=new FormData();fd.append('file',f);fd.append('entityId','site');
+    const r=await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'HTTP '+r.status);}
+    const m=await r.json();
+    await homePatchSite({aboutBg:m.big||m.med||m.thumb||''});
+  }catch(e){toast('Ошибка: '+e.message);}
+};
+
 function admin(seg){
   const tab=seg[1]||'dash';
   if(tab==='edit') return adminEdit(seg[2]);
   if(tab==='new') return adminNew();
-  const views={dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,stats:adminStats,site:adminSite,roles:adminRoles};
+  const views={dash:adminDash,entities:adminEntities,moderation:adminModeration,dict:adminDict,media:adminMedia,stats:adminStats,home:adminHome,site:adminSite,roles:adminRoles};
   return views[tab]?views[tab]():adminDash();
 }
 
