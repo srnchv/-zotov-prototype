@@ -53,7 +53,9 @@
 .rel-item .im img{width:100%;height:100%;object-fit:cover}
 .rel-item.noimg .row{min-height:0}
 .rel-item.noimg .vb{min-height:12px}
-.rel-item:hover h3{color:var(--red)}
+.rel-item:hover{color:var(--red)} /* ховер — вся карточка */
+.rel-item:hover .dv{background:var(--red)}
+.rel-item:hover .vb{border-color:var(--red)}
 
 /* «Похожее» */
 #similar{padding-top:80px}

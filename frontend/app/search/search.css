@@ -55,7 +55,9 @@
 .rc .im{height:184px;width:184px;max-width:100%;flex:0 0 184px;overflow:hidden;background:var(--grey5)}
 .rc .im.p{width:138px}
 .rc .im img{width:100%;height:100%;object-fit:cover}
-.rc:hover h3{color:var(--red)}
+.rc:hover{color:var(--red);border-color:var(--red)} /* ховер — вся карточка */
+.rc:hover .vb{border-color:var(--red)}
+.rc:hover .k,.rc:hover .k .grey{color:var(--red)}
 #empty{padding:40px 0;font-size:18px;line-height:20px;color:var(--grey2)}
 #more{display:flex;justify-content:center;padding:48px 0 0}
 #more a{background:var(--ink);color:#fff;padding:12px;min-width:172px;text-align:center;font-size:14.1px;line-height:16px;font-weight:700;text-transform:uppercase;letter-spacing:.423px}

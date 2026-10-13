@@ -63,12 +63,13 @@ a{color:inherit;text-decoration:none}
 .lt span{display:inline-block;min-width:55px;text-align:center} /* широкие буквы (ф, ш) шире ячейки 55 — ячейка растёт, крайняя не вылезает за край */
 .lt.cream{color:#fffadc}
 /* ссылка «Все …» (section-link): линия 8 + 20 + кружок; после неё — отступ этажа */
-.slink{display:flex;align-items:center;gap:8px;margin:0 12px var(--pb);border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
+.slink{display:flex;align-items:center;gap:8px;margin:0 12px calc(var(--pb) - 8px);border-top:8px solid var(--ink);padding-top:20px;font-size:14.1px;line-height:16px;font-weight:500}
 .slink span{flex:1 1 auto;text-align:right}
 .slink i{width:var(--ico);height:var(--ico);border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .slink:hover{color:var(--red)}
 .slink:hover i{background:var(--red)}
-.sec{padding-top:20px;border-top:8px solid var(--grey5)}
+.sec{padding-top:12px;border-top:8px solid var(--grey5)} /* 8 линии + 12 = 20 до леттеринга, как в макете */
+.sec>.lt{margin-bottom:12px}
 .feat{padding:var(--feat-pt) 12px 12px;display:flex;gap:12px;align-items:flex-start}
 .feat.pgrid,.feat.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:stretch}
 .feat.cgrid{grid-template-columns:1fr 1fr}
