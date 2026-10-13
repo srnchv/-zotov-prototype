@@ -158,6 +158,7 @@ export default async function Home() {
 
         {/* ---- карта: статичный коллаж (с надписью «КАРТА» внутри) из админки, переход в раздел ---- */}
         <section id="map" className="sec">
+          <Lettering text="карта" />
           <a className="canvas" href="/map" aria-label="Карта">
             <picture>
               <source media="(max-width:1023px)" srcSet={site.mapM || "/assets/map-m.jpg"} />

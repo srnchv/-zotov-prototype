@@ -63,7 +63,8 @@
 .tile.hu .hc{top:auto;bottom:-12px;flex-direction:column-reverse}
 
 /* карта: коллаж из макета (десктоп 1740×800, леттеринг «карта» вписан в коллаж), ссылка «Вся карта» */
-#map.sec{padding-top:12px}
+#map.sec{padding-top:12px} /* десктопный коллаж — с надписью «КАРТА» внутри, свой леттеринг спрятан */
+#map .lt{display:none}
 #map .canvas{display:block;background:#fff}
 #map .canvas img{width:100%;height:auto;display:block}
 #map .slink{margin-top:12px}
@@ -117,8 +118,10 @@
   .mosaic{--col:calc((100cqw - 108px)/8);--row:calc(var(--col)*1.285);grid-template-columns:repeat(8,1fr)}
   .tile{grid-column:var(--tc) / span var(--ds);grid-row:var(--tr) / span var(--ds)}
   .tile .hc,.tile:hover .hc,.tile.big:hover .hc{display:none}
+  #map.sec{padding-top:12px}
+  #map .lt{display:flex} /* вертикальный коллаж без надписи — леттеринг сверху, как в макете */
   #map .canvas{display:flex;justify-content:center}
-  #map .canvas img{width:75%} /* планшет: вертикальный коллаж по центру */
+  #map .canvas img{width:75%} /* планшет: по центру */
   #about{height:890px}
   #about .lt{top:-8px}
   #about .lead{display:none}
