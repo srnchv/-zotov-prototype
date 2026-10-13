@@ -64,9 +64,8 @@
 
 /* карта: коллаж из макета (десктоп 1740×800, леттеринг «карта» вписан в коллаж), ссылка «Вся карта» */
 #map.sec{padding-top:12px}
-#map .lt{display:none}
-#map .canvas{display:block;aspect-ratio:1740/800;overflow:hidden;background:#fff}
-#map .canvas img{width:100%;height:100%;object-fit:cover;display:block}
+#map .canvas{display:block;background:#fff}
+#map .canvas img{width:100%;height:auto;display:block}
 #map .slink{margin-top:12px}
 
 /* ==== об архиве (desktop/about 1080): фото + затемнение, песочный текст ==== */
@@ -117,10 +116,8 @@
   .mosaic{--col:calc((100cqw - 108px)/8);--row:calc(var(--col)*1.285);grid-template-columns:repeat(8,1fr)}
   .tile{grid-column:var(--tc) / span var(--ds);grid-row:var(--tr) / span var(--ds)}
   .tile .hc,.tile:hover .hc,.tile.big:hover .hc{display:none}
-  #map.sec{padding-top:20px}
-  #map .lt{display:flex}
-  #map .canvas{margin-top:12px;aspect-ratio:768/638;display:flex;align-items:center;justify-content:center}
-  #map .canvas img{width:75%;height:auto}
+  #map .canvas{display:flex;justify-content:center}
+  #map .canvas img{width:75%} /* планшет: вертикальный коллаж по центру */
   #about{height:890px}
   #about .lead{display:none}
   #about .lead-m{display:block;position:absolute;left:12px;right:12px;top:102px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.24px;font-weight:500;text-transform:uppercase}
@@ -145,8 +142,7 @@
   .theme .im{width:80px;height:80px}
   .mosaic{--col:calc((100cqw - 60px)/4);--row:calc(var(--col)*1.28);grid-template-columns:repeat(4,1fr)}
   .tile{grid-column:var(--mc) / span var(--ms);grid-row:var(--mr) / span var(--ms)}
-  #map .canvas{aspect-ratio:360/462;display:block}
-  #map .canvas img{width:100%;height:100%;object-fit:cover}
+  #map .canvas img{width:100%}
   #about{height:640px}
   #about .lead-m{top:76px;font-size:20px;line-height:20px;letter-spacing:0}
   #about .cols{bottom:12px}

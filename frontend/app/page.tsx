@@ -156,13 +156,12 @@ export default async function Home() {
           <SectionLink href="/cat/person" text="Все материалы" />
         </section>
 
-        {/* ---- карта: статичный коллаж из макета, переход в раздел ---- */}
+        {/* ---- карта: статичный коллаж (с надписью «КАРТА» внутри) из админки, переход в раздел ---- */}
         <section id="map" className="sec">
-          <Lettering text="карта" />
           <a className="canvas" href="/map" aria-label="Карта">
             <picture>
-              <source media="(max-width:1023px)" srcSet="/assets/map-m.jpg" />
-              <img src="/assets/map-d.jpg" alt="" />
+              <source media="(max-width:1023px)" srcSet={site.mapM || "/assets/map-m.jpg"} />
+              <img src={site.mapD || "/assets/map-d.jpg"} alt="Карта" />
             </picture>
           </a>
           <SectionLink href="/map" text="Все материалы" />

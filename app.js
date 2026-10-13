@@ -1626,7 +1626,7 @@ const HOME_DEF={heroText:'Уникальный архив о конструкт�
   aboutCol2:'Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.',
   aboutCol3:'Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.',
   aboutCol4:'Зотов. Архив приглашает к сотрудничеству исследователей, проекты и институции, цели работы которых связаны с цифровизацией и сохранением наследия конструктивизма.',
-  aboutEmail:'archive@centrezotov.ru',aboutBg:''};
+  aboutEmail:'archive@centrezotov.ru',aboutBg:'',mapD:'',mapM:''};
 const siteVal=k=>{const s=DB['site']||{};if(s[k]!=null&&s[k]!=='')return s[k];
   // старые построчные поля (hero1–4, about1–3) склеиваем в новые многострочные
   if(k==='heroText'&&s.hero1)return [s.hero1,s.hero2,s.hero3,s.hero4].filter(Boolean).join('\n');
@@ -2015,12 +2015,18 @@ function adminHome(){
       <div class="card"><b>Об архиве</b>
         <div class="field" style="margin-top:10px"><label>Фон — фотография</label>
           <div class="media" style="aspect-ratio:3/1;${bg?`background-image:url('${bg}');background-size:cover;background-position:center`:''}"></div>
-          <input type="file" id="home-bg" accept="image/*" style="display:none" onchange="homeBgUpload()">
+          <input type="file" id="home-bg" accept="image/*" style="display:none" onchange="homeImgUpload('aboutBg')">
           <div style="display:flex;gap:8px;margin-top:8px"><span class="btn sm" onclick="document.getElementById('home-bg').click()">＋ Загрузить фото</span>${bg?`<span class="btn sm" onclick="homePatchSite({aboutBg:''})">Убрать</span>`:''}</div></div>
         <div class="field"><label>Подзаголовок <span class="muted" style="font-weight:400">— строки: 1-я слева, 2-я справа, 3-я по центру</span></label><textarea class="inp" id="home-aboutText" style="width:100%;min-height:80px">${esc(aboutText)}</textarea></div>
         ${[1,2,3,4].map(i=>`<div class="field"><label>Колонка ${i}${i===4?' <span class="muted" style="font-weight:400">— под ней подпись «По вопросам сотрудничества» и e-mail</span>':''}</label><textarea class="inp" id="home-aboutCol${i}" style="width:100%;min-height:80px">${esc(siteVal('aboutCol'+i))}</textarea></div>`).join('')}
         <div class="field"><label>E-mail для сотрудничества</label><input class="inp" id="home-aboutEmail" style="width:100%;color:var(--ink)" value="${esc(siteVal('aboutEmail'))}"></div>
         <div style="display:flex;gap:10px"><span class="btn dark" onclick="homeSaveTexts()">Сохранить тексты</span></div>
+      </div>
+      <div class="card"><b>Карта</b><div class="muted" style="font-size:12px;margin:4px 0 8px">Статичный коллаж с надписью «КАРТА» внутри. Десктоп — 1740×800, мобайл и планшет — вертикальный 360×573 (загружайте в 2x).</div>
+        ${[['mapD','Десктоп','1740/800'],['mapM','Мобайл и планшет','360/573']].map(([k,l,ar])=>`<div class="field"><label>${l}</label>
+          <div class="media" style="aspect-ratio:${ar};max-height:220px;${siteVal(k)?`background-image:url('${siteVal(k)}');background-size:contain;background-repeat:no-repeat;background-position:center`:''}"></div>
+          <input type="file" id="home-${k}" accept="image/*" style="display:none" onchange="homeImgUpload('${k}')">
+          <div style="display:flex;gap:8px;margin-top:8px"><span class="btn sm" onclick="document.getElementById('home-${k}').click()">＋ Загрузить</span>${siteVal(k)?`<span class="btn sm" onclick="homePatchSite({${k}:''})">Убрать</span>`:''}</div></div>`).join('')}
       </div>
       <div class="card"><b>Темы</b>${lim('theme')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Лента на главной. Количество материалов считается по материалам в теме.</div>${list('theme')}</div>
       <div class="card"><b>Проекты центра</b>${lim('project')}<div class="muted" style="font-size:12px;margin:4px 0 8px">Два проекта — две большие карточки; три — фичер большой, два маленьких.</div>${list('project',o=>`<label style="font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer;white-space:nowrap"><input type="radio" name="feat" ${o.featured?'checked':''} onchange="homeFeature('${o.id}')"> фичер</label>`)}</div>
@@ -2081,16 +2087,16 @@ window.homeSaveTexts=()=>{
   [1,2,3,4].forEach(i=>payload['aboutCol'+i]=g('aboutCol'+i)||'');
   homePatchSite(payload);
 };
-// фон «Об архиве»: загружаем в медиатеку как файл сущности site и ставим ссылку на большой размер
-window.homeBgUpload=async()=>{
-  const inp=document.getElementById('home-bg');const f=inp.files&&inp.files[0];if(!f)return;
+// картинки главной (фон «Об архиве», коллажи карты): загружаем в медиатеку как файл сущности site и ставим ссылку на большой размер
+window.homeImgUpload=async key=>{
+  const inp=document.getElementById(key==='aboutBg'?'home-bg':'home-'+key);const f=inp&&inp.files&&inp.files[0];if(!f)return;
   try{
     if(!DB['site'])await api('/entities',{method:'POST',body:JSON.stringify({id:'site',type:'dict',title:'Тексты сайта',payload:{}})});
     const fd=new FormData();fd.append('file',f);fd.append('entityId','site');
     const r=await fetch(API+'/media',{method:'POST',headers:admToken()?{authorization:'Bearer '+admToken()}:{},body:fd});
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||'HTTP '+r.status);}
     const m=await r.json();
-    await homePatchSite({aboutBg:m.big||m.med||m.thumb||''});
+    await homePatchSite({[key]:m.big||m.med||m.thumb||''});
   }catch(e){toast('Ошибка: '+e.message);}
 };
 
