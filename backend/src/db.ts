@@ -70,6 +70,18 @@ CREATE TABLE IF NOT EXISTS hits (
   at      TEXT NOT NULL DEFAULT (${SQL.NOW})
 );
 CREATE INDEX IF NOT EXISTS idx_hits_at ON hits(at);
+
+-- Пользователи админки: роли admin / editor / moderator, пароль — scrypt-хэш
+CREATE TABLE IF NOT EXISTS users (
+  id         TEXT PRIMARY KEY,
+  login      TEXT NOT NULL UNIQUE,
+  name       TEXT NOT NULL DEFAULT '',
+  role       TEXT NOT NULL DEFAULT 'editor',
+  pass_hash  TEXT NOT NULL,
+  active     INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (${SQL.NOW}),
+  last_login TEXT
+);
 `;
 
 export let q: Q;

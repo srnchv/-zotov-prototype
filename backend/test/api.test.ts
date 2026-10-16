@@ -1,6 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createApp } from "../src/app.js";
+import { bootstrap } from "../src/users.js";
 import type { Server } from "node:http";
 
 let server: Server, base: string;
@@ -8,6 +9,7 @@ const TOKEN = process.env.ADMIN_TOKEN || "dev-token";
 const authed = { "content-type": "application/json", authorization: `Bearer ${TOKEN}` };
 
 before(async () => {
+  await bootstrap();
   server = createApp().listen(0);
   const addr = server.address() as any;
   base = `http://127.0.0.1:${addr.port}`;
@@ -52,7 +54,13 @@ test("login: верные креды дают токен, неверные — 4
     body: JSON.stringify({ login: "admin", password: "zotov2026" }),
   });
   assert.equal(ok.status, 200);
-  assert.equal((await ok.json()).token, TOKEN);
+  const d = await ok.json();
+  assert.ok(d.token && d.role === "admin");
+  // токен сессии даёт права на мутации и /me
+  const me = await fetch(`${base}/api/me`, { headers: { authorization: "Bearer " + d.token } });
+  assert.equal((await me.json()).role, "admin");
+  const list = await fetch(`${base}/api/users`, { headers: { authorization: "Bearer " + d.token } });
+  assert.equal(list.status, 200);
   const bad = await fetch(`${base}/api/login`, {
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ login: "admin", password: "нет" }),

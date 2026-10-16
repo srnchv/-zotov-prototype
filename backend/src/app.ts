@@ -4,6 +4,9 @@ import multer from "multer";
 import { z } from "zod";
 import * as repo from "./repo.js";
 import * as media from "./media.js";
+import * as users from "./users.js";
+import path from "node:path";
+import { existsSync } from "node:fs";
 
 // Express 4 не ловит исключения из async-обработчиков — оборачиваем
 const ah = (fn: (req: express.Request, res: express.Response) => Promise<unknown>): express.RequestHandler =>
@@ -14,27 +17,88 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: "1mb" }));
 
-  // Мутации — только с токеном (тестовый стенд; в проде — полноценная авторизация и роли).
+  // Авторизация: сессионный токен пользователя (роли admin / editor / moderator) либо служебный ADMIN_TOKEN (скрипты, интеграции).
   const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
+  type Who = { uid: string; role: users.Role; name: string };
+  const whoIs = (req: express.Request): Who | null => {
+    const h = String(req.headers.authorization || "");
+    if (!h.startsWith("Bearer ")) return null;
+    const t = h.slice(7);
+    if (t === ADMIN_TOKEN) return { uid: "api", role: "admin", name: "API" };
+    return users.verifyToken(t);
+  };
   const auth: express.RequestHandler = (req, res, next) => {
-    if (req.headers.authorization === `Bearer ${ADMIN_TOKEN}`) return next();
-    res.status(401).json({ error: "unauthorized" });
+    const w = whoIs(req);
+    if (!w) return res.status(401).json({ error: "unauthorized" });
+    (req as any).who = w;
+    // модератор меняет только статус публикации, остальное — чтение
+    if (w.role === "moderator" && req.method !== "GET") {
+      const onlyStatus = req.method === "PATCH" && /^\/api\/entities\/[^/]+$/.test(req.path) && Object.keys(req.body || {}).every((k) => k === "status");
+      if (!onlyStatus) return res.status(403).json({ error: "forbidden" });
+    }
+    next();
+  };
+  const adminOnly: express.RequestHandler = (req, res, next) => {
+    const w = whoIs(req);
+    if (!w) return res.status(401).json({ error: "unauthorized" });
+    if (w.role !== "admin") return res.status(403).json({ error: "forbidden" });
+    (req as any).who = w; next();
   };
 
-  // Вход в админку: логин/пароль → ключ редактора (тестовый стенд; в проде — сессии и роли).
-  const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "zotov2026";
-  app.post("/api/login", (req, res) => {
+  // Вход: логин/пароль → токен на 30 дней
+  app.post("/api/login", ah(async (req, res) => {
     const { login, password } = z.object({ login: z.string(), password: z.string() }).parse(req.body);
-    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD)
-      return res.json({ token: ADMIN_TOKEN, name: "Тестовый администратор", role: "editor" });
-    res.status(401).json({ error: "bad credentials" });
-  });
+    const u = await users.findByLogin(login);
+    if (!u || !Number(u.active) || !users.checkPassword(password, u.pass_hash)) return res.status(401).json({ error: "bad credentials" });
+    await users.touchLogin(u.id);
+    res.json({ token: users.issueToken(u), name: u.name, role: u.role, id: u.id });
+  }));
+  app.get("/api/me", ah(async (req, res) => {
+    const w = whoIs(req);
+    if (!w) return res.status(401).json({ error: "unauthorized" });
+    res.json(w);
+  }));
+  // Пользователи — только администратор
+  const userBody = z.object({ login: z.string().min(2).max(64), name: z.string().max(120).default(""), role: z.enum(["admin", "editor", "moderator"]), password: z.string().min(6).max(200) });
+  app.get("/api/users", adminOnly, ah(async (_req, res) => res.json(await users.listUsers())));
+  app.post("/api/users", adminOnly, ah(async (req, res) => {
+    const b = userBody.parse(req.body);
+    if (await users.findByLogin(b.login)) return res.status(409).json({ error: "login taken" });
+    res.status(201).json(await users.createUser(b));
+  }));
+  app.patch("/api/users/:id", adminOnly, ah(async (req, res) => {
+    const b = userBody.partial().extend({ active: z.boolean().optional() }).parse(req.body);
+    const id = String(req.params.id), me = (req as any).who as Who;
+    const cur = await users.getUser(id);
+    if (!cur) return res.status(404).json({ error: "not found" });
+    // нельзя оставить систему без активного администратора
+    if (cur.role === "admin" && ((b.role && b.role !== "admin") || b.active === false) && (await users.countAdmins()) <= 1) return res.status(400).json({ error: "last admin" });
+    if (b.login && b.login !== cur.login && (await users.findByLogin(b.login))) return res.status(409).json({ error: "login taken" });
+    if (me.uid === id && b.role && b.role !== "admin") return res.status(400).json({ error: "self demote" });
+    res.json(await users.updateUser(id, b));
+  }));
+  app.delete("/api/users/:id", adminOnly, ah(async (req, res) => {
+    const id = String(req.params.id), me = (req as any).who as Who;
+    if (me.uid === id) return res.status(400).json({ error: "self delete" });
+    const cur = await users.getUser(id);
+    if (cur?.role === "admin" && (await users.countAdmins()) <= 1) return res.status(400).json({ error: "last admin" });
+    if (!(await users.deleteUser(id))) return res.status(404).json({ error: "not found" });
+    res.status(204).end();
+  }));
 
-  // имя редактора для журнала: фронт шлёт в заголовке (uri-encoded, т.к. кириллица)
+  // имя для журнала: пользователь сессии; для служебного токена — заголовок x-editor (uri-encoded)
   const actor = (req: express.Request) => {
-    try { return decodeURIComponent(String(req.headers["x-editor"] || "")); } catch { return ""; }
+    const w = (req as any).who as Who | undefined;
+    if (w && w.uid !== "api") return w.name || w.uid;
+    try { return decodeURIComponent(String(req.headers["x-editor"] || "")) || "API"; } catch { return "API"; }
   };
+
+  // Vue-админка: собранная статика отдаётся тем же приложением по /admin (SPA — любой путь → index.html)
+  const adminDir = process.env.ADMIN_DIR || path.resolve(process.cwd(), "admin-dist");
+  if (existsSync(adminDir)) {
+    app.use("/admin", express.static(adminDir, { index: "index.html", maxAge: "1h" }));
+    app.get(/^\/admin(\/.*)?$/, (_req, res) => res.sendFile(path.join(adminDir, "index.html")));
+  }
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.3.0" }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
