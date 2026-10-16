@@ -1273,8 +1273,8 @@ const dateKeyOf=o=>DATEKEY[o.type]||'date';
 const SRCKIND={text:'Текстовый материал',record:'Библиографическая запись'};
 const isRecord=o=>o.type==='source'&&o.srcKind==='record';
 // вид файла по метаданным или расширению
-const kindOf=f=>{if(['image','video','audio'].includes(f.kind))return f.kind;const ext=String(f.format||f.title||'').toLowerCase().split('.').pop();if(['mp3','wav','ogg','flac','m4a'].includes(ext))return 'audio';if(['mp4','mov','webm','avi'].includes(ext))return 'video';if(['jpg','jpeg','png','webp','gif','tif','tiff'].includes(ext))return 'image';return 'doc';};
-const MEDIA_FLOORS=[['image','Фото','image/*'],['video','Видео','video/*'],['audio','Аудио','audio/*'],['doc','Документы','application/pdf,.doc,.docx,.txt']];
+const kindOf=f=>{if(['image','video','audio','tour'].includes(f.kind))return f.kind;const ext=String(f.format||f.title||'').toLowerCase().split('.').pop();if(['mp3','wav','ogg','flac','m4a'].includes(ext))return 'audio';if(['mp4','mov','webm','avi'].includes(ext))return 'video';if(['jpg','jpeg','png','webp','gif','tif','tiff'].includes(ext))return 'image';return 'doc';};
+const MEDIA_FLOORS=[['image','Фото','image/*'],['video','Видео','video/*'],['audio','Аудио','audio/*'],['tour','3D-тур',''],['doc','Документы','application/pdf,.doc,.docx,.txt']];
 function adminEdit(id){
   loadAuds();
   const o=DB[id];
@@ -1300,11 +1300,11 @@ function adminEdit(id){
   const floors=MEDIA_FLOORS.map(([k,l,accept])=>{const fs=files.filter(m=>kindOf(m)===k);return `<div style="margin-top:14px"><div class="kicker" style="display:flex;justify-content:space-between;align-items:center">${l} <span class="muted" style="font-weight:400">${fs.length||''}</span></div>
       ${fs.map(m=>`<div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
         <span class="thumbmini"${m.thumb?` style="background-image:url('${m.thumb}');background-size:cover;background-position:center"`:''}></span>
-        <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(m.title)}<br><span class="muted" style="font-size:11px">${esc(m.format||'')} · ${fmtSize(m.size)}</span></span>
+        <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(m.title)}<br><span class="muted" style="font-size:11px">${k==='tour'?esc((m.embed||'').replace(/^https?:\/\//,'').slice(0,60)):esc(m.format||'')+' · '+fmtSize(m.size)}</span></span>
         ${k==='image'?`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" title="Какая область фото попадёт в карточки" onclick="admCrop('${m.id}','${o.id}')">Кадр</span> `+(isCover(m)?'<span class="statbadge" title="Показывается в карточках и на странице">Обложка</span>':`<span class="lnk" style="cursor:pointer;font-size:12px;white-space:nowrap" onclick="admSetCover('${o.id}','${m.id}')">Сделать обложкой</span>`):''}
         <span class="lnk" style="color:#9a2e2e;cursor:pointer" onclick="admDelete('${m.id}','${o.id}')">✕</span></div>
         ${k==='video'||k==='audio'?`<div style="margin:4px 0 0 34px;font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted">Субтитры:</span>${(m.subtitles||[]).map(t=>`<span class="chip" style="font-size:12px">${esc(t.label||t.lang)} <span class="muted" style="cursor:pointer" onclick="admSubsRm('${m.id}','${esc(t.lang)}')">✕</span></span>`).join('')}<span class="lnk" style="cursor:pointer" onclick="admSubsUpload('${m.id}')">＋ .vtt / .srt</span></div>`:''}`).join('')}
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><span class="btn sm" onclick="admUploadKind('${o.id}','${accept}')">＋ Загрузить</span>${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${k==='tour'?`<span class="btn sm" onclick="admAddTour('${o.id}')">＋ Код эмбеда</span><span class="muted" style="font-size:12px;align-self:center">Matterport, Kuula, 3DVista и т.п. — тур встанет в галерею рядом с фото и видео</span>`:`<span class="btn sm" onclick="admUploadKind('${o.id}','${accept}')">＋ Загрузить</span>${o.type!=='media'?`<span class="btn sm" onclick="admPickMedia('${o.id}')">＋ из медиатеки</span>`:''}`}</div>
     </div>`;}).join('');
   const s=AUDS&&AUDS.summary&&AUDS.summary[o.id];
   const hist=AUDS&&AUDS.recent?AUDS.recent.filter(a=>a.entity_id===o.id).slice(0,5):[];
@@ -1412,6 +1412,27 @@ window.admCropSave=async(mid,pid)=>{
 // обложка карточки — выбранное фото из прикреплённых
 window.admSetCover=(id,mid)=>{const m=DB[mid];if(!m)return;admPatch(id,{payload:{cover:mid,img:m.thumb||'',imgBig:m.med||m.thumb||'',imgPos:m.focus||'50% 50%'}});};
 // загрузка на конкретный «этаж»: ограничиваем выбор файлов по виду
+// 3D-тур: вставляется код эмбеда (iframe) или просто ссылка; храним только адрес, iframe на сайте свой
+window.admAddTour=pid=>{
+  document.getElementById('modal-root').innerHTML=`<div class="ov" onclick="if(event.target===this)admCloseLp()"><div class="modal fmodal" style="width:min(640px,94vw)">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">3D-тур</h2><span style="font-size:22px;cursor:pointer" onclick="admCloseLp()">✕</span></div>
+    <div class="field" style="margin-top:12px"><label>Название</label><input class="inp" id="tour-title" style="width:100%;color:var(--ink)" placeholder="3D-тур по выставке"></div>
+    <div class="field"><label>Код эмбеда или ссылка</label><textarea class="inp" id="tour-code" style="width:100%;min-height:110px;font-family:monospace;font-size:12px" placeholder='<iframe src="https://my.matterport.com/show/?m=…" …></iframe>'></textarea>
+      <div class="muted" style="font-size:12px;margin-top:4px">Берём из кода только адрес тура. На сайте он откроется в окне галереи, на весь экран — кнопкой самого тура.</div></div>
+    <div class="right" style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end"><span class="btn" onclick="admCloseLp()">Отмена</span><span class="btn dark" onclick="admSaveTour('${pid}')">Добавить</span></div>
+  </div></div>`;
+};
+window.admSaveTour=async pid=>{
+  const code=(document.getElementById('tour-code').value||'').trim();
+  const m=code.match(/src\s*=\s*["']([^"']+)["']/i);
+  const src=(m?m[1]:code).trim();
+  if(!/^https:\/\//i.test(src)){toast('Нужна ссылка вида https://… или код с iframe');return;}
+  const title=(document.getElementById('tour-title').value||'').trim()||'3D-тур';
+  try{
+    await api('/entities',{method:'POST',body:JSON.stringify({type:'media',title,payload:{kind:'tour',embed:src,parent:pid},links:[pid]})});
+    await refreshData();admCloseLp();toast('3D-тур добавлен в галерею');render();
+  }catch(e){toast('Ошибка: '+e.message);}
+};
 window.admUploadKind=(id,accept)=>{const i=document.getElementById('f-file');if(!i)return;i.accept=accept;i.click();};
 function adminModeration(){
   return adminLayout('moderation',`<h1 style="font-size:30px" class="muted">Модерация</h1>
