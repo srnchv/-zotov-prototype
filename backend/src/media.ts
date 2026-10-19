@@ -162,6 +162,26 @@ export async function uploadTourZip(opts: { zipPath: string; entityId?: string; 
   return media;
 }
 
+// Большие туры (гигабайты): папка заливается из браузера файл за файлом через API, без временного диска
+export async function tourStart(opts: { entityId?: string; title: string }) {
+  const id = "md-" + createHash("sha1").update(opts.title + Date.now() + Math.random()).digest("hex").slice(0, 8);
+  const prefix = `tours/${id.slice(3)}/`;
+  return repo.createEntity({ id, type: "media", title: opts.title, status: "draft", payload: { kind: "tour", tourPrefix: prefix, uploading: true, parent: opts.entityId || null, format: "ZIP", files: 0, size: 0 }, links: opts.entityId ? [opts.entityId] : [] });
+}
+export async function tourPutFile(mediaId: string, relPath: string, body: Buffer) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || !m.tourPrefix) throw new Error("tour not found");
+  const clean = relPath.replace(/^\/+/, "").replace(/\.\.(\/|$)/g, "");
+  await put(String(m.tourPrefix) + clean, body, mimeOf(clean));
+  return { key: clean, size: body.length };
+}
+export async function tourFinish(mediaId: string, indexPath: string, files: number, size: number) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || !m.tourPrefix) throw new Error("tour not found");
+  const embed = `${PUBLIC_URL}/${m.tourPrefix}${indexPath.replace(/^\/+/, "")}`;
+  return repo.updateEntity(mediaId, { status: "published", payload: { embed, uploading: false, files, size } });
+}
+
 export async function deleteMediaFiles(mediaId: string) {
   const m = await repo.getEntity(mediaId);
   if (!m || m.type !== "media") return;

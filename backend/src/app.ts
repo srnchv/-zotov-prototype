@@ -215,6 +215,25 @@ export function createApp() {
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
+  // 3D-тур папкой (гигабайты): start → файлы по одному (параллельно из браузера) → finish с путём к index.html
+  app.post("/api/tours/start", auth, ah(async (req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    const { entityId, title } = z.object({ entityId: z.string().optional(), title: z.string().max(300).optional() }).parse(req.body);
+    const m = await media.tourStart({ entityId, title: title?.trim() || "3D-тур" });
+    res.status(201).json(m);
+  }));
+  app.post("/api/tours/:id/file", auth, upload.single("file"), ah(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    const { path: rel } = z.object({ path: z.string().min(1).max(500) }).parse(req.body);
+    res.json(await media.tourPutFile(String(req.params.id), rel, req.file.buffer));
+  }));
+  app.post("/api/tours/:id/finish", auth, ah(async (req, res) => {
+    const { index, files, size } = z.object({ index: z.string().min(1), files: z.number().int().optional(), size: z.number().optional() }).parse(req.body);
+    const m = await media.tourFinish(String(req.params.id), index, files || 0, size || 0);
+    await repo.logAct("media", m?.parent ? String(m.parent) : String(req.params.id), m?.title || "3D-тур", actor(req));
+    res.json(m);
+  }));
+
   // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour
   const uploadZip = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
   app.post("/api/tours", auth, uploadZip.single("file"), async (req, res) => {
