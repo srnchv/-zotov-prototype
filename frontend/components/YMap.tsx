@@ -1,6 +1,6 @@
 "use client";
-// Яндекс Карты JavaScript API 3.0 на публичном сайте: одна точка (страница места) или все места архива (раздел «Карта»).
-// Ключ приходит с бэкенда (/api/config); маркер — красная точка с подписью, клик ведёт в карточку.
+// Яндекс Карты JavaScript API 2.1 на публичном сайте: одна точка (страница места) или все места архива (раздел «Карта»).
+// Ключ приходит с бэкенда (/api/config); маркер — красная точка с подписью в стиле архива, клик ведёт в карточку.
 import { useEffect, useRef, useState } from "react";
 export type Pin = { id: string; title: string; lat: number; lon: number; sub?: string };
 let loading: Promise<any> | null = null;
@@ -8,14 +8,15 @@ function loadYmaps(key: string) {
   if (loading) return loading;
   loading = new Promise((res, rej) => {
     const s = document.createElement("script");
-    s.src = `https://api-maps.yandex.ru/v3/?apikey=${encodeURIComponent(key)}&lang=ru_RU`;
-    s.onload = async () => { const y = (window as any).ymaps3; await y.ready; res(y); };
+    s.src = `https://api-maps.yandex.ru/2.1/?apikey=${encodeURIComponent(key)}&lang=ru_RU`;
+    s.onload = () => { const y = (window as any).ymaps; y.ready(() => res(y)); };
     s.onerror = () => rej(new Error("map"));
     document.head.appendChild(s);
   });
   loading.catch(() => { loading = null; });
   return loading;
 }
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 export default function YMap({ apiKey, pins, zoom, link = true, className }: { apiKey: string; pins: Pin[]; zoom?: number; link?: boolean; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState("");
@@ -24,18 +25,11 @@ export default function YMap({ apiKey, pins, zoom, link = true, className }: { a
     let map: any;
     loadYmaps(apiKey).then((Y) => {
       if (!box.current) return;
-      const lons = pins.map((p) => p.lon), lats = pins.map((p) => p.lat);
-      const center = [(Math.min(...lons) + Math.max(...lons)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2];
-      map = new Y.YMap(box.current, { location: pins.length > 1 ? { bounds: [[Math.min(...lons) - 0.01, Math.min(...lats) - 0.01], [Math.max(...lons) + 0.01, Math.max(...lats) + 0.01]] } : { center, zoom: zoom || 15 } });
-      map.addChild(new Y.YMapDefaultSchemeLayer({ theme: "light" }));
-      map.addChild(new Y.YMapDefaultFeaturesLayer({}));
-      for (const p of pins) {
-        const el = document.createElement(link ? "a" : "div");
-        el.className = "ypin";
-        el.innerHTML = `<i></i><b>${p.title.replace(/</g, "&lt;")}</b>`;
-        if (link) { (el as HTMLAnchorElement).href = `/m/${p.id}`; el.title = p.title; }
-        map.addChild(new Y.YMapMarker({ coordinates: [p.lon, p.lat] }, el));
-      }
+      map = new Y.Map(box.current, { center: [pins[0].lat, pins[0].lon], zoom: zoom || 15, controls: ["zoomControl"] }, { suppressMapOpenBlock: true, yandexMapDisablePoiInteractivity: true });
+      const tag = link ? "a" : "div";
+      const layout = Y.templateLayoutFactory.createClass(`<${tag} class="ypin"${link ? ' href="/m/$[properties.id]"' : ""}><i></i><b>$[properties.title]</b></${tag}>`);
+      for (const p of pins) map.geoObjects.add(new Y.Placemark([p.lat, p.lon], { id: p.id, title: esc(p.title) }, { iconLayout: layout, iconShape: { type: "Rectangle", coordinates: [[-9, -9], [220, 12]] } }));
+      if (pins.length > 1) map.setBounds(map.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 48 });
     }).catch(() => setErr("Карта не загрузилась"));
     return () => { try { map?.destroy(); } catch {} };
   }, [apiKey, pins, zoom, link]);
