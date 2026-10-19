@@ -12,7 +12,7 @@ const title = ref(""), code = ref(""), file = ref<File | null>(null), busy = ref
 const dirFiles = ref<File[]>([]);
 const inpZip = ref<HTMLInputElement>(), inpDir = ref<HTMLInputElement>();
 const API = import.meta.env.VITE_API_URL || "/api";
-const auth = () => { const t = localStorage.getItem("zadm_token"); return t ? { authorization: "Bearer " + t } : {}; };
+const auth = (): Record<string, string> => { const t = localStorage.getItem("zadm_token"); return t ? { authorization: "Bearer " + t } : {}; };
 
 // папка: относительные пути файлов, корень — папка с index.html наименьшей вложенности
 const rel = (f: File) => (f as any).webkitRelativePath || f.name;
@@ -61,7 +61,7 @@ function uploadZip() {
   const fd = new FormData(); fd.append("file", file.value); fd.append("entityId", props.parentId); if (title.value.trim()) fd.append("title", title.value.trim());
   const xhr = new XMLHttpRequest();
   xhr.open("POST", API + "/tours");
-  const h = auth() as Record<string, string>; if (h.authorization) xhr.setRequestHeader("authorization", h.authorization);
+  const h = auth(); if (h.authorization) xhr.setRequestHeader("authorization", h.authorization);
   xhr.upload.onprogress = (e) => { if (e.lengthComputable) progress.value = e.loaded >= e.total ? "Распаковываем в хранилище — это может занять пару минут…" : `Загружаем архив: ${Math.round((e.loaded / e.total) * 100)}%`; };
   xhr.onload = async () => { busy.value = false; if (xhr.status < 300) { await load(); toast("3D-тур распакован и добавлен в галерею"); emit("close"); } else { let msg = "HTTP " + xhr.status; try { msg = JSON.parse(xhr.responseText).error || msg; } catch {} toast("Ошибка: " + msg); progress.value = ""; } };
   xhr.onerror = () => { busy.value = false; progress.value = ""; toast("Ошибка сети при загрузке"); };
