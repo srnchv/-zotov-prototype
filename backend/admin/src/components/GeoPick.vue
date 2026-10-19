@@ -7,6 +7,15 @@ import { loadYmaps } from "../lib/ymaps";
 const props = defineProps<{ lat: string; lon: string; address: string }>();
 const emit = defineEmits<{ update: [lat: string, lon: string]; addr: [text: string] }>();
 const q = ref(props.address || ""), hits = ref<any[]>([]), busy = ref(false), mapErr = ref("");
+// подсказки при вводе (геосаджест): с задержкой, от двух символов
+const sug = ref<{ title: string; subtitle: string; address: string }[]>([]);
+let sugT: any = null;
+function onType() {
+  clearTimeout(sugT); hits.value = [];
+  if (q.value.trim().length < 2) { sug.value = []; return; }
+  sugT = setTimeout(async () => { try { sug.value = await api(`/suggest?q=${encodeURIComponent(q.value.trim())}`); } catch { sug.value = []; } }, 250);
+}
+function pickSug(s: { address: string }) { q.value = s.address; sug.value = []; find(); }
 const box = ref<HTMLElement>();
 let map: any = null, marker: any = null, Y: any = null;
 const num = (v: string) => { const n = parseFloat(String(v).replace(",", ".")); return Number.isFinite(n) ? n : null; };
@@ -41,7 +50,12 @@ watch(() => [props.lat, props.lon], ([a, b]) => { const lat = num(a), lon = num(
 </script>
 <template>
   <div class="field"><label>Поиск по адресу <span class="muted">— найдём точку; для утраченных зданий поставьте её на карте вручную</span></label>
-    <div style="display:flex;gap:8px"><input class="inp" v-model="q" placeholder="Москва, Мясницкая, 21" @keydown.enter.prevent="find"><button class="btn sm" :disabled="busy" @click="find">Найти</button></div>
+    <div style="position:relative">
+      <div style="display:flex;gap:8px"><input class="inp" v-model="q" placeholder="Москва, Мясницкая, 21" autocomplete="off" @input="onType" @keydown.enter.prevent="sug = []; find()" @keydown.esc="sug = []"><button class="btn sm" :disabled="busy" @click="sug = []; find()">Найти</button></div>
+      <div v-if="sug.length" style="position:absolute;left:0;right:0;top:100%;z-index:20;background:#fff;border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.08)">
+        <div v-for="(s, i) in sug" :key="i" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--line)" @click="pickSug(s)"><div style="font-size:13px">{{ s.title }}</div><div class="muted" style="font-size:12px">{{ s.subtitle }}</div></div>
+      </div>
+    </div>
     <div v-if="hits.length" class="metabox" style="margin-top:8px;padding:0 12px">
       <div v-for="(h, i) in hits" :key="i" class="r" style="cursor:pointer;padding:9px 0" @click="pick(h)"><span style="font-size:13px">{{ h.text }}</span><span class="muted" style="font-size:11px;white-space:nowrap">{{ h.precision === 'exact' ? 'дом' : h.kind }}</span></div>
     </div></div>

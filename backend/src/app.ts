@@ -105,6 +105,18 @@ export function createApp() {
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.4.0" }));
   // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
   app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "" }));
+  // геосаджест Яндекса — подсказки адреса при вводе (ключ тоже только на сервере)
+  app.get("/api/suggest", auth, ah(async (req, res) => {
+    const key = process.env.YANDEX_SUGGEST_KEY;
+    if (!key) return res.json([]);
+    const { q } = z.object({ q: z.string().min(2).max(200) }).parse(req.query);
+    const u = new URL("https://suggest-maps.yandex.ru/v1/suggest");
+    u.searchParams.set("apikey", key); u.searchParams.set("text", q); u.searchParams.set("lang", "ru"); u.searchParams.set("results", "7"); u.searchParams.set("print_address", "1"); u.searchParams.set("types", "geo");
+    const r = await fetch(u, { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return res.json([]);
+    const j: any = await r.json();
+    res.json((j?.results || []).map((x: any) => ({ title: x.title?.text || "", subtitle: x.subtitle?.text || "", address: x.address?.formatted_address || [x.title?.text, x.subtitle?.text].filter(Boolean).join(", ") })));
+  }));
   // геокодер Яндекса — через бэкенд, ключ наружу не уходит: ?q=адрес (прямой) или ?ll=долгота,широта (обратный)
   app.get("/api/geo", auth, ah(async (req, res) => {
     const key = process.env.YANDEX_GEOCODER_KEY;
