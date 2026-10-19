@@ -222,6 +222,7 @@ export function createApp() {
     const m = await media.tourStart({ entityId, title: title?.trim() || "3D-тур" });
     res.status(201).json(m);
   }));
+  app.get("/api/tours/:id/files", auth, ah(async (req, res) => res.json(await media.tourFiles(String(req.params.id)))));
   app.post("/api/tours/:id/file", auth, upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
     const { path: rel } = z.object({ path: z.string().min(1).max(500) }).parse(req.body);

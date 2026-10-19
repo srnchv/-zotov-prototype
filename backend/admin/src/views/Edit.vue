@@ -165,7 +165,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
             <div v-for="m in files.filter(m => kindOf(m) === k)" :key="m.id">
               <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
                 <span class="thumbmini" :style="bg(m)"></span>
-                <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><router-link :to="'/edit/' + m.id">{{ m.title }}</router-link><br><span class="muted" style="font-size:11px">{{ k === 'tour' ? String(m.embed || '').replace(/^https?:\/\//, '').slice(0, 60) : (m.format || '') + ' · ' + fmtSize(m.size) }}</span></span>
+                <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><router-link :to="'/edit/' + m.id">{{ m.title }}</router-link><br><span class="muted" style="font-size:11px">{{ k === 'tour' ? (m.uploading ? 'загрузка не завершена — откройте «＋ Код эмбеда» → «Папка тура» и докачайте' : String(m.embed || '').replace(/^https?:\/\//, '').slice(0, 60) + (m.files ? ' · ' + m.files + ' файлов · ' + fmtSize(m.size) : '')) : (m.format || '') + ' · ' + fmtSize(m.size) }}</span></span>
                 <template v-if="k === 'image' && canEdit">
                   <span class="lnk" style="font-size:12px;white-space:nowrap" title="Какая область фото попадёт в карточки" @click="crop = m">Кадр</span>
                   <span v-if="isCover(m)" class="statbadge" title="Показывается в карточках и на странице">Обложка</span>

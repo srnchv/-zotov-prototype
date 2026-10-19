@@ -3,9 +3,12 @@
 // тур живёт у нас. Небольшой ZIP (до 2 ГБ) можно отдать целиком. Либо ссылка / код эмбеда внешнего сервиса.
 import { ref, computed } from "vue";
 import Modal from "./Modal.vue";
-import { api, load, toast } from "../lib/store";
+import { S, api, load, toast } from "../lib/store";
 import { fmtSize } from "../lib/model";
 const props = defineProps<{ parentId: string }>();
+// незавершённые загрузки этого тура у сущности — можно докачать, не заливая всё заново
+const pending = computed(() => (S.db[props.parentId]?.links || []).map((id) => S.db[id]).filter((m) => m && m.type === "media" && m.kind === "tour" && m.uploading));
+const resumeId = ref<string>("");
 const emit = defineEmits<{ close: [] }>();
 const mode = ref<"dir" | "zip" | "link">("dir");
 const title = ref(""), code = ref(""), file = ref<File | null>(null), busy = ref(false), progress = ref("");
@@ -30,9 +33,14 @@ async function uploadDir() {
   const p = plan.value; if (!p) return;
   busy.value = true;
   try {
-    const m = await api<{ id: string }>("/tours/start", { method: "POST", body: JSON.stringify({ entityId: props.parentId, title: title.value.trim() || "3D-тур" }) });
+    const m = resumeId.value ? { id: resumeId.value } : await api<{ id: string }>("/tours/start", { method: "POST", body: JSON.stringify({ entityId: props.parentId, title: title.value.trim() || "3D-тур" }) });
+    // докачка: пропускаем файлы, которые уже лежат в хранилище с тем же размером
+    const have = new Map<string, number>();
+    if (resumeId.value) { progress.value = "Сверяем с хранилищем…"; for (const f of await api<{ key: string; size: number }[]>(`/tours/${m.id}/files`)) have.set(f.key, f.size); }
     let done = 0, bytes = 0, failed: string[] = [];
-    const queue = [...p.files];
+    const queue = p.files.filter((f) => have.get(rel(f).slice(p.root.length)) !== f.size);
+    const skipped = p.files.length - queue.length;
+    if (skipped) progress.value = `Уже загружено ${skipped} файлов, докачиваем ${queue.length}…`;
     const worker = async () => {
       while (queue.length) {
         const f = queue.shift()!; const path = rel(f).slice(p.root.length);
@@ -45,7 +53,7 @@ async function uploadDir() {
           } catch (e) { if (attempt === 2) failed.push(path); else await new Promise((r) => setTimeout(r, 1000 * (attempt + 1))); }
         }
         done++; bytes += f.size;
-        progress.value = `Загружено ${done} из ${p.files.length} файлов · ${fmtSize(bytes)} из ${fmtSize(p.size)}${failed.length ? ` · ошибок: ${failed.length}` : ""}`;
+        progress.value = `Загружено ${skipped + done} из ${p.files.length} файлов · ${fmtSize(bytes)} из ${fmtSize(p.size)}${failed.length ? ` · ошибок: ${failed.length}` : ""}`;
       }
     };
     await Promise.all(Array.from({ length: 4 }, worker));
@@ -94,8 +102,10 @@ async function saveLink() {
           <span v-else-if="dirFiles.length" style="font-size:13px;color:#9a2e2e">В папке нет index.html</span>
         </div>
         <div class="muted" style="font-size:12px;margin-top:6px">Файлы уходят в хранилище архива по одному, можно гигабайтами — тур будет жить у нас, без сторонних сервисов. Не закрывайте вкладку до конца загрузки.</div></div>
+      <div v-if="pending.length" class="field"><label>Незавершённые загрузки — выберите, чтобы докачать недостающие файлы вместо новой загрузки</label>
+        <select class="sel" v-model="resumeId" :disabled="busy"><option value="">— новая загрузка —</option><option v-for="t in pending" :key="t.id" :value="t.id">{{ t.title }} ({{ t.id }})</option></select></div>
       <div v-if="progress" class="admbar" style="margin:0 0 8px">{{ progress }}</div>
-      <div class="right"><button class="btn" :disabled="busy" @click="emit('close')">Отмена</button><button class="btn dark" :disabled="busy || !plan" @click="uploadDir">Загрузить</button></div>
+      <div class="right"><button class="btn" :disabled="busy" @click="emit('close')">Отмена</button><button class="btn dark" :disabled="busy || !plan" @click="uploadDir">{{ resumeId ? "Докачать" : "Загрузить" }}</button></div>
     </template>
     <template v-else-if="mode === 'zip'">
       <div class="field"><label>Архив (ZIP с index.html внутри)</label>

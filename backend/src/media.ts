@@ -175,6 +175,19 @@ export async function tourPutFile(mediaId: string, relPath: string, body: Buffer
   await put(String(m.tourPrefix) + clean, body, mimeOf(clean));
   return { key: clean, size: body.length };
 }
+// что уже лежит в хранилище у тура — для докачки после обрыва
+export async function tourFiles(mediaId: string) {
+  const m = await repo.getEntity(mediaId);
+  if (!m || !m.tourPrefix) throw new Error("tour not found");
+  const prefix = String(m.tourPrefix), out: { key: string; size: number }[] = [];
+  let token: string | undefined;
+  do {
+    const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
+    for (const o of r.Contents || []) out.push({ key: String(o.Key).slice(prefix.length), size: Number(o.Size || 0) });
+    token = r.IsTruncated ? r.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
 export async function tourFinish(mediaId: string, indexPath: string, files: number, size: number) {
   const m = await repo.getEntity(mediaId);
   if (!m || !m.tourPrefix) throw new Error("tour not found");
