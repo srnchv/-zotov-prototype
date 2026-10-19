@@ -68,7 +68,7 @@ export async function searchApi(q: string): Promise<SearchHit[]> {
 // вид медиафайла: kind с сервера, иначе по mime/расширению (файлы, загруженные до появления kind)
 export const mediaKind = (m: Entity) => {
   const k = String(m.kind || "");
-  if (["image", "video", "audio", "pdf", "tour"].includes(k)) return k; // tour — 3D-тур (эмбед)
+  if (["image", "video", "audio", "pdf"].includes(k)) return k;
   const mime = String(m.mime || ""), ext = String(m.format || m.title || "").toLowerCase().split(".").pop() || "";
   if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext)) return "audio";
   if (mime.startsWith("video/") || ["mp4", "mov", "webm"].includes(ext)) return "video";
@@ -83,4 +83,15 @@ export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperti
   if (own) return { objectPosition: own };
   const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image" && x.focus);
   return m ? { objectPosition: String(m.focus) } : undefined;
+};
+
+// публичная конфигурация стенда (ключ Яндекс Карт JavaScript API — доменный, не секрет)
+export async function getConfig(): Promise<{ ymapsKey: string }> {
+  try { const r = await fetch(`${API}/config`, { next: { revalidate: 300 } }); if (r.ok) return r.json(); } catch {}
+  return { ymapsKey: "" };
+}
+// координаты сущности (места): числа или null
+export const coordsOf = (e: Entity): [number, number] | null => {
+  const lat = parseFloat(String(e.lat ?? "").replace(",", ".")), lon = parseFloat(String(e.lon ?? "").replace(",", "."));
+  return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
 };

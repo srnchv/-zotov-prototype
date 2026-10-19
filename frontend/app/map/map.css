@@ -1,0 +1,25 @@
+/* Карта: леттеринг, вводный текст, карта во всю ширину, под ней список мест */
+#mapp{position:relative}
+#mapp #intro{padding:220px 12px 16px;max-width:588px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.24px;font-weight:500}
+#mapp .div8{margin:0 12px}
+.ymap{position:relative;background:var(--grey5);width:100%;aspect-ratio:3/2;overflow:hidden}
+.ymap.big{aspect-ratio:auto;height:800px;margin:12px 12px 0;width:auto}
+.ymap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
+.ypin{display:flex;align-items:center;gap:6px;transform:translate(-9px,-9px);color:var(--ink);text-decoration:none;white-space:nowrap}
+.ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
+.ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+a.ypin:hover b,a.ypin:hover i{background:var(--red);color:#fff}
+#plist{display:grid;grid-template-columns:repeat(6,1fr);gap:24px 12px;padding:48px 12px 0}
+.pl{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pl .dv{height:8px;background:var(--ink);margin-bottom:4px}
+.pl h3{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
+.pl .sub{font-size:16px;line-height:18px;letter-spacing:-.08px;padding-top:2px}
+.pl .inf{font-size:14.1px;line-height:16px;padding-top:8px}
+.pl .inf b{display:block;font-weight:700}
+.pl:hover{color:var(--red)}
+.pl:hover .dv{background:var(--red)}
+#empty{padding:40px 12px;font-size:18px;line-height:20px;color:var(--grey2)}
+#mapp .end{margin-top:48px;margin-bottom:var(--pb)}
+@media (max-width:1599px){#plist{grid-template-columns:repeat(4,1fr)}.ymap.big{height:620px}}
+@media (max-width:1023px){#mapp{padding-top:110px}#mapp #intro{padding-top:120px}#plist{grid-template-columns:repeat(3,1fr);padding-top:32px}.ymap.big{height:520px}}
+@media (max-width:599px){#mapp #intro{padding:64px 12px 16px;max-width:none;font-size:20px;line-height:20px;letter-spacing:0}#plist{grid-template-columns:1fr}.ymap.big{height:70vh}}

@@ -11,6 +11,7 @@ import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
 import CropModal from "../components/CropModal.vue";
 import TourModal from "../components/TourModal.vue";
+import GeoPick from "../components/GeoPick.vue";
 import { JOB, jobText } from "../lib/tourJob";
 
 const props = defineProps<{ id: string }>();
@@ -130,6 +131,11 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
           <select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
         <div class="field"><label>{{ DATELABEL[o.type] || "Дата / период" }}</label><input class="inp" v-model="f[dk]"></div>
         <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label><input class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
+        <template v-if="o.type === 'place'">
+          <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Широта</label><input class="inp" v-model="f.lat" placeholder="55.7558"></div><div class="field" style="flex:1"><label>Долгота</label><input class="inp" v-model="f.lon" placeholder="37.6176"></div></div>
+          <GeoPick :lat="f.lat" :lon="f.lon" :address="[f.city, f.address].filter(Boolean).join(', ')" @update="(a, b) => { f.lat = a; f.lon = b; }" />
+          <div class="muted" style="font-size:12px;margin-top:-6px">Координаты сохраняются кнопкой «Сохранить» вместе с остальными полями. Место без координат на карту не попадает.</div>
+        </template>
         <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
 
         <template v-if="HOME_TYPES.includes(o.type)">

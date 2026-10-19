@@ -102,7 +102,27 @@ export function createApp() {
     app.get(/^\/admin(\/.*)?$/, (_req, res) => res.sendFile(path.join(adminDir, "index.html")));
   }
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.3.0" }));
+  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.4.0" }));
+  // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
+  app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "" }));
+  // геокодер Яндекса — через бэкенд, ключ наружу не уходит: ?q=адрес (прямой) или ?ll=долгота,широта (обратный)
+  app.get("/api/geo", auth, ah(async (req, res) => {
+    const key = process.env.YANDEX_GEOCODER_KEY;
+    if (!key) return res.status(503).json({ error: "geocoder not configured" });
+    const { q, ll } = z.object({ q: z.string().max(300).optional(), ll: z.string().max(60).optional() }).parse(req.query);
+    if (!q && !ll) return res.status(400).json({ error: "q or ll required" });
+    const u = new URL("https://geocode-maps.yandex.ru/1.x/");
+    u.searchParams.set("apikey", key); u.searchParams.set("format", "json"); u.searchParams.set("results", "6"); u.searchParams.set("lang", "ru_RU");
+    u.searchParams.set("geocode", q || String(ll));
+    const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return res.status(502).json({ error: "geocoder: HTTP " + r.status });
+    const j: any = await r.json();
+    const items = (j?.response?.GeoObjectCollection?.featureMember || []).map((f: any) => {
+      const g = f.GeoObject, [lon, lat] = String(g.Point?.pos || "").split(" ").map(Number);
+      return { name: g.name, text: g.metaDataProperty?.GeocoderMetaData?.text || g.description || g.name, kind: g.metaDataProperty?.GeocoderMetaData?.kind, precision: g.metaDataProperty?.GeocoderMetaData?.precision, lat, lon };
+    }).filter((x: any) => Number.isFinite(x.lat) && Number.isFinite(x.lon));
+    res.json(items);
+  }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
   app.get("/api/export", ah(async (_req, res) => res.json(await repo.exportAll())));

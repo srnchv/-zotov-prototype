@@ -43,6 +43,9 @@
 .navrel .tert{margin-top:8px;border-left:4px solid var(--grey4);padding-left:48px;display:flex;flex-direction:column;gap:4px}
 .navrel .tert a{display:flex;gap:4px;border:0;padding:0;height:auto}
 
-/* 3D-тур: эмбед во всё окно галереи (3:2), полный экран — контролами самого тура */
-.tour{width:100%;height:100%;border:0;display:block;background:var(--ink)}
-.imgbox .tour{aspect-ratio:3/2;height:auto}
+/* карта места (Яндекс Карты): окно 3:2 после описания, маркер — красная точка с подписью */
+.ymap{position:relative;background:var(--grey5);width:100%;aspect-ratio:3/2;overflow:hidden}
+.ymap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
+.ypin{display:flex;align-items:center;gap:6px;transform:translate(-9px,-9px);color:var(--ink);text-decoration:none;white-space:nowrap}
+.ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
+.ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}

@@ -2,7 +2,7 @@ import "../material.css";
 import "../media.css";
 import Player from "@/components/Player";
 import PdfReader from "@/components/PdfReader";
-import MediaGallery, { Tour, type MSlide } from "@/components/MediaGallery";
+import MediaGallery, { type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
@@ -14,7 +14,8 @@ import HomeScale from "@/components/HomeScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
 import NavRel from "@/components/NavRel";
-import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
+import YMap from "@/components/YMap";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -58,7 +59,7 @@ function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string
 
 export default async function EntityPage({ params }: Props) {
   const { id } = await params;
-  const [e, db, site] = await Promise.all([getEntity(id), loadArchive(), getSite()]);
+  const [e, db, site, cfg] = await Promise.all([getEntity(id), loadArchive(), getSite(), getConfig()]);
   if (!e || e.type === "dict" || e.type === "tag" || (e.status && e.status !== "published")) notFound();
   const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
@@ -67,7 +68,7 @@ export default async function EntityPage({ params }: Props) {
   const cover: { src: string; title: string } | null = coverMedia
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
-  const docs = media.filter((m) => !["image", "tour"].includes(mediaKind(m)));
+  const docs = media.filter((m) => mediaKind(m) !== "image");
   const isOpen = (s(e, "access") || "open") === "open";
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
@@ -85,9 +86,6 @@ export default async function EntityPage({ params }: Props) {
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
   const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || m.title || e.title), pos: m.focus ? String(m.focus) : undefined })) : [];
   if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
-  // 3D-туры — в ту же галерею после фото (эмбед из админки)
-  const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
-  if (isOpen) for (const t of tours) slides.push({ kind: "tour", src: String(t.embed), title: String(t.title) });
   const topKind: "images" | "video" | "audio" | "none" = slides.length ? "images" : video && isOpen ? "video" : audio && isOpen ? "audio" : "none";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
@@ -147,7 +145,6 @@ export default async function EntityPage({ params }: Props) {
           <div id="rightcol">
             <div className="embed">
               {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
-                : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
                 : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" && slides[0].pos ? { objectPosition: slides[0].pos } : undefined} /></div>
                 : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
                 : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
@@ -161,6 +158,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="msec">
               {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
             </div>
+            {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
             {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
               <div className="embed2">
                 {video && topKind !== "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
