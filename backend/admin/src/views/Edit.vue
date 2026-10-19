@@ -11,6 +11,7 @@ import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
 import CropModal from "../components/CropModal.vue";
 import TourModal from "../components/TourModal.vue";
+import { JOB, jobText } from "../lib/tourJob";
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
@@ -165,7 +166,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
             <div v-for="m in files.filter(m => kindOf(m) === k)" :key="m.id">
               <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
                 <span class="thumbmini" :style="bg(m)"></span>
-                <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><router-link :to="'/edit/' + m.id">{{ m.title }}</router-link><br><span class="muted" style="font-size:11px">{{ k === 'tour' ? (m.uploading ? 'загрузка не завершена — откройте «＋ Код эмбеда» → «Папка тура» и докачайте' : String(m.embed || '').replace(/^https?:\/\//, '').slice(0, 60) + (m.files ? ' · ' + m.files + ' файлов · ' + fmtSize(m.size) : '')) : (m.format || '') + ' · ' + fmtSize(m.size) }}</span></span>
+                <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><router-link :to="'/edit/' + m.id">{{ m.title }}</router-link><br><span class="muted" style="font-size:11px">{{ k === 'tour' ? (m.uploading ? (JOB.cur && JOB.cur.id === m.id ? jobText(JOB.cur) : 'загрузка не завершена — «＋ Код эмбеда» → «Папка тура» → докачать') : String(m.embed || '').replace(/^https?:\/\//, '').slice(0, 60) + (m.files ? ' · ' + m.files + ' файлов · ' + fmtSize(m.size) : '')) : (m.format || '') + ' · ' + fmtSize(m.size) }}</span></span>
                 <template v-if="k === 'image' && canEdit">
                   <span class="lnk" style="font-size:12px;white-space:nowrap" title="Какая область фото попадёт в карточки" @click="crop = m">Кадр</span>
                   <span v-if="isCover(m)" class="statbadge" title="Показывается в карточках и на странице">Обложка</span>
@@ -180,7 +181,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
               </div>
             </div>
             <div v-if="canEdit" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <template v-if="k === 'tour'"><button class="btn sm" @click="tour = true">＋ Код эмбеда</button><span class="muted" style="font-size:12px">Matterport, Kuula, 3DVista — тур встанет в галерею рядом с фото и видео</span></template>
+              <template v-if="k === 'tour'"><button class="btn sm" @click="tour = true">{{ JOB.cur && JOB.cur.parentId === o.id ? (JOB.cur.running ? 'Идёт загрузка…' : 'Загрузка остановлена') : '＋ Код эмбеда' }}</button><span class="muted" style="font-size:12px">Matterport, Kuula, 3DVista — тур встанет в галерею рядом с фото и видео</span></template>
               <template v-else><button class="btn sm" @click="uploadKind(accept)">＋ Загрузить</button><button v-if="o.type !== 'media'" class="btn sm" @click="picker = 'media'">＋ из медиатеки</button></template>
             </div>
           </div>

@@ -4,12 +4,13 @@ import { onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { S, SITE, logged, isAdmin, logout, load } from "./lib/store";
 import { ROLE_LABEL } from "./lib/model";
+import { JOB } from "./lib/tourJob";
 const route = useRoute();
 const TABS = computed(() => [
   ["/dash", "Дашборд"], ["/entities", "Сущности"], ["/dict", "Справочники"], ["/media", "Медиатека"], ["/home", "Главная страница"], ["/site", "Тексты сайта"],
   ...(isAdmin.value ? [["/stats", "Статистика"], ["/users", "Пользователи"]] : []),
 ]);
-onMounted(() => { if (logged.value) load(); });
+onMounted(() => { if (logged.value) load(); window.addEventListener("beforeunload", (e) => { if (JOB.cur?.running) { e.preventDefault(); e.returnValue = ""; } }); });
 const out = () => { logout(); location.href = "/admin/login"; };
 </script>
 <template>
