@@ -31,6 +31,10 @@ async function uploadDir() {
   try { await startJob({ parentId: props.parentId, title: title.value.trim() || "3D-тур", files: p.files, root: p.root, index: p.index, tourId: resumeId.value || undefined }); }
   catch (e: any) { toast(e.message); }
 }
+async function finishAsIs() {
+  try { await api(`/tours/${resumeId.value}/finish`, { method: "POST", body: JSON.stringify({ index: "index.html" }) }); await load(); toast("3D-тур добавлен в галерею"); emit("close"); }
+  catch (e: any) { toast("Ошибка: " + e.message); }
+}
 function uploadZip() {
   if (!file.value) return;
   busy.value = true; progress.value = "Загружаем архив…";
@@ -78,7 +82,8 @@ async function saveLink() {
             <span v-else-if="dirFiles.length" style="font-size:13px;color:#9a2e2e">В папке нет index.html</span>
           </div></div>
         <div v-if="pending.length" class="field"><label>Незавершённая загрузка найдена — докачаем недостающие файлы в неё</label>
-          <select class="sel" v-model="resumeId"><option value="">— нет, начать заново —</option><option v-for="t in pending" :key="t.id" :value="t.id">{{ t.title }} ({{ t.id }})</option></select></div>
+          <select class="sel" v-model="resumeId"><option value="">— нет, начать заново —</option><option v-for="t in pending" :key="t.id" :value="t.id">{{ t.title }} ({{ t.id }})</option></select>
+          <div v-if="resumeId" style="margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn sm" @click="finishAsIs">Завершить как есть</button><span class="muted" style="font-size:12px">если уверены, что всё загружено: тур сразу встанет в галерею без сверки</span></div></div>
         <div class="muted" style="font-size:12px">Файлы уходят в хранилище архива по одному, можно гигабайтами — тур будет жить у нас. После запуска окно можно закрыть, вкладку админки — нет.</div>
         <div class="right"><button class="btn" @click="emit('close')">Отмена</button><button class="btn dark" :disabled="!plan" @click="uploadDir">{{ resumeId ? "Докачать" : "Загрузить" }}</button></div>
       </template>
