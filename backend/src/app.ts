@@ -6,6 +6,8 @@ import * as repo from "./repo.js";
 import * as media from "./media.js";
 import * as users from "./users.js";
 import path from "node:path";
+import os from "node:os";
+import { unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
 
 // Express 4 не ловит исключения из async-обработчиков — оборачиваем
@@ -212,6 +214,23 @@ export function createApp() {
 
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+  // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour
+  const uploadZip = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+  app.post("/api/tours", auth, uploadZip.single("file"), async (req, res) => {
+    const tmp = req.file?.path;
+    try {
+      if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+      if (!req.file || !tmp) return res.status(400).json({ error: "no file" });
+      const { entityId, title } = z.object({ entityId: z.string().optional(), title: z.string().max(300).optional() }).parse(req.body);
+      const m = await media.uploadTourZip({ zipPath: tmp, entityId, title: title?.trim() || req.file.originalname.replace(/\.zip$/i, "") || "3D-тур" });
+      await repo.logAct("media", entityId || m.id, m.title, actor(req));
+      res.status(201).json(m);
+    } catch (e: any) {
+      console.error("tour upload failed:", e);
+      res.status(502).json({ error: "tour: " + (e?.message || "upload failed") });
+    } finally { if (tmp) unlink(tmp).catch(() => {}); }
+  });
 
   app.post("/api/media", auth, upload.single("file"), async (req, res) => {
     try {

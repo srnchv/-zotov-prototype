@@ -12,7 +12,7 @@ const Arrow = ({ left }: { left?: boolean }) => (
 );
 // 3D-тур (Matterport, Kuula, 3DVista и т.п.): живёт внутри окна галереи; на весь экран — кнопкой самого тура
 export function Tour({ src, title }: { src: string; title: string }) {
-  return <iframe className="tour" src={src} title={title} loading="lazy" allowFullScreen allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer; autoplay" referrerPolicy="no-referrer-when-downgrade" />;
+  return <iframe className="tour" src={src} title={title} loading="lazy" allowFullScreen allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer; autoplay; vr" referrerPolicy="no-referrer-when-downgrade" />;
 }
 export default function MediaGallery({ slides, caption }: { slides: MSlide[]; caption?: string }) {
   const [i, setI] = useState(0);

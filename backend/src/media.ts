@@ -1,6 +1,8 @@
 // Медиа-хранилище: S3-совместимое (Timeweb / любой хостинг клиента — меняются только env-переменные).
 // Оригинал сохраняется как есть (по подписанной ссылке), наружу отдаются сжатые производные.
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import yauzl from "yauzl";
+import { createHash } from "node:crypto";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
@@ -110,9 +112,70 @@ export async function selftest() {
 }
 
 // При удалении media-сущности подчищаем файлы в хранилище
+// ---- 3D-тур пакетом (ZIP от студии: index.html + ресурсы): распаковываем в S3 под tours/<id>/, тур живёт у нас ----
+const MIME: Record<string, string> = { html: "text/html; charset=utf-8", htm: "text/html; charset=utf-8", js: "application/javascript", mjs: "application/javascript", css: "text/css", json: "application/json", xml: "application/xml", txt: "text/plain",
+  png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", ico: "image/x-icon", avif: "image/avif",
+  mp4: "video/mp4", webm: "video/webm", mp3: "audio/mpeg", ogg: "audio/ogg", wav: "audio/wav", m4a: "audio/mp4",
+  woff: "font/woff", woff2: "font/woff2", ttf: "font/ttf", otf: "font/otf", eot: "application/vnd.ms-fontobject",
+  glb: "model/gltf-binary", gltf: "model/gltf+json", bin: "application/octet-stream", wasm: "application/wasm", pdf: "application/pdf", vtt: "text/vtt", ktx2: "image/ktx2", basis: "application/octet-stream" };
+const mimeOf = (name: string) => MIME[(name.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
+
+export async function uploadTourZip(opts: { zipPath: string; entityId?: string; title: string }) {
+  const { zipPath, entityId, title } = opts;
+  const id = "md-" + createHash("sha1").update(zipPath + Date.now()).digest("hex").slice(0, 8);
+  const prefix = `tours/${id.slice(3)}/`;
+  // читаем список записей, находим index.html с наименьшей вложенностью — его папка становится корнем тура
+  const entries: yauzl.Entry[] = [];
+  const zip = await new Promise<yauzl.ZipFile>((res, rej) => yauzl.open(zipPath, { lazyEntries: true }, (e, z) => (e ? rej(e) : res(z!))));
+  await new Promise<void>((res, rej) => { zip.on("entry", (en: yauzl.Entry) => { entries.push(en); zip.readEntry(); }); zip.on("end", () => res()); zip.on("error", rej); zip.readEntry(); });
+  zip.close();
+  const files = entries.filter((e) => !/\/$/.test(e.fileName) && !e.fileName.startsWith("__MACOSX/") && !/(^|\/)\./.test(e.fileName));
+  const idx = files.map((e) => e.fileName).filter((n) => /(^|\/)index\.html?$/i.test(n)).sort((a, b) => a.split("/").length - b.split("/").length)[0];
+  if (!idx) throw new Error("в архиве нет index.html");
+  const root = idx.slice(0, idx.lastIndexOf("/") + 1);
+  const toUpload = files.filter((e) => e.fileName.startsWith(root));
+  if (!toUpload.length) throw new Error("пустой архив");
+  // второй проход: распаковываем и льём в S3 файл за файлом (без распаковки на диск)
+  const zip2 = await new Promise<yauzl.ZipFile>((res, rej) => yauzl.open(zipPath, { lazyEntries: true }, (e, z) => (e ? rej(e) : res(z!))));
+  let total = 0, count = 0;
+  await new Promise<void>((res, rej) => {
+    zip2.on("entry", (en: yauzl.Entry) => {
+      if (!toUpload.some((f) => f.fileName === en.fileName)) return zip2.readEntry();
+      zip2.openReadStream(en, (e, rs) => {
+        if (e || !rs) return rej(e || new Error("read"));
+        const chunks: Buffer[] = [];
+        rs.on("data", (c: Buffer) => chunks.push(c));
+        rs.on("end", async () => {
+          try { const body = Buffer.concat(chunks); total += body.length; count++;
+            await put(prefix + en.fileName.slice(root.length), body, mimeOf(en.fileName)); zip2.readEntry(); }
+          catch (err) { rej(err); }
+        });
+        rs.on("error", rej);
+      });
+    });
+    zip2.on("end", () => res()); zip2.on("error", rej); zip2.readEntry();
+  });
+  zip2.close();
+  const embed = `${PUBLIC_URL}/${prefix}${idx.slice(root.length)}`;
+  const payload = { kind: "tour", embed, tourPrefix: prefix, files: count, size: total, parent: entityId || null, format: "ZIP" };
+  const media = await repo.createEntity({ id, type: "media", title, payload, links: entityId ? [entityId] : [] });
+  return media;
+}
+
 export async function deleteMediaFiles(mediaId: string) {
   const m = await repo.getEntity(mediaId);
   if (!m || m.type !== "media") return;
+  if (m.tourPrefix) { // распакованный тур: удаляем всё под префиксом
+    let token: string | undefined;
+    do {
+      const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: String(m.tourPrefix), ContinuationToken: token })).catch(() => null);
+      if (!r) break;
+      const keys = (r.Contents || []).map((o) => ({ Key: o.Key! }));
+      if (keys.length) await s3().send(new DeleteObjectsCommand({ Bucket: BUCKET, Delete: { Objects: keys } })).catch(() => {});
+      token = r.IsTruncated ? r.NextContinuationToken : undefined;
+    } while (token);
+    return;
+  }
   const keys = [m.origKey, ...["thumb", "med", "big"].filter((r) => m[r]).map((r) => `media/${mediaId.replace(/^md-/, "")}/${r}.webp`)].filter(Boolean) as string[];
   for (const Key of keys) await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key })).catch(() => {});
 }
