@@ -127,8 +127,13 @@ export function createApp() {
     const u = new URL("https://geocode-maps.yandex.ru/1.x/");
     u.searchParams.set("apikey", key); u.searchParams.set("format", "json"); u.searchParams.set("results", "6"); u.searchParams.set("lang", "ru_RU");
     u.searchParams.set("geocode", q || String(ll));
-    const r = await fetch(u, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) return res.status(502).json({ error: "geocoder: HTTP " + r.status });
+    // Referer — на случай, если у ключа включено ограничение по доменам (серверный запрос его не несёт)
+    const r = await fetch(u, { signal: AbortSignal.timeout(8000), headers: { referer: "https://" + (req.get("host") || "") + "/" } });
+    if (!r.ok) {
+      // текст ошибки Яндекса, чтобы было понятно: ключ не тот, продукт не подключён или лимит
+      let msg = ""; try { const e: any = await r.json(); msg = e?.message || e?.error?.message || e?.statusCode || ""; } catch {}
+      return res.status(502).json({ error: `geocoder: HTTP ${r.status}${msg ? " — " + msg : ""} (ключ …${key.slice(-4)})` });
+    }
     const j: any = await r.json();
     const items = (j?.response?.GeoObjectCollection?.featureMember || []).map((f: any) => {
       const g = f.GeoObject, [lon, lat] = String(g.Point?.pos || "").split(" ").map(Number);
