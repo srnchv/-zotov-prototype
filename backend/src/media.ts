@@ -112,6 +112,13 @@ export async function selftest() {
 }
 
 // При удалении media-сущности подчищаем файлы в хранилище
+// статические ассеты сайта (иллюстрации главной и т.п.): лежат публично под assets/<имя>, только для администратора
+export async function putAsset(name: string, body: Buffer) {
+  const clean = name.replace(/[^\w.\-\/]/g, "_").replace(/\.\.+/g, ".");
+  await put("assets/" + clean, body, mimeOf(clean));
+  return `${PUBLIC_URL}/assets/${clean}`;
+}
+
 // ---- 3D-тур пакетом (ZIP от студии: index.html + ресурсы): распаковываем в S3 под tours/<id>/, тур живёт у нас ----
 const MIME: Record<string, string> = { html: "text/html; charset=utf-8", htm: "text/html; charset=utf-8", js: "application/javascript", mjs: "application/javascript", css: "text/css", json: "application/json", xml: "application/xml", txt: "text/plain",
   png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", ico: "image/x-icon", avif: "image/avif",

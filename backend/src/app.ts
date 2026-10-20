@@ -247,6 +247,14 @@ export function createApp() {
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
+  // ассеты сайта: PNG/SVG иллюстраций → публичный URL (администратор)
+  app.post("/api/assets", adminOnly, upload.single("file"), ah(async (req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    const { name } = z.object({ name: z.string().min(1).max(120) }).parse(req.body);
+    res.status(201).json({ url: await media.putAsset(name, req.file.buffer) });
+  }));
+
   // 3D-тур папкой (гигабайты): start → файлы по одному (параллельно из браузера) → finish с путём к index.html
   app.post("/api/tours/start", auth, ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
