@@ -86,7 +86,7 @@ export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperti
 };
 
 // публичная конфигурация стенда (ключ Яндекс Карт JavaScript API — доменный, не секрет)
-export async function getConfig(): Promise<{ ymapsKey: string }> {
+export async function getConfig(): Promise<{ ymapsKey: string; ymapsV3?: boolean }> {
   try { const r = await fetch(`${API}/config`, { next: { revalidate: 300 } }); if (r.ok) return r.json(); } catch {}
   return { ymapsKey: "" };
 }

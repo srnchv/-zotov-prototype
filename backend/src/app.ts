@@ -104,7 +104,8 @@ export function createApp() {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.4.0" }));
   // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
-  app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "" }));
+  // ymapsV3 — ключ открыт для JavaScript API 3.0 (YANDEX_JS_V3=1): фронт включает векторную карту со стилями дизайнера; иначе 2.1
+  app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "", ymapsV3: process.env.YANDEX_JS_V3 === "1" }));
   // геосаджест Яндекса — подсказки адреса при вводе (ключ тоже только на сервере)
   app.get("/api/suggest", auth, ah(async (req, res) => {
     const key = process.env.YANDEX_SUGGEST_KEY;

@@ -171,13 +171,13 @@ export default async function Home() {
             <div className="pcards t">
               {personsT.map((p, i) => { const [c, r, sz] = CARDS_T[i]; return (
                 <a className={"pcard" + (sz === 2 ? " big" : "")} key={"t" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
-                  <div className="nm"><div className="dv" />{p.title}</div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
                 </a>); })}
             </div>
             <div className="pcards m">
               {personsM.map((p, i) => { const [c, r, sz] = CARDS_M[i]; return (
                 <a className={"pcard" + (sz === 2 ? " big" : "")} key={"m" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
-                  <div className="nm"><div className="dv" />{p.title}</div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
                 </a>); })}
             </div>
           </div>

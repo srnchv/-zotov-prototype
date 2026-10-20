@@ -28,7 +28,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
           <Lettering text="карта" />
           <div id="intro">Географический слой архива: здания, города и адреса, связанные с материалами, событиями и людьми. Существующие и давно утраченные — на одной карте.</div>
           <div className="div8" />
-          {pins.length ? <YMap apiKey={cfg.ymapsKey} pins={pins} className="big" focus={place} /> : <div id="empty">Мест с координатами пока нет — они задаются в админке, в карточке места.</div>}
+          {pins.length ? <YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={pins} className="big" focus={place} /> : <div id="empty">Мест с координатами пока нет — они задаются в админке, в карточке места.</div>}
           <div id="plist">
             {places.map(({ p }) => (
               <a className={"pl" + (p.id === place ? " on" : "")} key={p.id} href={`/m/${p.id}`}>

@@ -158,7 +158,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="msec">
               {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
             </div>
-            {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
+            {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
             {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
               <div className="embed2">
                 {video && topKind !== "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
