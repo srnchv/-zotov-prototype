@@ -49,7 +49,7 @@ function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string
     case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""], ["Права и доступ", ACCESS[s(e, "access")] || "Открытый доступ"]];
     case "person": return [["Тип, подтип", `${t}, ${s(e, "group") || "—"}`], ["Роль", s(e, "role") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", "Открытый доступ"]];
     case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
-    case "place": return [["Тип, подтип", `${t}, ${s(e, "placeType") || "—"}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Статус", s(e, "status") === "published" ? "Существует" : s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
+    case "place": return [["Тип, подтип", `${t}, ${s(e, "placeType") || "—"}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
     case "project": return [["Тип, подтип", s(e, "prType") || t], ["Кураторы", s(e, "curators") || "—"], ["Даты проведения", s(e, "dates") || "—"], ["Площадка", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
     case "collection": return [["Тип, подтип", `${t}, ${s(e, "colType") || "—"}`], ["Период", s(e, "period") || "—"], ["Состав", `${linked(db, e, "material").length} материалов`], ["Хранение", "Центр «Зотов», Москва"], ["Права и доступ", "Открытый доступ"]];
     case "org": return [["Тип, подтип", `${t}, ${s(e, "orgType") || "—"}`], ["Период", s(e, "period") || "—"], ["Адрес", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Связано в архиве", `${(e.links || []).length} объектов`], ["Права и доступ", "Открытый доступ"]];
@@ -60,7 +60,7 @@ function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string
 export default async function EntityPage({ params }: Props) {
   const { id } = await params;
   const [e, db, site, cfg] = await Promise.all([getEntity(id), loadArchive(), getSite(), getConfig()]);
-  if (!e || e.type === "dict" || e.type === "tag" || (e.status && e.status !== "published")) notFound();
+  if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) notFound();
   const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
   const media: Entity[] = (e.links || []).filter((x) => x.type === "media");

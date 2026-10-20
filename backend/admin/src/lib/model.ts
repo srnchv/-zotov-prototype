@@ -31,12 +31,12 @@ export const subKeyOf = (t: string) => SUBKEY[t] || "subtype";
 export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
 // специфичные поля после общих
 export const SPECIFIC: Record<string, [string, string, string?][]> = {
-  place: [["city", "Город", "Москва"], ["address", "Адрес"]],
+  place: [["city", "Город", "Москва"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "Существует / утрачено / реконструировано"]],
   project: [["curators", "Кураторы"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],
 };
-export const PAYLOAD_KEYS = ["lat", "lon", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
+export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
 // источник: текстовый материал (полная карточка) или библиографическая запись (короткая)
 export const SRCKIND: Record<string, string> = { text: "Текстовый материал", record: "Библиографическая запись" };
 export const isRecord = (o: { type: string; srcKind?: string }) => o.type === "source" && o.srcKind === "record";

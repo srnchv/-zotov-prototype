@@ -30,7 +30,8 @@ export async function loadArchive() {
   return db;
 }
 
-export const published = (e?: Entity) => !!e && (e.status ?? "published") === "published" && e.type !== "dict";
+// опубликовано всё, что не черновик и не на модерации (в старых данных у мест в status лежало состояние здания)
+export const published = (e?: Entity) => !!e && !["draft", "moderation"].includes(String(e.status || "")) && e.type !== "dict";
 export const ofType = (db: Record<string, Entity>, t: string) => Object.values(db).filter((e) => e.type === t && published(e));
 export const linked = (db: Record<string, Entity>, e: Entity, t?: string) =>
   (e.links || []).map((id) => db[id]).filter((x) => x && published(x) && (!t || x.type === t));

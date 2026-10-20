@@ -14,8 +14,8 @@ const rowToEntity = (r: any): Entity => ({
   id: r.id,
   type: r.type,
   title: r.title,
-  status: r.status,
   ...(JSON.parse(r.payload || "{}") as object),
+  status: r.status, // колонка главнее payload: в старых данных в payload лежал status «Существует» и перекрывал публикацию
   created_at: r.created_at,
   updated_at: r.updated_at,
 });
@@ -55,10 +55,12 @@ export async function getEntity(id: string): Promise<(Entity & { links: Entity[]
   return { ...rowToEntity(r), links: linked };
 }
 
+// системные поля живут в колонках, в payload им не место
+const RESERVED = ["id", "type", "title", "status", "created_at", "updated_at"];
 export async function createEntity(data: { id?: string; type: string; title: string; status?: string; payload?: object; links?: string[] }) {
   const id = data.id || randomUUID().slice(0, 8);
   await q.run("INSERT INTO entities (id, type, title, status, payload) VALUES (?,?,?,?,?)",
-    [id, data.type, data.title, data.status || "published", JSON.stringify(data.payload || {})]);
+    [id, data.type, data.title, data.status || "published", JSON.stringify(Object.fromEntries(Object.entries(data.payload || {}).filter(([k]) => !RESERVED.includes(k))))]);
   for (const t of data.links || []) await addLink(id, t);
   return (await getEntity(id))!;
 }
@@ -69,6 +71,7 @@ export async function updateEntity(id: string, patch: { title?: string; status?:
   const payload = patch.payload
     ? { ...JSON.parse(cur.payload || "{}"), ...patch.payload }
     : JSON.parse(cur.payload || "{}");
+  for (const k of RESERVED) delete (payload as Record<string, unknown>)[k];
   await q.run(
     `UPDATE entities SET title = ?, status = ?, payload = ?, updated_at = ${SQL.NOW} WHERE id = ?`,
     [patch.title ?? cur.title, patch.status ?? cur.status, JSON.stringify(payload), id],
