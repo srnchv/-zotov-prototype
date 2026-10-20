@@ -23,3 +23,4 @@ a.ypin:hover b,a.ypin:hover i{background:var(--red);color:#fff}
 @media (max-width:1599px){#plist{grid-template-columns:repeat(4,1fr)}.ymap.big{height:620px}}
 @media (max-width:1023px){#mapp{padding-top:110px}#mapp #intro{padding-top:120px}#plist{grid-template-columns:repeat(3,1fr);padding-top:32px}.ymap.big{height:520px}}
 @media (max-width:599px){#mapp #intro{padding:64px 12px 16px;max-width:none;font-size:20px;line-height:20px;letter-spacing:0}#plist{grid-template-columns:1fr}.ymap.big{height:70vh}}
+.pl.on{color:var(--red)} .pl.on .dv{background:var(--red)}

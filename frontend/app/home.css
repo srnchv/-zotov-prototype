@@ -37,40 +37,65 @@
 .theme:hover .vb{border-color:var(--red)}
 #themes .slink{margin:8px 12px 0}
 #chrono .slink{margin-bottom:96px}
-.ditem:hover .year{color:var(--red)}
+.ditem:hover .year,.ditem:hover .vcard{color:var(--red)} /* ховер — год и карточка вместе, одна ссылка */
+.ditem:hover .vcard .dv{background:var(--red)}
+.ditem:hover .vcard .vb{border-color:var(--red)}
 
 /* мозаика личностей: 12 колонок, ячейка 4:5 (132×165 на 1740, 79×98 на 1100), фото без рамки */
 .mosaic{--col:calc((100cqw - 156px)/12);--row:calc(var(--col)*1.25);margin:12px 0;display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:var(--row);gap:12px;width:100%}
 .tile{position:relative;grid-column:var(--dc) / span var(--ds);grid-row:var(--dr) / span var(--ds);background:var(--grey5);overflow:visible}
 .tile>img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
 .tile:hover{z-index:5}
-/* карточка при наведении (person-hover): красное поле 12 вокруг фото, справа имя и роль;
-   ширина не меньше трёх ячеек и растёт по длине имени, чтобы фамилия не выходила за красное */
-.tile .hc{display:none;position:absolute;left:-12px;top:-12px;min-width:calc(var(--col)*3 + 24px);width:max-content;max-width:calc(var(--col)*6 + 60px);height:calc(var(--row) + 24px);background:var(--red);padding:12px;gap:12px;grid-template-columns:var(--col) auto;color:var(--ink)}
-.tile.hl .hc{left:auto;right:-12px;grid-template-columns:auto var(--col)}
+/* карточка при наведении (person-hover): красное поле поверх плитки — фото остаётся на месте, рядом имя и описание.
+   Маленькая плитка: вправо (hr) или влево (hl) на 3 ячейки × 1 ряд (420×165 на 1740); большая: вниз (hd) или вверх (hu) — 2 ячейки × 3 ряда (276×519) */
+.tile .hc{display:none;position:absolute;left:0;top:0;width:calc(var(--col)*3 + 24px);height:var(--row);background:var(--red);grid-template-columns:var(--col) minmax(0,1fr);color:var(--ink)}
+.tile.hl .hc{left:auto;right:0;grid-template-columns:minmax(0,1fr) var(--col)}
 .tile.hl .hc>img{order:2}
 .tile:hover .hc{display:grid}
-.tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom}
-.tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding-right:4px}
-.tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase;white-space:nowrap}
-.tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px;white-space:nowrap}
-/* большая плитка (2×2): карточка вертикальная — фото во всю плитку, текст блоком под ним (или над, если плитка у нижнего края) */
-.tile.big .hc{display:none;flex-direction:column;width:calc(var(--col)*2 + 36px);min-width:0;max-width:none;height:auto}
+.tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
+.tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding:12px}
+.tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
+.tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px}
+.tile.big .hc{display:none;flex-direction:column;width:calc(var(--col)*2 + 12px);height:calc(var(--row)*3 + 24px)}
 .tile.big:hover .hc{display:flex}
-.tile.big .hc>img{width:calc(var(--col)*2 + 12px);height:calc(var(--row)*2 + 12px);flex:0 0 auto}
-.tile.big .hct{height:calc(var(--row) - 24px);flex:0 0 auto;padding-right:0}
-.tile.big .hct b,.tile.big .hct small{white-space:normal}
-.tile.hu .hc{top:auto;bottom:-12px;flex-direction:column-reverse}
+.tile.big .hc>img{width:100%;height:calc(var(--row)*2 + 12px);flex:0 0 auto}
+.tile.big .hct{flex:1 1 auto}
+.tile.hu .hc{top:auto;bottom:0;flex-direction:column-reverse}
+/* планшет и мобайл: личности карточками «имя + фото» (person-card) по своим сеткам */
+.pcards{display:none;grid-auto-flow:dense;gap:12px;margin:12px 12px 0}
+.pcard{display:flex;flex-direction:column;gap:4px;min-width:0;overflow:hidden}
+.pcard .nm{height:44px;flex:0 0 44px;display:flex;flex-direction:column;gap:4px;font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pcard .nm .dv{height:8px;flex:0 0 8px;background:var(--ink)}
+.pcard .im{flex:1 1 auto;min-height:0;background:var(--grey5);overflow:hidden}
+.pcard .im img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.pcard:hover{color:var(--red)}
+.pcard:hover .nm .dv{background:var(--red)}
 
-/* карта: коллаж из макета (десктоп 1740×800, леттеринг «карта» вписан в коллаж), ссылка «Вся карта» */
-#map.sec{padding-top:12px} /* десктопный коллаж — с надписью «КАРТА» внутри, свой леттеринг спрятан */
-#map .lt{display:none}
-#map .canvas{display:block;background:#fff}
-#map .canvas img{width:100%;height:auto;display:block}
-#map .slink{margin-top:12px}
+/* карта: леттеринг, подводка (3 строки Algorytm 50/48) и коллаж слоями (MapCollage, 1740×800) со ссылками на места */
+#map .lead{display:flex;flex-direction:column;padding:0 12px;margin:12px 0 48px;font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
+#map .lead span{white-space:nowrap}
+#map .lead .l{align-self:flex-start}
+#map .lead .r{align-self:flex-end}
+.mcol{position:relative;width:calc(100% - 24px);margin:0 12px 12px;aspect-ratio:1740/800;overflow:hidden}
+.mcol>*{position:absolute}
+.mc-c{border-radius:50%;display:block}
+.mc-s{display:block;overflow:visible;pointer-events:none}
+.mc-b{display:block;overflow:visible}
+.mc-b img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mc-sil{position:absolute;width:100%;height:100%;overflow:visible;opacity:0;transition:opacity .15s}
+.mc-sil path{fill:var(--red)}
+.mc-b.sh .mc-sil{opacity:1}
+.mc-b.sh .mc-sil path{fill:var(--ink)}
+.mc-b:hover .mc-sil{opacity:1}
+.mc-b:hover .mc-sil path{fill:var(--red)}
+.mc-tip{display:none;position:absolute;left:50%;top:-8px;transform:translate(-50%,-100%);background:var(--red);color:var(--ink);padding:6px 8px;font-size:12px;line-height:14px;font-weight:500;white-space:nowrap;z-index:3}
+.mc-b:hover .mc-tip{display:block}
+.mc-b:hover{z-index:2}
+#map .canvas.m{display:none;background:#fff}
+#map .canvas.m img{width:100%;height:auto;display:block}
 
 /* ==== об архиве (desktop/about 1080): фото + затемнение, песочный текст ==== */
-#about{position:relative;height:1080px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden} /* высота с линией, координаты ниже — от верха линии минус 8 */
+#about{position:relative;height:100vh;min-height:720px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden} /* высота с линией, координаты ниже — от верха линии минус 8 */
 #about .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#d9d9d9}
 #about .shade{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 #about .lt{position:absolute;left:0;right:0;top:4px}
@@ -100,7 +125,9 @@
   #lede span{white-space:normal}
   #lede .r,#lede .c{align-self:flex-end;text-align:right}
   #search{width:min(800px,100% - 24px)}
-  .tile.big .hct small{font-size:12px;line-height:14px}
+  .tile .hc{width:calc(var(--col)*4 + 36px)} /* 350×98 */
+  .tile .hct small,.tile.big .hct small{font-size:12px;line-height:14px}
+  #map .lead{font-size:37px;line-height:36px;letter-spacing:-.74px}
   #about .lead span{white-space:normal}
   #about .lead .r,#about .lead .c{text-align:right}
   #about .cols{bottom:24px}
@@ -117,11 +144,14 @@
   #themes{padding:0 0 72px}
   .mosaic{--col:calc((100cqw - 108px)/8);--row:calc(var(--col)*1.285);grid-template-columns:repeat(8,1fr)}
   .tile{grid-column:var(--tc) / span var(--ds);grid-row:var(--tr) / span var(--ds)}
-  .tile .hc,.tile:hover .hc,.tile.big:hover .hc{display:none}
-  #map.sec{padding-top:12px}
-  #map .lt{display:flex} /* вертикальный коллаж без надписи — леттеринг сверху, как в макете */
-  #map .canvas{display:flex;justify-content:center}
-  #map .canvas img{width:75%} /* планшет: по центру */
+  .mosaic{display:none}
+  .pcards.t{display:grid;--pc:calc((100cqw - 84px)/6);grid-template-columns:repeat(6,1fr);grid-auto-rows:calc(var(--pc)*198/114)}
+  .pcard.big .nm{font-size:24.1px;line-height:24px;letter-spacing:-.24px}
+  #map .lead{font-size:24.1px;line-height:24px;letter-spacing:-.24px;margin:12px 0 24px}
+  #map .lead span{white-space:normal}
+  .mcol{display:none}
+  #map .canvas.m{display:flex;justify-content:center}
+  #map .canvas.m img{width:75%} /* планшет: иллюстрация по центру */
   #about{height:890px}
   #about .lt{top:-8px}
   #about .lead{display:none}
@@ -143,11 +173,15 @@
   #search{margin-top:126px}
   #search input{font-size:20px;line-height:20px}
   #themes .hrow{flex-direction:column;gap:8px;overflow:visible}
-  .theme{width:auto;height:96px}
-  .theme .im{width:80px;height:80px}
+  .theme{width:auto}
   .mosaic{--col:calc((100cqw - 60px)/4);--row:calc(var(--col)*1.28);grid-template-columns:repeat(4,1fr)}
   .tile{grid-column:var(--mc) / span var(--ms);grid-row:var(--mr) / span var(--ms)}
-  #map .canvas img{width:100%}
+  .pcards.t{display:none}
+  .pcards.m{display:grid;--pc:calc((100cqw - 48px)/3);grid-template-columns:repeat(3,1fr);grid-auto-rows:calc(var(--pc)*186/104)}
+  #map .lead{font-size:20px;line-height:20px;letter-spacing:0}
+  #map .canvas.m img{width:100%}
+  .theme{height:88px}
+  .theme .im{width:72px;height:72px}
   #about{height:640px}
   #about .lt{top:4px}
   #about .lead-m{top:78px;font-size:20px;line-height:20px;letter-spacing:0}

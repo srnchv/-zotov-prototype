@@ -17,7 +17,8 @@ function loadYmaps(key: string) {
   return loading;
 }
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-export default function YMap({ apiKey, pins, zoom, link = true, className }: { apiKey: string; pins: Pin[]; zoom?: number; link?: boolean; className?: string }) {
+// focus — id места, на котором карта открывается крупно (переход с коллажа главной: /map?place=…)
+export default function YMap({ apiKey, pins, zoom, link = true, className, focus }: { apiKey: string; pins: Pin[]; zoom?: number; link?: boolean; className?: string; focus?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState("");
   useEffect(() => {
@@ -29,10 +30,12 @@ export default function YMap({ apiKey, pins, zoom, link = true, className }: { a
       const tag = link ? "a" : "div";
       const layout = Y.templateLayoutFactory.createClass(`<${tag} class="ypin"${link ? ' href="/m/$[properties.id]"' : ""}><i></i><b>$[properties.title]</b></${tag}>`);
       for (const p of pins) map.geoObjects.add(new Y.Placemark([p.lat, p.lon], { id: p.id, title: esc(p.title) }, { iconLayout: layout, iconShape: { type: "Rectangle", coordinates: [[-9, -9], [220, 12]] } }));
-      if (pins.length > 1) map.setBounds(map.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 48 });
+      const f = focus ? pins.find((p) => p.id === focus) : undefined;
+      if (f) map.setCenter([f.lat, f.lon], 16);
+      else if (pins.length > 1) map.setBounds(map.geoObjects.getBounds(), { checkZoomRange: true, zoomMargin: 48 });
     }).catch(() => setErr("Карта не загрузилась"));
     return () => { try { map?.destroy(); } catch {} };
-  }, [apiKey, pins, zoom, link]);
+  }, [apiKey, pins, zoom, link, focus]);
   if (!apiKey) return <div className={"ymap " + (className || "")}><span className="ph">Карта будет доступна после подключения ключа Яндекс Карт</span></div>;
   return <div className={"ymap " + (className || "")} ref={box}>{err ? <span className="ph">{err}</span> : null}</div>;
 }

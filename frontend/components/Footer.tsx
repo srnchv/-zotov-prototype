@@ -18,7 +18,7 @@ export default function Footer({ className = "", site = SITE_DEFAULTS }: { class
           <a href={site.offerUrl || "#"}>Публичная оферта</a>
         </div>
         <div className="c2">
-          {soc.map(([k, l]) => <a key={k} href={site[k as keyof Site]} target="_blank" rel="noreferrer">{l}</a>)}
+          {soc.map(([k, l]) => <a key={k} href={String(site[k as keyof Site] || "#")} target="_blank" rel="noreferrer">{l}</a>)}
         </div>
         <div className="c5"><a href="https://charmer.design" target="_blank" rel="noreferrer">Сделано<br />в Charmer</a></div>
         <div className="c6">{site.copyright}</div>

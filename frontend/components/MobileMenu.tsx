@@ -3,7 +3,7 @@
 // «Меню» открывает панель поверх страницы (мобайл — почти во весь экран, планшет — 384 слева):
 // крестик слева сверху, логотип с «АРХИВ» справа, список разделов, внизу «Войти».
 import { useEffect, useState } from "react";
-import { NAV, LOGIN_URL, CENTER_URL, ExtIcon } from "./Sidebar";
+import { NAV, LOGIN_URL, CENTER_URL, ExtIcon, Logo } from "./Sidebar";
 
 const LETTERS = ["a", "r", "h", "i", "v"];
 export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: string }) {
@@ -18,10 +18,10 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
   return (
     <>
       <div className="mmenu">
-        <a className="mlogo" href="/"><img src="/assets/logo-zotov.svg" alt="Зотов" /></a>
+        <a className="mlogo" href="/"><Logo /></a>
         <button type="button" className="mbtn" onClick={() => setOpen(true)}>Меню</button>
       </div>
-      <a className="mcenter" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+      <a className="mcenter" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span></a>
       {open ? (
         <div className="moverlay" onClick={() => setOpen(false)}>
           <div className="mpanel" role="dialog" aria-label="Меню" onClick={(e) => e.stopPropagation()}>
@@ -34,7 +34,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
             </div>
             <nav className="mnav">
               {NAV.map(([t, h]) => <a key={t} href={h}>{t}</a>)}
-              <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Зотов Центр</span><ExtIcon /></a>
+              <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span><ExtIcon /></a>
             </nav>
             <a className="mlogin" href={LOGIN_URL}>Войти</a>
           </div>

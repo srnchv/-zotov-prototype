@@ -5,7 +5,7 @@ import { S, all, api, load, toast, canEdit, homeList, homeCheck, collHighlights,
 import { TYPES, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 import CollItems from "../components/CollItems.vue";
-const hero = ref(siteVal("heroText")), about = reactive({ aboutText: siteVal("aboutText"), aboutCol1: siteVal("aboutCol1"), aboutCol2: siteVal("aboutCol2"), aboutCol3: siteVal("aboutCol3"), aboutCol4: siteVal("aboutCol4"), aboutEmail: siteVal("aboutEmail") });
+const hero = ref(siteVal("heroText")), searchPh = ref(siteVal("searchPh")), searchPhM = ref(siteVal("searchPhM")), mapText = ref(siteVal("mapText")), about = reactive({ aboutText: siteVal("aboutText"), aboutCol1: siteVal("aboutCol1"), aboutCol2: siteVal("aboutCol2"), aboutCol3: siteVal("aboutCol3"), aboutCol4: siteVal("aboutCol4"), aboutEmail: siteVal("aboutEmail") });
 const chk = computed(() => homeCheck(undefined, hero.value.length));
 const pickType = ref<string | null>(null);
 const pool = computed(() => (pickType.value ? all(pickType.value).filter((o) => !onHome(o)) : []));
@@ -27,7 +27,7 @@ async function saveColl(c: Entity) {
 }
 async function saveTexts() {
   if (hero.value.length > 500) { toast("Подзаголовок длиннее 500 знаков — сократите."); return; }
-  try { await patchSite({ heroText: hero.value.trim(), ...Object.fromEntries(Object.entries(about).map(([k, v]) => [k, String(v).trim()])) }); toast("Сохранено — обновлено на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); }
+  try { await patchSite({ heroText: hero.value.trim(), searchPh: searchPh.value.trim(), searchPhM: searchPhM.value.trim(), mapText: mapText.value.trim(), ...Object.fromEntries(Object.entries(about).map(([k, v]) => [k, String(v).trim()])) }); toast("Сохранено — обновлено на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); }
 }
 const inputs: Record<string, HTMLInputElement | undefined> = {};
 async function img(key: string, ev: Event) {
@@ -35,7 +35,15 @@ async function img(key: string, ev: Event) {
   try { if (!S.db["site"]) await patchSite({}); const m = await uploadFile(file, "site"); await patchSite({ [key]: m.big || m.med || m.thumb || "" }); toast("Сохранено — обновлено на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); }
   (ev.target as HTMLInputElement).value = "";
 }
-const IMGS: [string, string, string, string][] = [["aboutBg", "Фон «Об архиве»", "3/1", "Фотография на весь блок, под затемнением"], ["mapD", "Карта — десктоп", "1740/800", "Коллаж 1740×800 с надписью «КАРТА» внутри"], ["mapM", "Карта — мобайл и планшет", "360/462", "Вертикальный коллаж без надписи (в 2x)"]];
+const IMGS: [string, string, string, string][] = [["aboutBg", "Фон «Об архиве»", "3/1", "Фотография на весь блок, под затемнением; блок — на высоту экрана"], ["mapM", "Карта — мобайл и планшет", "360/462", "Вертикальная иллюстрация без надписи (в 2x). На десктопе коллаж собирается из слоёв, картинка не нужна"]];
+// коллаж карты на десктопе: четыре здания зашиты в вёрстку, здесь — какое место открывается по клику и подписывается на ховере
+const BUILDINGS: [string, string][] = [["b1", "Здание 1 — слева, башня с надписью «Моссельпром»"], ["b2", "Здание 2 — в центре, «Хлебозавод № 5 · 1931»"], ["b3", "Здание 3 — справа внизу, широкий фасад дворца культуры"], ["b4", "Здание 4 — справа вверху, круглая башня"]];
+const places = computed(() => all("place").slice().sort((a, b) => a.title.localeCompare(b.title, "ru")));
+const mapB = reactive<Record<string, string>>({ ...((S.db["site"] && S.db["site"].mapBuildings) || {}) });
+async function saveMap() {
+  try { await patchSite({ mapBuildings: { ...mapB } }); toast("Сохранено — обновлено на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); }
+}
+const placeLabel = (id: string) => { const p = S.db[id]; return p ? p.title + (p.city ? ", " + p.city : "") : ""; };
 </script>
 <template>
   <h1>Главная страница</h1>
@@ -47,7 +55,18 @@ const IMGS: [string, string, string, string][] = [["aboutBg", "Фон «Об а�
       <div class="field" style="margin-top:10px"><label>Подзаголовок <span class="muted">— до 500 знаков; каждая строка — отдельная строка макета (1-я и 2-я слева, 3-я справа, 4-я по центру)</span></label>
         <textarea class="inp" v-model="hero" maxlength="500" style="min-height:110px" :disabled="!canEdit"></textarea>
         <div class="muted" style="font-size:12px;text-align:right">{{ hero.length }} / 500</div></div>
+      <div class="field"><label>Плейсхолдер поиска <span class="muted">— десктоп и планшет</span></label><input class="inp" v-model="searchPh" :disabled="!canEdit"></div>
+      <div class="field"><label>Плейсхолдер поиска на мобайле <span class="muted">— короткий, чтобы поместился</span></label><input class="inp" v-model="searchPhM" :disabled="!canEdit"></div>
       <button v-if="canEdit" class="btn dark" @click="saveTexts">Сохранить тексты</button>
+    </div>
+    <div class="card"><b>Карта</b>
+      <div class="field" style="margin-top:10px"><label>Подводка <span class="muted">— три строки: 1-я слева, 2-я справа, 3-я слева</span></label><textarea class="inp" v-model="mapText" style="min-height:80px" :disabled="!canEdit"></textarea>
+        <button v-if="canEdit" class="btn dark" style="margin-top:8px" @click="saveTexts">Сохранить тексты</button></div>
+      <div class="muted" style="font-size:12px;margin:12px 0 8px">Здания коллажа на десктопе. При наведении подписывается «Название, Город» выбранного места, по клику открывается оно же в разделе «Карта» (нужны координаты в карточке места).</div>
+      <div v-for="[k, l] in BUILDINGS" :key="k" class="field"><label>{{ l }}</label>
+        <select class="sel" v-model="mapB[k]" :disabled="!canEdit"><option value="">— не привязано —</option><option v-for="p in places" :key="p.id" :value="p.id">{{ placeLabel(p.id) }}</option></select>
+        <div v-if="mapB[k] && S.db[mapB[k]] && !S.db[mapB[k]].lat" class="muted" style="font-size:12px;margin-top:4px;color:#9a2e2e">У места нет координат — <router-link :to="'/edit/' + mapB[k]">поставьте точку</router-link>, иначе откроется общая карта.</div></div>
+      <button v-if="canEdit" class="btn dark" @click="saveMap">Сохранить привязку</button>
     </div>
     <div class="card"><b>Об архиве</b>
       <div class="field" style="margin-top:10px"><label>Подзаголовок <span class="muted">— строки: 1-я слева, 2-я справа, 3-я по центру</span></label><textarea class="inp" v-model="about.aboutText" style="min-height:80px" :disabled="!canEdit"></textarea></div>

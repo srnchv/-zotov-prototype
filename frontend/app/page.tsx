@@ -5,7 +5,8 @@ import Footer from "@/components/Footer";
 import HomeScale from "@/components/HomeScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
 import Gallery from "@/components/Gallery";
-import Parallax from "@/components/Parallax";
+import MapCollage, { BUILDINGS } from "@/components/MapCollage";
+import SearchPh from "@/components/SearchPh";
 import { Lettering, SectionLink } from "@/components/Lettering";
 import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaKind, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
@@ -38,6 +39,10 @@ function hoverDir(m: [number, number, number][], i: number, cols: number, rows: 
   if (sz === 1) return free(c + 1, r) && free(c + 2, r) ? "hr" : "hl";
   return free(c, r + 2) && free(c + 1, r + 2) ? "hd" : "hu";
 }
+// сетки личностей на планшете (6×5, 10 карточек) и мобайле (3×6, 9 карточек): [колонка, ряд, размер] по макету
+const CARDS_T: [number, number, number][] = [[1, 1, 1], [6, 1, 1], [2, 2, 1], [3, 1, 2], [1, 3, 1], [3, 3, 1], [6, 3, 1], [2, 4, 1], [4, 4, 2], [3, 5, 1]];
+const CARDS_M: [number, number, number][] = [[1, 1, 1], [3, 1, 1], [2, 2, 1], [3, 2, 1], [1, 3, 2], [3, 4, 1], [2, 5, 1], [1, 6, 1], [3, 6, 1]];
+const cap = (t: string) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 // мозаика личностей: [колонка, ряд, размер] — desktop 12×4, tablet 8×5, mobile 4×8 (из макетов Section 5)
 const MOSAIC_D: [number, number, number][] = [[1, 1, 1], [3, 1, 2], [5, 1, 1], [9, 1, 1], [8, 2, 1], [2, 3, 1], [5, 3, 1], [6, 3, 2], [9, 3, 1], [10, 2, 2], [12, 3, 1], [1, 4, 1], [10, 4, 1]];
 const MOSAIC_T: [number, number, number][] = [[1, 1, 1], [2, 1, 2], [5, 1, 1], [8, 1, 1], [4, 2, 1], [1, 3, 1], [3, 3, 1], [6, 2, 2], [8, 3, 1], [4, 4, 2], [7, 4, 1], [2, 5, 1], [6, 5, 1]];
@@ -59,6 +64,12 @@ export default async function Home() {
   const pool = shuffle(pick("person"));
   const persons = pool.length ? Array.from({ length: 13 }, (_, i) => pool[i % pool.length]) : [];
   const colls = pick("collection").slice(0, 2);
+  const personsT = pool.length ? Array.from({ length: 10 }, (_, i) => pool[i % pool.length]) : [];
+  const personsM = pool.length ? Array.from({ length: 9 }, (_, i) => pool[i % pool.length]) : [];
+  const mapL = lines(site.mapText, 3), MAP_AL = ["l", "r", "l"];
+  // здания коллажа карты → привязанные в админке места (подпись «Название, Город» и переход в раздел «Карта»)
+  const mb = (site.mapBuildings || {}) as Record<string, string>;
+  const buildings = BUILDINGS.map((b) => { const p = mb[b.key] ? db[mb[b.key]] : undefined; return { key: b.key, placeId: p?.id, title: p ? `${p.title}${p.city ? ", " + p.city : ""}` : b.defTitle }; });
   const heroL = lines(site.heroText, 4), aboutL = lines(site.aboutText, 3);
   const HERO_AL = ["l", "l", "r", "c"], ABOUT_AL = ["l", "r", "c"];
 
@@ -78,8 +89,8 @@ export default async function Home() {
 
       <div id="rest" className="home">
         {/* ---- первый экран ---- */}
+        <div className="mhead sticky"><MobileMenu centerUrl={site.centerUrl} /></div>
         <section id="hero">
-          <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
           <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
           <div id="lede">{heroL.map((t, i) => <span className={HERO_AL[i]} key={i}>{t}</span>)}</div>
           <div id="lede-m">
@@ -87,9 +98,9 @@ export default async function Home() {
             {heroL.length > 2 ? <p className="r">{heroL.slice(2).join(" ")}</p> : null}
           </div>
           <form id="search" action="/search" method="get">
-            <label className="lbl" htmlFor="home-q">Поиск в каталоге</label>
+            <label className="lbl" htmlFor="home-q">Поиск по архиву</label>
             <div className="box">
-              <input id="home-q" name="q" placeholder={site.searchPh} autoComplete="off" />
+              <input id="home-q" name="q" placeholder={site.searchPh} data-ph-m={site.searchPhM} autoComplete="off" /><SearchPh />
               <button type="submit" aria-label="Найти"><svg className="ic" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg></button>
             </div>
           </form>
@@ -108,41 +119,45 @@ export default async function Home() {
               </a>
             ))}
           </div>
-          <SectionLink href="/cat/theme" text="Все материалы" />
+          <SectionLink href="/cat/theme" text="Все темы" />
         </section>
 
         {/* ---- проекты центра: 3 → фичер большой + два средних; 2 → две большие ---- */}
         <section id="projects" className="sec">
-          <Lettering text="проекты центра" />
+          <a href="/cat/project"><Lettering text="проекты центра" /></a>
           <div className={"feat " + (twoBig ? "cgrid" : "pgrid")}>
             {projects.map((p, i) => card(p, twoBig || i === 0 ? "big" : "med", i, PH_PR, s(p, "dates")))}
           </div>
-          <SectionLink href="/cat/project" text="Все материалы" />
+          <SectionLink href="/cat/project" text="Все проекты" />
         </section>
 
         {/* ---- хронограф: лента по годам по возрастанию; у события — только год и тип ---- */}
         <section id="chrono" className="sec">
-          <Lettering text="хронограф" />
+          <a href="/chrono"><Lettering text="хронограф" /></a>
           <div className="feat hrow">
             {chrono.map((e, i) => (
-              <div className="ditem" key={e.id}>
+              <a className="ditem" key={e.id} href={`/m/${e.id}`}>
                 <div className="year">{yearOf(e.date) || s(e, "date")}</div>
-                {card(e, "small", i, PH_CH, "", s(e, "evType"))}
-              </div>
+                <div className="vcard small">
+                  <div className="dv" />
+                  <div className="tx"><h3>{e.title}</h3><div className="vb" /><div className="inf"><b>{s(e, "evType") || "Событие"}</b></div></div>
+                  <div className="im"><img src={img(e, ph(PH_CH, i), true)} alt="" style={imgPos(db, e)} /></div>
+                </div>
+              </a>
             ))}
           </div>
-          <SectionLink href="/chrono" text="Все материалы" />
+          <SectionLink href="/chrono" text="Все события" />
         </section>
 
         {/* ---- личности: фигура из 13 ячеек, личности в ней — случайно из выбранных в админке; ховер по 4 сценариям ---- */}
         <section id="persons" className="sec">
-          <Lettering text="личности" />
+          <a href="/cat/person"><Lettering text="личности" /></a>
           <div className="feat">
             <div className="mosaic">
               {persons.map((p, i) => {
                 const d = MOSAIC_D[i], t = MOSAIC_T[i], m = MOSAIC_M[i];
                 const dir = hoverDir(MOSAIC_D, i, 12, 4);
-                const sub = [s(p, "role"), s(p, "life")].filter(Boolean).join(", ");
+                const sub = cap([s(p, "role"), s(p, "life")].filter(Boolean).join(", "));
                 return (
                   <a className={"tile " + dir + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
@@ -152,25 +167,35 @@ export default async function Home() {
                 );
               })}
             </div>
+            {/* планшет и мобайл: карточки «имя + фото» по своим сеткам (person-card) */}
+            <div className="pcards t">
+              {personsT.map((p, i) => { const [c, r, sz] = CARDS_T[i]; return (
+                <a className={"pcard" + (sz === 2 ? " big" : "")} key={"t" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
+                  <div className="nm"><div className="dv" />{p.title}</div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                </a>); })}
+            </div>
+            <div className="pcards m">
+              {personsM.map((p, i) => { const [c, r, sz] = CARDS_M[i]; return (
+                <a className={"pcard" + (sz === 2 ? " big" : "")} key={"m" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
+                  <div className="nm"><div className="dv" />{p.title}</div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                </a>); })}
+            </div>
           </div>
-          <SectionLink href="/cat/person" text="Все материалы" />
+          <SectionLink href="/cat/person" text="Все личности" />
         </section>
 
-        {/* ---- карта: статичный коллаж (с надписью «КАРТА» внутри) из админки, переход в раздел ---- */}
+        {/* ---- карта: коллаж из зданий (десктоп — слоями с ховером и переходом к месту; планшет/мобайл — иллюстрация) ---- */}
         <section id="map" className="sec">
-          <Lettering text="карта" />
-          <a className="canvas" href="/map" aria-label="Карта">
-            <picture>
-              <source media="(max-width:1023px)" srcSet={site.mapM || "/assets/map-m.jpg"} />
-              <img src={site.mapD || "/assets/map-d.jpg"} alt="Карта" />
-            </picture>
-          </a>
-          <SectionLink href="/map" text="Все материалы" />
+          <a href="/map"><Lettering text="карта" /></a>
+          <div className="lead">{mapL.map((t, i) => <span className={MAP_AL[i]} key={i}>{t}</span>)}</div>
+          <MapCollage buildings={buildings} />
+          <a className="canvas m" href="/map" aria-label="Карта"><img src={site.mapM || "/assets/map-m.jpg"} alt="" /></a>
+          <SectionLink href="/map" text="Смотреть на карте" textM="Все места" />
         </section>
 
         {/* ---- коллекции: галерея хайлайтов (фото и подпись из привязки «материал в коллекции») ---- */}
         <section id="collections" className="sec">
-          <Lettering text="коллекции" />
+          <a href="/cat/collection"><Lettering text="коллекции" /></a>
           <div className="feat cgrid">
             {colls.map((c, i) => {
               const items = (c.items || {}) as Record<string, { img?: string; caption?: string; hl?: boolean }>;
@@ -180,7 +205,10 @@ export default async function Home() {
                 const src = med && med.type === "media" ? String(med.big || med.med || "") : imgOf(db, m, true);
                 return { src: src || ph(PH_C, i), title: it.caption || m.title, pos: med?.focus ? String(med.focus) : imgPos(db, m)?.objectPosition as string | undefined };
               });
-              if (!slides.length) slides.push({ src: img(c, ph(PH_C, i), true), title: c.title, pos: imgPos(db, c)?.objectPosition as string | undefined }); // хайлайтов нет — обложка
+              if (slides.length < 2) { // хайлайты не настроены — обложки материалов коллекции (до 5), иначе обложка
+                const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true)).slice(0, 5).map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m)?.objectPosition as string | undefined }));
+                slides.splice(0, slides.length, ...(fromMats.length >= 2 ? fromMats : [{ src: img(c, ph(PH_C, i), true), title: c.title, pos: imgPos(db, c)?.objectPosition as string | undefined }]));
+              }
               return (
                 <a className="vcard big coll" key={c.id} href={`/m/${c.id}`}>
                   <div className="dv" />
@@ -195,10 +223,10 @@ export default async function Home() {
               );
             })}
           </div>
-          <SectionLink href="/cat/collection" text="Все материалы" />
+          <SectionLink href="/cat/collection" text="Все коллекции" />
         </section>
 
-        {/* ---- об архиве: фон из админки, колонки с параллаксом ---- */}
+        {/* ---- об архиве: фон из админки на высоту экрана, тексты прибиты к низу ---- */}
         <section id="about">
           <img className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" />
           <div className="shade" />
@@ -214,7 +242,6 @@ export default async function Home() {
             <div>{site.aboutCol3}</div>
             <div className="last"><span>{site.aboutCol4}</span><span>По вопросам сотрудничества:<br /><a href={`mailto:${site.aboutEmail}`}>{site.aboutEmail}</a></span></div>
           </div>
-          <Parallax target="about-cols" />
         </section>
 
         <Footer site={site} />
