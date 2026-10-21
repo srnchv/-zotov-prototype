@@ -53,3 +53,9 @@
 .ypin{display:flex;align-items:center;gap:6px;margin:-9px 0 0 -9px;color:var(--ink);text-decoration:none;white-space:nowrap}
 .ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
 .ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+
+/* защита от сохранения: картинка не ловит мышь — правый клик и перетаскивание попадают на контейнер, где нет «Сохранить изображение».
+   От скриншота это не спасает (и ничто не спасёт), но на сайте и так только копии ≤1600 с водяным знаком по настройке */
+.embed .imgbox img,.mgal-view img,.embed2 img{pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
+.embed .imgbox,.mgal-view{-webkit-touch-callout:none}
+.embed video{pointer-events:auto}

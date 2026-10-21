@@ -143,7 +143,10 @@ export function createApp() {
   }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
-  app.get("/api/export", ah(async (_req, res) => res.json(await repo.exportAll())));
+  // ключ оригинала в хранилище — служебное поле, наружу не уходит (оригиналы только через /api/media/:id/file)
+  const hideOrig = (e: any) => { if (e && e.type === "media" && "origKey" in e) { const { origKey: _o, ...rest } = e; return rest; } return e; };
+  const isStaff = (req: express.Request) => !!whoIs(req);
+  app.get("/api/export", ah(async (req, res) => { const d = await repo.exportAll(); res.json(isStaff(req) ? d : { ...d, entities: d.entities.map(hideOrig) }); }));
 
   app.get("/api/entities", ah(async (req, res) => {
     const query = z.object({
@@ -153,13 +156,22 @@ export function createApp() {
       limit: z.coerce.number().int().min(1).max(200).optional(),
       offset: z.coerce.number().int().min(0).optional(),
     }).parse(req.query);
-    res.json(await repo.listEntities(query));
+    const r = await repo.listEntities(query);
+    res.json(isStaff(req) ? r : { ...r, items: r.items.map(hideOrig) });
+  }));
+
+  // пересборка медиатеки: закрыть оригиналы, пересчитать копии (водяной знак, ≤1600) — администратор
+  app.post("/api/media/reprocess", adminOnly, ah(async (_req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
+    const log: string[] = [];
+    const r = await media.reprocessAll((m) => log.push(m));
+    res.json({ ...r, log: log.slice(0, 50) });
   }));
 
   app.get("/api/entities/:id", ah(async (req, res) => {
     const e = await repo.getEntity(String(req.params.id));
     if (!e) return res.status(404).json({ error: "not found" });
-    res.json(e);
+    res.json(isStaff(req) ? e : { ...hideOrig(e), links: e.links.map(hideOrig) });
   }));
 
   const entityBody = z.object({
@@ -327,7 +339,9 @@ export function createApp() {
     // доступ «по запросу» / ограниченный — только владельцам токена (личный кабинет появится позже)
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
     const access = String((parent?.access ?? m.access) || "open");
-    if (access !== "open" && req.headers.authorization !== `Bearer ${ADMIN_TOKEN}`) return res.status(403).json({ error: "access restricted" });
+    if (access !== "open" && !whoIs(req)) return res.status(403).json({ error: "access restricted" });
+    // оригиналы изображений наружу не отдаём вообще: сайту хватает копий ≤1600 (видео/аудио/PDF стримятся для плеера)
+    if (String(m.kind) === "image" && !whoIs(req)) return res.status(403).json({ error: "originals are not public" });
     const s = await media.streamOriginal(m.id, req.headers.range as string | undefined);
     if (!s) return res.status(404).json({ error: "not found" });
     res.status(s.status).set(s.headers);

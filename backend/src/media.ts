@@ -1,6 +1,6 @@
 // Медиа-хранилище: S3-совместимое (Timeweb / любой хостинг клиента — меняются только env-переменные).
 // Оригинал сохраняется как есть (по подписанной ссылке), наружу отдаются сжатые производные.
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import yauzl from "yauzl";
 import { createHash } from "node:crypto";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -27,18 +27,45 @@ const s3 = () =>
   });
 
 // Производные для изображений: превью в карточку, средний для страницы, большой для просмотрщика.
+// Публичная копия ограничена 1600 px по ширине: хватает для просмотра на экране, но не для печати и переиздания.
 const RENDITIONS: [name: string, width: number, quality: number][] = [
   ["thumb", 400, 75],
   ["med", 1200, 80],
-  ["big", 2560, 82],
+  ["big", 1600, 82],
 ];
 
-export async function processImage(buf: Buffer) {
+// Водяной знак (настройка сайта: wmText) — полупрозрачный повторяющийся текст по диагонали на средней и большой копиях
+function watermarkSvg(text: string, w: number) {
+  // плитка с запасом по высоте, чтобы повёрнутая строка не обрезалась по краям
+  const fs = Math.max(14, Math.round(w / 40)), tw = Math.round(fs * text.length * 0.62) + fs * 4, th = Math.round(tw * 0.5) + fs * 2;
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${tw}" height="${th}"><text x="${tw / 2}" y="${th / 2}" text-anchor="middle" dominant-baseline="middle" font-family="Helvetica, Arial, sans-serif" font-size="${fs}" font-weight="700" fill="#fff" fill-opacity="0.22" stroke="#000" stroke-opacity="0.12" stroke-width="1" transform="rotate(-22 ${tw / 2} ${th / 2})">${esc}</text></svg>`);
+}
+async function siteWatermark() {
+  const site = await repo.getEntity("site").catch(() => null);
+  const t = String(site?.wmText || "").trim();
+  return t || null;
+}
+export async function processImage(buf: Buffer, wm?: string | null) {
   const meta = await sharp(buf).metadata();
   const out: Record<string, Buffer> = {};
-  for (const [name, width, quality] of RENDITIONS)
-    out[name] = await sharp(buf).rotate().resize({ width, withoutEnlargement: true }).webp({ quality }).toBuffer();
+  for (const [name, width, quality] of RENDITIONS) {
+    let img = sharp(buf).rotate().resize({ width, withoutEnlargement: true });
+    if (wm && name !== "thumb") {
+      const base = await img.toBuffer(); const m = await sharp(base).metadata();
+      img = sharp(base).composite([{ input: watermarkSvg(wm, m.width || width), tile: true, blend: "over" }]);
+    }
+    out[name] = await img.webp({ quality }).toBuffer();
+  }
   return { renditions: out, width: meta.width || 0, height: meta.height || 0 };
+}
+
+// Оригиналы: ключ с секретной частью (наружу не отдаётся) + приватный ACL, если хранилище его поддерживает.
+// Так оригинал нельзя ни угадать по id, ни открыть напрямую — только через /api/media/:id/file с проверкой доступа.
+const origKeyFor = (id: string, filename: string) => `orig/${id}-${randomUUID().replace(/-/g, "").slice(0, 20)}/${filename.replace(/[^\wа-яА-ЯёЁ.\-]+/g, "_")}`;
+async function putPrivate(key: string, body: Buffer, contentType: string) {
+  try { await s3().send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType, ACL: "private" })); }
+  catch { await put(key, body, contentType); } // хранилище без ACL — защищает секретный ключ
 }
 
 async function put(key: string, body: Buffer, contentType: string) {
@@ -49,7 +76,7 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
   const { entityId, filename, mime, buffer } = opts;
   const id = randomUUID().slice(0, 8);
   const kind = mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "file";
-  const origKey = `orig/${id}/${filename.replace(/[^\wа-яА-ЯёЁ.\-]+/g, "_")}`;
+  const origKey = origKeyFor(id, filename);
 
   const payload: Record<string, unknown> = {
     kind, mime, filename,
@@ -60,14 +87,14 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
   };
 
   if (kind === "image") {
-    const { renditions, width, height } = await processImage(buffer);
+    const { renditions, width, height } = await processImage(buffer, await siteWatermark());
     payload.width = width; payload.height = height;
     for (const [name, body] of Object.entries(renditions)) {
       await put(`media/${id}/${name}.webp`, body, "image/webp");
       payload[name] = `${PUBLIC_URL}/media/${id}/${name}.webp`;
     }
   }
-  await put(origKey, buffer, mime);
+  await putPrivate(origKey, buffer, mime);
 
   const media = await repo.createEntity({
     id: `md-${id}`, type: "media", title: filename,
@@ -81,6 +108,36 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
       await repo.updateEntity(entityId, { payload: { img: payload.thumb, imgBig: payload.med } });
   }
   return media;
+}
+
+// Пересборка медиатеки (администратор): старые оригиналы переносятся под секретные ключи и закрываются,
+// копии изображений пересчитываются по текущим правилам (≤1600, водяной знак из настроек). Идемпотентно.
+export async function reprocessAll(log: (m: string) => void) {
+  const all = (await repo.listEntities({ type: "media", limit: 100000 })).items as any[];
+  const wm = await siteWatermark();
+  let moved = 0, redone = 0, failed = 0;
+  for (const m of all) {
+    if (!m.origKey || m.kind === "tour") continue;
+    try {
+      let key = String(m.origKey);
+      const id = String(m.id).replace(/^md-/, "");
+      if (/^orig\/[^/\-]+\//.test(key)) { // старый угадываемый ключ orig/<id>/<file>
+        const nk = origKeyFor(id, key.split("/").pop() || "file");
+        try { await s3().send(new CopyObjectCommand({ Bucket: BUCKET, CopySource: `/${BUCKET}/${encodeURIComponent(key).replace(/%2F/g, "/")}`, Key: nk, ACL: "private" })); }
+        catch { await s3().send(new CopyObjectCommand({ Bucket: BUCKET, CopySource: `/${BUCKET}/${encodeURIComponent(key).replace(/%2F/g, "/")}`, Key: nk })); }
+        await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key })).catch(() => {});
+        await repo.updateEntity(m.id, { payload: { origKey: nk } }); key = nk; moved++;
+      }
+      if (m.kind === "image") {
+        const r = await s3().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+        const buf = Buffer.from(await r.Body!.transformToByteArray());
+        const { renditions } = await processImage(buf, wm);
+        for (const [name, body] of Object.entries(renditions)) await put(`media/${id}/${name}.webp`, body, "image/webp");
+        await repo.updateEntity(m.id, { payload: { wm: wm || "" } }); redone++;
+      }
+    } catch (e: any) { failed++; log(`${m.id}: ${e?.message || e}`); }
+  }
+  return { total: all.length, moved, redone, failed };
 }
 
 // Подписанная ссылка на оригинал (оригиналы напрямую не публикуются)
