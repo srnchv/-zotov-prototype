@@ -2,7 +2,7 @@ import "../material.css";
 import "../media.css";
 import Player from "@/components/Player";
 import PdfReader from "@/components/PdfReader";
-import MediaGallery, { type MSlide } from "@/components/MediaGallery";
+import MediaGallery, { Tour, type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
@@ -68,7 +68,7 @@ export default async function EntityPage({ params }: Props) {
   const cover: { src: string; title: string } | null = coverMedia
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
-  const docs = media.filter((m) => mediaKind(m) !== "image");
+  const docs = media.filter((m) => !["image", "tour"].includes(mediaKind(m)));
   const isOpen = (s(e, "access") || "open") === "open";
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
@@ -86,6 +86,9 @@ export default async function EntityPage({ params }: Props) {
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
   const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || m.title || e.title), pos: m.focus ? String(m.focus) : undefined })) : [];
   if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
+  // 3D-туры — в ту же галерею после фото (эмбед из админки)
+  const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
+  if (isOpen) for (const t of tours) slides.push({ kind: "tour", src: String(t.embed), title: String(t.title) });
   const topKind: "images" | "video" | "audio" | "none" = slides.length ? "images" : video && isOpen ? "video" : audio && isOpen ? "audio" : "none";
   const sources = rel.filter((x) => x.type === "source");
   const coll = rel.find((x) => x.type === "collection");
@@ -145,6 +148,7 @@ export default async function EntityPage({ params }: Props) {
           <div id="rightcol">
             <div className="embed">
               {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
+                : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
                 : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" && slides[0].pos ? { objectPosition: slides[0].pos } : undefined} /></div>
                 : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
                 : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
