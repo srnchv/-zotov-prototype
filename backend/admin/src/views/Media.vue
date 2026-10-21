@@ -14,7 +14,7 @@ async function onFile() { const file = inp.value?.files?.[0]; if (!file) return;
 const wm = ref(siteVal("wmText")), busyWm = ref(false), wmLog = ref("");
 async function saveWm() { try { await patchSite({ wmText: wm.value.trim() }); toast("Сохранено — применится к новым загрузкам; для старых нажмите «Пересобрать копии»"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 async function reprocess() {
-  if (!confirm("Пересобрать копии всех изображений по текущим настройкам и закрыть оригиналы? Это займёт время, сайт работает как обычно.")) return;
+  if (!confirm("Пересобрать копии всех изображений и закрыть оригиналы? Это займёт время, сайт работает как обычно.")) return;
   busyWm.value = true; wmLog.value = "";
   try { const r = await api<any>("/media/reprocess", { method: "POST" }); wmLog.value = `Готово: файлов ${r.total}, оригиналов закрыто ${r.moved}, копий пересобрано ${r.redone}, ошибок ${r.failed}` + (r.log?.length ? "\n" + r.log.join("\n") : ""); await load(); }
   catch (e: any) { wmLog.value = "Ошибка: " + e.message; }
@@ -24,9 +24,9 @@ async function del(id: string) { if (!confirm("Удалить файл из ар
 </script>
 <template>
   <div v-if="isAdmin" class="card" style="margin-bottom:16px"><b>Защита изображений</b>
-    <div class="muted" style="font-size:12px;margin:4px 0 10px;max-width:760px">Оригиналы хранятся закрыто и на сайт не попадают: показываются копии не шире 1600 px. Водяной знак — полупрозрачный текст по всей площади средней и большой копии (превью в карточках без знака). Пусто — без знака.</div>
-    <div class="field"><label>Текст водяного знака</label><div style="display:flex;gap:8px"><input class="inp" v-model="wm" placeholder="© Центр «Зотов»" style="max-width:420px"><button class="btn sm" @click="saveWm">Сохранить</button></div></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn dark" :disabled="busyWm" @click="reprocess">{{ busyWm ? "Пересобираем…" : "Пересобрать копии и закрыть оригиналы" }}</button><span class="muted" style="font-size:12px">для уже загруженных файлов; новые загрузки обрабатываются сразу</span></div>
+    <div class="muted" style="font-size:12px;margin:4px 0 10px;max-width:760px">Оригиналы хранятся закрыто и на сайт не попадают: показываются копии не шире 1600 px. Новые загрузки обрабатываются сразу; кнопка ниже — для файлов, загруженных раньше.</div>
+    <!-- водяной знак (wm/saveWm) временно скрыт: на сервере нет шрифта с кириллицей, текст рисуется неверно; включим после установки шрифта в образ -->
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn dark" :disabled="busyWm" @click="reprocess">{{ busyWm ? "Пересобираем…" : "Пересобрать копии и закрыть оригиналы" }}</button></div>
     <pre v-if="wmLog" class="muted" style="font-size:12px;white-space:pre-wrap;margin:8px 0 0">{{ wmLog }}</pre>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap"><h1>Медиатека</h1>
