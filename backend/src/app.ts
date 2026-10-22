@@ -264,7 +264,7 @@ export function createApp() {
 
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
   // multer/busboy читают имя файла как latin1 — кириллица превращается в «Ð»Ð¸Ñ…». Перекодируем обратно в UTF-8.
-  const fixName = (n: string) => { try { const u = Buffer.from(n, "latin1").toString("utf8"); return u.includes("\uFFFD") ? n : u; } catch { return n; } };
+  const fixName = (n: string) => { try { const u = Buffer.from(n, "latin1").toString("utf8"); return (u.includes("\uFFFD") ? n : u).normalize("NFC"); } catch { return n; } }; // NFC: macOS присылает «й» как «и» + знак
   const fixFile: express.RequestHandler = (req, _res, next) => { const f = (req as any).file; if (f?.originalname) f.originalname = fixName(f.originalname); next(); };
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
