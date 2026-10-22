@@ -263,10 +263,13 @@ export function createApp() {
   }));
 
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
+  // multer/busboy читают имя файла как latin1 — кириллица превращается в «Ð»Ð¸Ñ…». Перекодируем обратно в UTF-8.
+  const fixName = (n: string) => { try { const u = Buffer.from(n, "latin1").toString("utf8"); return u.includes("\uFFFD") ? n : u; } catch { return n; } };
+  const fixFile: express.RequestHandler = (req, _res, next) => { const f = (req as any).file; if (f?.originalname) f.originalname = fixName(f.originalname); next(); };
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
   // ассеты сайта: PNG/SVG иллюстраций → публичный URL (администратор)
-  app.post("/api/assets", adminOnly, upload.single("file"), ah(async (req, res) => {
+  app.post("/api/assets", adminOnly, upload.single("file"), fixFile, ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
     if (!req.file) return res.status(400).json({ error: "no file" });
     const { name } = z.object({ name: z.string().min(1).max(120) }).parse(req.body);
@@ -281,7 +284,7 @@ export function createApp() {
     res.status(201).json(m);
   }));
   app.get("/api/tours/:id/files", auth, ah(async (req, res) => res.json(await media.tourFiles(String(req.params.id)))));
-  app.post("/api/tours/:id/file", auth, upload.single("file"), ah(async (req, res) => {
+  app.post("/api/tours/:id/file", auth, upload.single("file"), fixFile, ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
     const { path: rel } = z.object({ path: z.string().min(1).max(500) }).parse(req.body);
     res.json(await media.tourPutFile(String(req.params.id), rel, req.file.buffer));
@@ -295,7 +298,7 @@ export function createApp() {
 
   // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour
   const uploadZip = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
-  app.post("/api/tours", auth, uploadZip.single("file"), async (req, res) => {
+  app.post("/api/tours", auth, uploadZip.single("file"), fixFile, async (req, res) => {
     const tmp = req.file?.path;
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
@@ -310,7 +313,7 @@ export function createApp() {
     } finally { if (tmp) unlink(tmp).catch(() => {}); }
   });
 
-  app.post("/api/media", auth, upload.single("file"), async (req, res) => {
+  app.post("/api/media", auth, upload.single("file"), fixFile, async (req, res) => {
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
       if (!req.file) return res.status(400).json({ error: "no file" });
@@ -349,7 +352,7 @@ export function createApp() {
   }));
 
   // субтитры к видео/аудио: .vtt или .srt (конвертируем), язык — в поле lang
-  app.post("/api/media/:id/subtitles", auth, upload.single("file"), ah(async (req, res) => {
+  app.post("/api/media/:id/subtitles", auth, upload.single("file"), fixFile, ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
     if (!req.file) return res.status(400).json({ error: "no file" });
     const { lang, label } = z.object({ lang: z.string().optional(), label: z.string().optional() }).parse(req.body);
