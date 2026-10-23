@@ -12,7 +12,11 @@ export default function SoftNav({ root = "srch", prefix = "/search" }: { root?: 
       const a = (e.target as HTMLElement).closest(`a[href^='${prefix}']`) as HTMLAnchorElement | null;
       if (!a || e.metaKey || e.ctrlKey || e.button !== 0) return;
       e.preventDefault();
-      router.push(a.getAttribute("href")!, { scroll: false });
+      const h = a.getAttribute("href")!;
+      router.push(h, { scroll: false });
+      // пагинация ведёт к началу выдачи (#results) — прокручиваем после подгрузки
+      const hash = h.split("#")[1];
+      if (hash) setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
     };
     const onSubmit = (e: Event) => {
       const f = e.target as HTMLFormElement;

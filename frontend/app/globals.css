@@ -34,7 +34,9 @@ a{color:inherit;text-decoration:none}
 #menu.mat{position:absolute;left:12px;top:152px;width:148px;display:flex;flex-direction:column;gap:8px}
 #menu.mat a{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:4px solid var(--grey5);padding-top:12px;height:32px;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase}
 #menu.mat a.mext{font-weight:500;letter-spacing:0;text-transform:none}
-#menu.mat a:hover,#menu.mat a.active{color:var(--red)}
+#menu.mat a:hover{color:var(--red)}
+/* активный раздел (menu/item, ТЗ поиска): чёрные полосы сверху и снизу, текст не меняется */
+#menu.mat a.active,#menu.mat a.active + a{border-top-color:var(--ink)}
 /* ховер пункта: красные и его линия сверху, и линия следующего пункта (пункт обрамлён) */
 #menu.mat a:hover,#menu.mat a:hover + a{border-top-color:var(--red)}
 #login-btn{position:absolute;left:12px;bottom:12px;width:148px;height:40px;background:var(--grey5);display:flex;align-items:center;justify-content:center;font-size:14.1px;line-height:16px;font-weight:500}

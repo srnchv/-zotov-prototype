@@ -25,7 +25,8 @@ export const TYPELABEL: Record<string, string> = { person: "Группа", colle
 export const SUBLABEL: Record<string, string> = { person: "Роль (художник, архитектор…)", collection: "Родительская коллекция" };
 export const DATEKEY: Record<string, string> = { person: "life", project: "dates", org: "period", collection: "period", source: "year" };
 export const DATELABEL: Record<string, string> = { person: "Годы жизни", project: "Даты проведения", org: "Период деятельности", collection: "Период", source: "Год" };
-export const DATEPH: Record<string, string> = { person: "1891–1956", project: "12.05–30.09.1927", org: "1920 — 1930" };
+// подсказки по ТЗ поиска: год или диапазон «с — по»; неточные даты — диапазоном («1920-е» → 1920–1929)
+export const DATEPH: Record<string, string> = { person: "1891–1956 (рождение — смерть)", project: "12.05–30.09.1927 (начало — окончание)", org: "1920 — 1930", material: "1927 или 1920–1929", event: "1927 или 1927–1928", place: "1929 или 1927–1931", source: "1927 (год публикации)" };
 export const typeKeyOf = (t: string) => TYPEKEY[t] || "subtype";
 export const subKeyOf = (t: string) => SUBKEY[t] || "subtype";
 export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
@@ -80,7 +81,7 @@ export const HOME_DEF: Record<string, string> = {
 // остальные тексты сайта (раздел «Тексты сайта»)
 export const SITE_DEF: [string, [string, string, string, boolean?][]][] = [
   ["Хронограф", [["chronoIntro", "Вводный текст на странице хронографа", "История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.", true]]],
-  ["Поиск", [["searchIntro", "Вводный текст на странице поиска", "Ищите по названиям, авторам, местам, датам и темам. Выдачу можно сузить фильтрами: период, личности, места, темы, события, коллекции — или оставить только связанное с проектами Центра.", true]]],
+  ["Поиск", [["searchIntro", "Вводный текст на странице поиска (перенос строки — как в макете)", "Архив Центра «Зотов» — это связанная система материалов, людей, мест\nи событий. Ищите по ключевым словам, уточняйте фильтрами и переходите по связям: каждый объект ведёт к другим.", true]]],
   ["Ссылки", [["centerUrl", "Сайт Центра «Зотов» (ссылка «Зотов Центр»)", "https://zotov.center"], ["privacyUrl", "Политика конфиденциальности (ссылка)", ""], ["personalUrl", "Обработка персональных данных (ссылка)", ""], ["offerUrl", "Публичная оферта (ссылка)", ""], ["copyright", "Копирайт в футере", "© Центр Зотов, 2022–2026"]]],
   ["Соцсети", [["vk", "ВКонтакте (ссылка)", ""], ["tg", "Telegram (ссылка)", ""], ["yt", "YouTube (ссылка)", ""], ["dzen", "Дзен (ссылка)", ""]]],
 ];

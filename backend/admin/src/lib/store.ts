@@ -94,7 +94,7 @@ export const DICTDEF = (): DictDef[] => [
   ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", placeType: "мест", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({
     key: "sub:" + tk, label: "Подтипы " + l, base: () => {
       const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
-      return [...new Set(S.raw.filter((o) => types.includes(o.type) && o[tk] && o[SUBKEY[o.type] || "subtype"]).map((o) => o[tk] + " › " + o[SUBKEY[o.type] || "subtype"]))].sort() as string[];
+      return [...new Set(S.raw.filter((o) => types.includes(o.type)).map((o) => { const [t, sub] = typeSubOf(o, tk); return t && sub ? t + " › " + sub : ""; }).filter(Boolean))].sort() as string[];
     },
   })),
   { key: "a11y", label: "Доступность", base: () => [...new Set([...A11Y, ...all("material").flatMap((o) => o.a11y || [])])] as string[] },
@@ -104,14 +104,69 @@ export function dictValues(key: string): string[] {
   const base = def ? def.base() : [];
   const s = S.db["dict-" + key] || {};
   const rem = new Set<string>(s.removed || []);
-  return [...new Set([...base, ...(s.added || [])])].filter((v) => !rem.has(v));
+  const order: string[] = s.order || [];
+  const at = (v: string) => { const i = order.indexOf(v); return i < 0 ? 1e6 : i; };
+  // порядок из админки (стрелки в «Справочниках»); новые значения — в конце по алфавиту
+  return [...new Set([...base, ...(s.added || [])])].filter((v) => v && !rem.has(v)).sort((a, b) => at(a) - at(b) || a.localeCompare(b, "ru"));
 }
-export async function dictPatch(key: string, mut: (st: { added: string[]; removed: string[] }) => void) {
+type DictState = { added: string[]; removed: string[]; order: string[] };
+export async function dictPatch(key: string, mut: (st: DictState) => void) {
   const cur = S.db["dict-" + key];
-  const st = { added: [...((cur && cur.added) || [])], removed: [...((cur && cur.removed) || [])] };
+  const st: DictState = { added: [...((cur && cur.added) || [])], removed: [...((cur && cur.removed) || [])], order: [...((cur && cur.order) || [])] };
   mut(st);
   if (cur) await api("/entities/dict-" + key, { method: "PATCH", body: JSON.stringify({ payload: st }) });
   else await api("/entities", { method: "POST", body: JSON.stringify({ id: "dict-" + key, type: "dict", title: "Справочник: " + (DICTDEF().find((d) => d.key === key)?.label || key), payload: st }) });
+  await load();
+}
+// тип и подтип сущности по ключу справочника; у мест исторически одной строкой «Тип · подтип»
+export function typeSubOf(o: Entity, tk: string): [string, string] {
+  const sk = SUBKEY[o.type] || "subtype";
+  const raw = String(o[tk] || "").trim();
+  if (tk === "placeType") { const [t, ...r] = raw.split(" · "); return [t.trim(), String(o[sk] || "").trim() || r.join(" · ").trim()]; }
+  return [raw, String(o[sk] || "").trim()];
+}
+// сущности, у которых стоит значение справочника (для проверки удаления и переименования)
+export function dictUsage(key: string, v: string): Entity[] {
+  const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
+  if (tk === "a11y") return S.raw.filter((o) => (o.a11y || []).includes(v));
+  const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
+  return S.raw.filter((o) => {
+    if (!types.includes(o.type)) return false;
+    const [t, st] = typeSubOf(o, tk);
+    return sub ? t + " › " + st === v : t === v;
+  });
+}
+// переименование значения: справочник + все карточки, где оно стоит (и подтипы переименованного типа)
+export async function dictRename(key: string, from: string, to: string) {
+  const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
+  const users = dictUsage(key, from);
+  for (const o of users) {
+    const sk = SUBKEY[o.type] || "subtype";
+    const [t, st] = typeSubOf(o, tk);
+    const composite = tk === "placeType" && String(o[tk] || "").includes(" · ");
+    let payload: Record<string, unknown>;
+    if (sub) { const nsub = to.split(" › ").slice(1).join(" › "); payload = composite ? { [tk]: t + " · " + nsub } : { [sk]: nsub }; }
+    else payload = composite ? { [tk]: to + " · " + st } : { [tk]: to };
+    await api("/entities/" + o.id, { method: "PATCH", body: JSON.stringify({ payload }) });
+  }
+  const swap = (st: DictState, a: string, b: string) => {
+    st.added = st.added.filter((x) => x !== a); if (!st.removed.includes(a)) st.removed.push(a);
+    st.removed = st.removed.filter((x) => x !== b); if (!st.added.includes(b)) st.added.push(b);
+    st.order = st.order.map((x) => (x === a ? b : x));
+  };
+  await dictPatch(key, (st) => swap(st, from, to));
+  if (!sub && DICTDEF().some((d) => d.key === "sub:" + key)) { // у типа переименовываются и его подтипы
+    const subs = dictValues("sub:" + key).filter((x) => x.startsWith(from + " › "));
+    if (subs.length) await dictPatch("sub:" + key, (st) => { for (const x of subs) swap(st, x, to + x.slice(from.length)); });
+  }
+  await load();
+  return users.length;
+}
+// диапазон Периода для фильтра поиска (dict-period: from/to)
+export const periodVal = () => { const d = S.db["dict-period"] || {}; return { from: String(d.from || ""), to: String(d.to || "") }; };
+export async function savePeriod(from: number, to: number) {
+  if (S.db["dict-period"]) await api("/entities/dict-period", { method: "PATCH", body: JSON.stringify({ payload: { from, to } }) });
+  else await api("/entities", { method: "POST", body: JSON.stringify({ id: "dict-period", type: "dict", title: "Справочник: период поиска", payload: { from, to } }) });
   await load();
 }
 export const subOptions = (tk: string, typeVal: string) => (typeVal ? dictValues("sub:" + tk).filter((v) => v.startsWith(typeVal + " › ")).map((v) => v.slice(typeVal.length + 3)) : []);
