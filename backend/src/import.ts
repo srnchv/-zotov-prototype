@@ -112,7 +112,7 @@ function parse(buf: Buffer) {
       const title = get("Название");
       if (!title) continue;
       if (r === 1 && title === cols[0].hint) continue; // строка подсказок
-      if (title.toUpperCase().startsWith(EXAMPLE)) continue;
+      if (r === 2 && title.toUpperCase().startsWith(EXAMPLE)) continue; // строка-пример шаблона
       const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: split(get("Файлы")), tags: split(get("Теги")) };
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       const d = get("Описание"); if (d) p.fields.desc = d;
@@ -127,8 +127,12 @@ function parse(buf: Buffer) {
 
 // ---- план: что создастся, что обновится, какие связи найдены ----
 export type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: string[]; notes: string[] };
-export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[] };
-async function buildPlan(buf: Buffer): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]> }> {
+// ненайденная связь: тип + название из таблицы, где встречается; решается в админке (выбрать карточку / создать / пропустить)
+export type Unresolved = { key: string; type: string; name: string; rows: string[]; similar: { id: string; title: string }[] };
+export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
+// решения по ненайденным: key → id карточки | "new" (создать карточку этого типа) | "" (пропустить связь)
+export type Resolve = Record<string, string>;
+async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]> }> {
   const { items, problems } = parse(buf);
   const { entities } = await repo.exportAll();
   const byKey = new Map<string, string>(); // type|title → id существующей карточки
@@ -138,6 +142,8 @@ async function buildPlan(buf: Buffer): Promise<{ plan: Plan; items: Parsed[]; by
   const newDict = new Set<string>();
   const rows: PlanRow[] = []; const files = new Set<string>(); let links = 0;
   const seen = new Set<string>();
+  const unres = new Map<string, Unresolved>();
+  const titles = entities.filter((e) => e.type !== "media" && e.type !== "dict" && e.type !== "tag");
   for (const p of items) {
     const k = p.type + "|" + key(p.title);
     const notes: string[] = [];
@@ -146,21 +152,27 @@ async function buildPlan(buf: Buffer): Promise<{ plan: Plan; items: Parsed[]; by
     seen.add(k);
     for (const [t, names] of Object.entries(p.links)) for (const n of names) {
       const lk = t + "|" + key(n);
-      if (byKey.has(lk) || inFile.has(lk)) links++;
-      else { action = "error"; notes.push(`не найдено: ${LINK_COLS.find(([x]) => x === t)?.[1]} → «${n}» (нет ни в архиве, ни в файле)`); }
+      if (byKey.has(lk) || inFile.has(lk)) { links++; continue; }
+      const rs = resolve[lk];
+      const chosen = rs && rs !== "new" ? entities.find((e) => e.id === rs && e.type === t) : null;
+      if (rs === "new" || chosen) { links++; notes.push(`${n} → ${rs === "new" ? "новая карточка" : "«" + chosen!.title + "»"}`); continue; }
+      if (rs === "") { notes.push(`связь «${n}» пропущена`); continue; }
+      const u = unres.get(lk) || { key: lk, type: t, name: n, rows: [], similar: titles.filter((e) => e.type === t && (key(e.title).includes(key(n).split(" ")[0]) || key(n).includes(key(e.title).split(" ")[0]))).slice(0, 5).map((e) => ({ id: e.id, title: e.title })) };
+      u.rows.push(`${p.sheet} ${p.row}`); unres.set(lk, u);
+      notes.push(`не найдено: ${LINK_COLS.find(([x]) => x === t)?.[1]} → «${n}»`);
     }
     if (p.dictKey && p.fields[p.dictKey]) { const v = p.fields[p.dictKey]; const have = (dicts[p.dictKey] || []).some((x) => key(x) === key(v)); if (!have) { newDict.add(`${p.dictKey}:${v}`); notes.push(`новое значение справочника «${v}» — добавится`); } }
     for (const f of p.files) files.add(f);
     rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes });
   }
-  const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict] };
+  const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
   return { plan, items, byKey, dicts };
 }
-export const preview = async (buf: Buffer) => (await buildPlan(buf)).plan;
+export const preview = async (buf: Buffer, resolve: Resolve = {}) => (await buildPlan(buf, resolve)).plan;
 
 // ---- запуск: сущности → справочники → связи; возвращает id по строкам (для заливки файлов из админки) ----
-export async function run(buf: Buffer, actor: string) {
-  const { plan, items, byKey, dicts } = await buildPlan(buf);
+export async function run(buf: Buffer, actor: string, resolve: Resolve = {}) {
+  const { plan, items, byKey, dicts } = await buildPlan(buf, resolve);
   const okRows = plan.rows.filter((r) => r.action !== "error");
   const ids = new Map<string, string>(byKey);
   const result: { sheet: string; row: number; title: string; id: string; action: string; files: string[] }[] = [];
@@ -175,6 +187,13 @@ export async function run(buf: Buffer, actor: string) {
     if (id) { await repo.updateEntity(id, { payload, ...(p.status ? { status: p.status } : {}) }); await repo.logAct("update", id, p.title, actor + " · импорт"); }
     else { const e = await repo.createEntity({ type: p.type, title: p.title, status: p.status || "published", payload }); id = e.id; ids.set(k, id); await repo.logAct("create", id, p.title, actor + " · импорт"); }
     result.push({ sheet: r.sheet, row: r.row, title: p.title, id, action: r.action, files: p.files });
+  }
+  // 1б. решения по ненайденным связям: выбранная карточка или новая минимальная карточка нужного типа
+  for (const [lk, rs] of Object.entries(resolve)) {
+    if (ids.has(lk)) continue;
+    const [t, nm] = [lk.slice(0, lk.indexOf("|")), lk.slice(lk.indexOf("|") + 1)];
+    if (rs === "new") { const title = items.flatMap((p) => p.links[t] || []).find((n) => key(n) === nm) || nm; const e = await repo.createEntity({ type: t, title, status: "draft" }); ids.set(lk, e.id); await repo.logAct("create", e.id, title, actor + " · импорт (из связи)"); }
+    else if (rs) ids.set(lk, rs);
   }
   // 2. справочники: новые значения типов
   const byDict: Record<string, string[]> = {};

@@ -270,17 +270,18 @@ export function createApp() {
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
   // ассеты сайта: PNG/SVG иллюстраций → публичный URL (администратор)
-  // импорт пачкой из Excel (редакторы): шаблон, предпросмотр без записи, запуск
+  // импорт пачкой из Excel (редакторы): шаблон, предпросмотр без записи, запуск; resolve — решения по ненайденным связям
+  const parseResolve = (v: unknown): imp.Resolve => { try { const o = JSON.parse(String(v || "{}")); return o && typeof o === "object" ? o : {}; } catch { return {}; } };
   app.get("/api/import/template", auth, ah(async (_req, res) => {
     res.set({ "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": "attachment; filename=\"zotov-import.xlsx\"" }).send(await imp.template());
   }));
   app.post("/api/import/preview", auth, upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
-    res.json(await imp.preview(req.file.buffer));
+    res.json(await imp.preview(req.file.buffer, parseResolve(req.body?.resolve)));
   }));
   app.post("/api/import/run", auth, upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
-    res.json(await imp.run(req.file.buffer, actor(req)));
+    res.json(await imp.run(req.file.buffer, actor(req), parseResolve(req.body?.resolve)));
   }));
 
   app.post("/api/assets", adminOnly, upload.single("file"), fixFile, ah(async (req, res) => {
