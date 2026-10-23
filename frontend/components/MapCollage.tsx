@@ -13,7 +13,7 @@ export const BUILDINGS = [
   { key: "b4", defTitle: "Городок чекистов, Екатеринбург", img: `${S3}/89aa8cff/big.webp`, x: 1179, y: 182, w: 422.78, h: 453.5, dx: 12, dy: -14, shadow: false, vb: "0 0 422.778 453.5",
     d: "M0 432.958V7.9007L27.1509 0L135.269 14.2213V25.2822L250.661 22.122L319.992 26.3357L376.233 34.2364L404.354 43.1905L418.899 52.1446L422.778 432.958L368.476 445.073L289.447 453.5H209.449H121.694L37.3324 447.706L0 432.958Z" },
 ];
-export type Building = { key: string; placeId?: string; title: string };
+export type Building = { key: string; placeId?: string; title: string; img?: string }; // img — своя вырезка из админки
 const pct = (v: number, base: number) => `${(v / base) * 100}%`;
 const box = (x: number, y: number, w: number, h: number) => ({ left: pct(x, W), top: pct(y, H), width: pct(w, W), height: pct(h, H) });
 const Circle = ({ x, y, d, fill }: { x: number; y: number; d: number; fill: string }) => <i className="mc-c" style={{ ...box(x, y, d, d), background: fill }} />;
@@ -28,7 +28,7 @@ export default function MapCollage({ buildings }: { buildings: Building[] }) {
     return (
       <a className={"mc-b" + (g.shadow ? " sh" : "")} key={key} href={href} style={box(g.x, g.y, g.w, g.h)} aria-label={info?.title || g.defTitle}>
         <svg className="mc-sil" viewBox={g.vb} preserveAspectRatio="none" style={{ left: pct(g.dx, g.w), top: pct(g.dy, g.h) }}><path d={g.d} /></svg>
-        <img src={g.img} alt="" />
+        <img src={info?.img || g.img} alt="" />
         <span className="mc-tip">{info?.title || g.defTitle}</span>
       </a>
     );

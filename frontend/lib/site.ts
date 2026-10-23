@@ -12,6 +12,7 @@ export const SITE_DEFAULTS = {
   aboutBg: "",
   mapM: "", // иллюстрация карты для планшета и мобайла (десктоп — коллаж слоями, MapCollage)
   mapBuildings: {} as Record<string, string>, // здания коллажа → id мест (b1…b4), раздел «Карта» в админке
+  mapImgs: {} as Record<string, string>, // свои вырезки зданий (b1…b4) вместо стандартных из макета
   aboutCol1: "Зотов. Архив объединит материалы и исследования, посвященные эпохе 1920-1930-х гг. в России. Здесь начинается систематизация и каталогизация данных, распределенных по разным городам, организациям и изданиям.",
   aboutCol2: "Главные задачи архива Центра «Зотов»: найти, объединить, систематизировать исторические источники периода развития конструктивизма; ввести в научный оборот ранее неисследованные источники; сохранить информацию о выставочных проектах и событиях в сфере изучения и популяризации наследия конструктивизма.",
   aboutCol3: "Цифровой архив — это новый подход к сохранению и популяризации культурного наследия, создание централизованного «адреса» по теме конструктивизма для институций, специалистов и студентов.",
@@ -29,6 +30,7 @@ export async function getSite(): Promise<Site> {
     const out = { ...SITE_DEFAULTS };
     for (const k of Object.keys(SITE_DEFAULTS) as (keyof Site)[]) if (typeof e[k] === "string" && e[k].trim()) (out as Record<string, unknown>)[k] = e[k].trim();
     if (e.mapBuildings && typeof e.mapBuildings === "object") out.mapBuildings = e.mapBuildings;
+    if (e.mapImgs && typeof e.mapImgs === "object") out.mapImgs = e.mapImgs;
     // старые построчные поля (hero1–4, about1–3), пока новые не сохранены
     if (!String(e.heroText || "").trim() && e.hero1) out.heroText = [e.hero1, e.hero2, e.hero3, e.hero4].filter(Boolean).join("\n");
     if (!String(e.aboutText || "").trim() && e.about1) out.aboutText = [e.about1, e.about2, e.about3].filter(Boolean).join("\n");

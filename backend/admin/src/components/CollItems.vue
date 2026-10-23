@@ -18,6 +18,8 @@ init();
 watch(() => props.coll, init);
 watch(st, () => emit("change", JSON.parse(JSON.stringify(st))), { deep: true, immediate: true });
 const thumb = (id: string) => (S.db[id]?.thumb ? `background-image:url('${S.db[id].thumb}')` : "");
+// подпись файла (название, автор, год) — заполняется в карточке материала
+const fileCap = (id: string) => { const f = S.db[id]; if (!f) return ""; return [f.caption, [f.author, f.year].filter(Boolean).join(", ")].filter(Boolean).join(" — "); };
 </script>
 <template>
   <div v-if="!mats().length" class="muted" style="font-size:13px;margin:8px 0">Добавьте материалы в коллекцию (блок «Связи») — здесь появятся их настройки.</div>
@@ -32,7 +34,7 @@ const thumb = (id: string) => (S.db[id]?.thumb ? `background-image:url('${S.db[i
             <option v-if="!imgsOf(m).length" value="">нет изображений</option>
             <option v-for="x in imgsOf(m)" :key="x.id" :value="x.id">{{ x.title }}</option>
           </select>
-          <input class="inp" style="font-size:12px;padding:3px 8px;flex:1;min-width:160px;width:auto" placeholder="Подпись (по умолчанию — название)" v-model="st[m.id].caption">
+          <input class="inp" style="font-size:12px;padding:3px 8px;flex:1;min-width:160px;width:auto" :placeholder="'Подпись для этой коллекции (по умолчанию — ' + (fileCap(st[m.id].img) ? '«' + fileCap(st[m.id].img) + '»' : 'название материала') + ')'" v-model="st[m.id].caption">
         </div>
       </div>
       <label class="check" style="margin:0;white-space:nowrap;font-size:12px"><input type="checkbox" v-model="st[m.id].hl"> Хайлайт</label>

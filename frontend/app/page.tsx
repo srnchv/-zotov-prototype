@@ -67,7 +67,8 @@ export default async function Home() {
   const mapL = lines(site.mapText, 3), MAP_AL = ["l", "r", "l"];
   // здания коллажа карты → привязанные в админке места (подпись «Название, Город» и переход в раздел «Карта»)
   const mb = (site.mapBuildings || {}) as Record<string, string>;
-  const buildings = BUILDINGS.map((b) => { const p = mb[b.key] ? db[mb[b.key]] : undefined; return { key: b.key, placeId: p?.id, title: p ? `${p.title}${p.city ? ", " + p.city : ""}` : b.defTitle }; });
+  const mi = (site.mapImgs || {}) as Record<string, string>;
+  const buildings = BUILDINGS.map((b) => { const p = mb[b.key] ? db[mb[b.key]] : undefined; return { key: b.key, placeId: p?.id, title: p ? `${p.title}${p.city ? ", " + p.city : ""}` : b.defTitle, img: mi[b.key] || undefined }; });
   const heroL = lines(site.heroText, 4), aboutL = lines(site.aboutText, 3);
   const HERO_AL = ["l", "l", "r", "c"], ABOUT_AL = ["l", "r", "c"];
 
@@ -199,7 +200,8 @@ export default async function Home() {
               const slides: { src: string; title: string; pos?: string }[] = hl.map((m) => {
                 const it = items[m.id] || {}; const med = it.img ? db[it.img] : undefined;
                 const src = med && med.type === "media" ? String(med.big || med.med || "") : imgOf(db, m, true);
-                return { src: src || ph(PH_C, i), title: it.caption || m.title, pos: med?.focus ? String(med.focus) : imgPos(db, m)?.objectPosition as string | undefined };
+                const fileCap = med ? [s(med, "caption"), [s(med, "author"), s(med, "year")].filter(Boolean).join(", ")].filter(Boolean).join(" — ") : "";
+                return { src: src || ph(PH_C, i), title: it.caption || fileCap || m.title, pos: med?.focus ? String(med.focus) : imgPos(db, m)?.objectPosition as string | undefined };
               });
               if (slides.length < 2) { // хайлайты не настроены — обложки материалов коллекции (до 5), иначе обложка
                 const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true)).slice(0, 5).map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m)?.objectPosition as string | undefined }));
