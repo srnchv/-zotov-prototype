@@ -52,10 +52,10 @@ async function onDrop(ev: DragEvent) {
   const entries = items.map((i) => (i as any).webkitGetAsEntry?.()).filter(Boolean);
   const files: File[] = entries.length ? (await Promise.all(entries.map(readEntry))).flat() : [...(ev.dataTransfer?.files || [])];
   const table = files.find((f) => /\.xlsx$/i.test(f.name));
-  const imgs = files.filter((f) => /\.(jpe?g|png|webp|tiff?|gif)$/i.test(f.name));
+  const imgs = files.filter((f) => kindOf(f.name) !== "other");
   if (table) { resolve.value = {}; await preview(table); }
   if (imgs.length) { addFiles(imgs); if (!plan.value) toast(`Папка принята: ${imgs.length} файлов. Теперь добавьте таблицу.`); }
-  if (!table && !imgs.length) toast("Перетащите таблицу .xlsx или папку с фото");
+  if (!table && !imgs.length) toast("Перетащите таблицу .xlsx или папку с файлами");
 }
 // сверка файлов таблицы с папкой
 const files = computed(() => {
@@ -69,7 +69,17 @@ const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const
 const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x) === keyOf(n))).map((r) => r.title).join(", ") || "";
 const canRun = computed(() => !!plan.value && plan.value.rows.some((r) => r.action !== "error") && !busy.value);
 // очередь загрузки фото: превью из папки, статус по каждому файлу
-type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean };
+type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean; kind: string; subs: { file: File; lang: string }[] };
+// вид файла по расширению: фото, видео, аудио, документ
+const extOf = (n: string) => (n.split(".").pop() || "").toLowerCase();
+const kindOf = (n: string) => { const e = extOf(n); return ["jpg", "jpeg", "png", "webp", "tif", "tiff", "gif"].includes(e) ? "image" : ["mp4", "mov", "webm", "avi", "m4v"].includes(e) ? "video" : ["mp3", "wav", "m4a", "ogg", "flac", "aac"].includes(e) ? "audio" : ["pdf", "doc", "docx", "txt"].includes(e) ? "doc" : ["srt", "vtt"].includes(e) ? "subs" : "other"; };
+const KIND_L: Record<string, string> = { image: "фото", video: "видео", audio: "аудио", doc: "документ", subs: "субтитры", other: "файл" };
+// субтитры к видео/аудио берутся из папки по имени: <файл>.ru.srt, <файл>.en.vtt или <файл>.srt (русский)
+function subsFor(name: string): { file: File; lang: string }[] {
+  const base = keyOf(name).replace(/\.[^.]+$/, ""); const out: { file: File; lang: string }[] = [];
+  for (const [k, f] of folder.value) { const m = k.match(/^(.+?)(?:\.([a-z]{2}))?\.(srt|vtt)$/); if (m && m[1] === base) out.push({ file: f, lang: m[2] || "ru" }); }
+  return out;
+}
 const ups = ref<Up[]>([]);
 const upStat = computed(() => ({ ok: ups.value.filter((u) => u.status === "ok").length, fail: ups.value.filter((u) => u.status === "fail").length, miss: ups.value.filter((u) => u.status === "miss").length, total: ups.value.length }));
 const stage = ref<"" | "cards" | "files" | "done">("");
@@ -81,7 +91,7 @@ async function run() {
     const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
     // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
-    for (const row of r.rows) row.files.forEach((n: string, i: number) => { const f = folder.value.get(keyOf(n)); ups.value.push({ name: n, card: row.title, cardId: row.id, url: f ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover: i === 0 }); });
+    for (const row of r.rows) { let coverSet = false; for (const n of row.files) { const f = folder.value.get(keyOf(n)); const k = kindOf(n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [] }); } }
     stage.value = "files";
     for (const u of ups.value) {
       if (u.status !== "wait") continue;
@@ -89,6 +99,7 @@ async function run() {
       try {
         const m = await uploadFile(folder.value.get(keyOf(u.name))!, u.cardId);
         if (u.cover && m?.thumb) await api("/entities/" + u.cardId, { method: "PATCH", body: JSON.stringify({ payload: { cover: m.id, img: m.thumb, imgBig: m.med || m.thumb } }) });
+        for (const sb of u.subs) { const fd = new FormData(); fd.append("file", sb.file); fd.append("lang", sb.lang); await api(`/media/${m.id}/subtitles`, { method: "POST", body: fd }); }
         u.status = "ok";
       } catch (e: any) { u.status = "fail"; u.err = e.message; }
     }
@@ -107,7 +118,7 @@ async function downloadTpl() {
 <template>
   <div @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop="onDrop" :class="{ dropzone: true, over: dragOver }">
   <h1>Импорт</h1>
-  <div class="muted" style="font-size:14px;margin:6px 0 14px;max-width:760px">Загрузка карточек пачкой: таблица Excel по шаблону и папка с фото. Связи между карточками задаются названиями, фото — именами файлов. Перед записью показывается, что именно изменится.</div>
+  <div class="muted" style="font-size:14px;margin:6px 0 14px;max-width:760px">Загрузка карточек пачкой: таблица Excel по шаблону и папка с фото. Связи между карточками задаются названиями, файлы (фото, видео, аудио, PDF, субтитры) — именами файлов. Перед записью показывается, что именно изменится.</div>
 
   <div class="card"><b>Шаг 1. Таблица</b>
     <div class="muted" style="font-size:12px;margin:4px 0 10px">Скачайте шаблон (в нём лист «Инструкция» и списки справочников), заполните листы по типам карточек и загрузите файл обратно — кнопкой или перетащив на эту страницу (так же можно перетащить папку с фото). Повторная загрузка той же таблицы безопасна: существующие карточки обновятся, а не продублируются. Третья строка шаблона — пример, она пропускается; свои данные — с четвёртой.</div>
@@ -147,17 +158,17 @@ async function downloadTpl() {
     </table>
   </div>
 
-  <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с фото</b> <span class="muted" style="font-size:12px">— необязательно</span>
-    <div class="muted" style="font-size:12px;margin:4px 0 10px">Одна папка без вложенных; имена латиницей, без пробелов, как в колонке «Файлы». Из папки берутся только файлы, упомянутые в таблице; первый файл строки станет обложкой.</div>
+  <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с файлами</b> <span class="muted" style="font-size:12px">— необязательно</span>
+    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы». Берутся только файлы из таблицы; первое фото строки станет обложкой. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
       <button class="btn sm" :disabled="!!busy" @click="inpDir?.click()">Выбрать папку</button>
       <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
-      <span v-else class="muted" style="font-size:13px">В таблице нет колонки «Файлы» с именами — папка не нужна.</span>
+      <span v-else class="muted" style="font-size:13px">В колонке «Файлы» нет имён — папка не нужна.</span>
     </div>
     <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
     <div v-if="files.have.length" class="upgrid" style="margin-top:12px">
-      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img :src="thumbOf(n)" alt=""></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
+      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
     </div>
   </div>
 
@@ -172,7 +183,7 @@ async function downloadTpl() {
     <div style="background:var(--fill);height:6px;margin:8px 0 12px"><div style="background:var(--ink);height:6px;transition:width .3s" :style="{ width: Math.round(((upStat.ok + upStat.fail) / Math.max(1, upStat.total - upStat.miss)) * 100) + '%' }"></div></div>
     <div class="upgrid">
       <div v-for="u in ups" :key="u.cardId + u.name" class="upitem" :class="u.status">
-        <div class="upthumb"><img v-if="u.url" :src="u.url" alt=""><span v-else class="muted">нет файла</span><i v-if="u.cover" title="Обложка">★</i></div>
+        <div class="upthumb"><img v-if="u.url" :src="u.url" alt=""><span v-else class="muted">{{ u.status === 'miss' ? 'нет файла' : KIND_L[u.kind] }}<template v-if="u.subs.length"><br>+ субтитры ({{ u.subs.map(x => x.lang).join(', ') }})</template></span><i v-if="u.cover" title="Обложка">★</i></div>
         <div class="upname" :title="u.name">{{ u.name }}</div>
         <div class="muted upcard" :title="u.card">{{ u.card }}</div>
         <div class="upst">{{ u.status === 'ok' ? 'загружено' : u.status === 'up' ? 'загружается…' : u.status === 'wait' ? 'в очереди' : u.status === 'miss' ? 'нет в папке' : 'ошибка: ' + u.err }}</div>
