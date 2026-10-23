@@ -13,6 +13,14 @@ const xlsx = ref<File | null>(null), plan = ref<Plan | null>(null), busy = ref("
 const inpX = ref<HTMLInputElement>(), inpDir = ref<HTMLInputElement>();
 const folder = ref<Map<string, File>>(new Map());
 const keyOf = (n: string) => n.trim().toLowerCase().normalize("NFC");
+// мягкое сопоставление имени из таблицы с файлом в папке: регистр, расширение (в таблице можно без него),
+// пробелы/подчёркивания/дефисы не важны: «Rodchenko Gallery Picture (1)» найдёт «rodchenko_gallery_picture (1).jpg»
+const loose = (n: string) => keyOf(n).replace(/\.(jpe?g|png|webp|tiff?|gif|mp4|mov|webm|avi|m4v|mp3|wav|m4a|ogg|flac|aac|pdf|docx?|txt)$/i, "").replace(/[\s_\-]+/g, "");
+function findFile(n: string): File | undefined {
+  const exact = folder.value.get(keyOf(n)); if (exact) return exact;
+  const want = loose(n); const hits = [...folder.value.values()].filter((f) => loose(f.name) === want);
+  return hits.length === 1 ? hits[0] : undefined;
+}
 const ACT: Record<string, string> = { create: "создать", update: "обновить", error: "ошибка" };
 
 // решения по ненайденным связям: key → id карточки | "new" | "" (пропустить); после каждого решения предпросмотр пересчитывается
@@ -60,12 +68,13 @@ async function onDrop(ev: DragEvent) {
 // сверка файлов таблицы с папкой
 const files = computed(() => {
   const need = plan.value?.files || [];
-  const have = need.filter((n) => folder.value.has(keyOf(n))), miss = need.filter((n) => !folder.value.has(keyOf(n)));
-  const extra = [...folder.value.keys()].filter((k) => !need.some((n) => keyOf(n) === k)).length;
+  const have = need.filter((n) => !!findFile(n)), miss = need.filter((n) => !findFile(n));
+  const used = new Set(have.map((n) => findFile(n)!));
+  const extra = [...folder.value.values()].filter((f) => !used.has(f) && kindOf(f.name) !== "subs").length;
   return { need, have, miss, extra };
 });
 const thumbs = new Map<string, string>();
-const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const f = folder.value.get(k); if (f) thumbs.set(k, URL.createObjectURL(f)); } return thumbs.get(k) || ""; };
+const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const f = findFile(n); if (f) thumbs.set(k, URL.createObjectURL(f)); } return thumbs.get(k) || ""; };
 const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x) === keyOf(n))).map((r) => r.title).join(", ") || "";
 const canRun = computed(() => !!plan.value && plan.value.rows.some((r) => r.action !== "error") && !busy.value);
 // очередь загрузки фото: превью из папки, статус по каждому файлу
@@ -76,8 +85,8 @@ const kindOf = (n: string) => { const e = extOf(n); return ["jpg", "jpeg", "png"
 const KIND_L: Record<string, string> = { image: "фото", video: "видео", audio: "аудио", doc: "документ", subs: "субтитры", other: "файл" };
 // субтитры к видео/аудио берутся из папки по имени: <файл>.ru.srt, <файл>.en.vtt или <файл>.srt (русский)
 function subsFor(name: string): { file: File; lang: string }[] {
-  const base = keyOf(name).replace(/\.[^.]+$/, ""); const out: { file: File; lang: string }[] = [];
-  for (const [k, f] of folder.value) { const m = k.match(/^(.+?)(?:\.([a-z]{2}))?\.(srt|vtt)$/); if (m && m[1] === base) out.push({ file: f, lang: m[2] || "ru" }); }
+  const f = findFile(name); const base = loose(f ? f.name : name); const out: { file: File; lang: string }[] = [];
+  for (const [k, sf] of folder.value) { const m = k.match(/^(.+?)(?:\.([a-z]{2}))?\.(srt|vtt)$/); if (m && loose(m[1]) === base) out.push({ file: sf, lang: m[2] || "ru" }); }
   return out;
 }
 const ups = ref<Up[]>([]);
@@ -91,13 +100,13 @@ async function run() {
     const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
     // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
-    for (const row of r.rows) { let coverSet = false; for (const n of row.files) { const f = folder.value.get(keyOf(n)); const k = kindOf(n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [] }); } }
+    for (const row of r.rows) { let coverSet = false; for (const n of row.files) { const f = findFile(n); const k = kindOf(f ? f.name : n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [] }); } }
     stage.value = "files";
     for (const u of ups.value) {
       if (u.status !== "wait") continue;
       u.status = "up"; busy.value = `Загружаем фото: ${upStat.value.ok + upStat.value.fail + 1} из ${ups.value.filter((x) => x.status !== "miss").length}`;
       try {
-        const m = await uploadFile(folder.value.get(keyOf(u.name))!, u.cardId);
+        const m = await uploadFile(findFile(u.name)!, u.cardId);
         if (u.cover && m?.thumb) await api("/entities/" + u.cardId, { method: "PATCH", body: JSON.stringify({ payload: { cover: m.id, img: m.thumb, imgBig: m.med || m.thumb } }) });
         for (const sb of u.subs) { const fd = new FormData(); fd.append("file", sb.file); fd.append("lang", sb.lang); await api(`/media/${m.id}/subtitles`, { method: "POST", body: fd }); }
         u.status = "ok";
@@ -168,7 +177,7 @@ async function downloadTpl() {
     </div>
     <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
     <div v-if="files.have.length" class="upgrid" style="margin-top:12px">
-      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
+      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(findFile(n)?.name || n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(findFile(n)?.name || n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
     </div>
   </div>
 
