@@ -64,35 +64,38 @@ const files = computed(() => {
   const extra = [...folder.value.keys()].filter((k) => !need.some((n) => keyOf(n) === k)).length;
   return { need, have, miss, extra };
 });
+const thumbs = new Map<string, string>();
+const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const f = folder.value.get(k); if (f) thumbs.set(k, URL.createObjectURL(f)); } return thumbs.get(k) || ""; };
+const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x) === keyOf(n))).map((r) => r.title).join(", ") || "";
 const canRun = computed(() => !!plan.value && plan.value.rows.some((r) => r.action !== "error") && !busy.value);
+// очередь загрузки фото: превью из папки, статус по каждому файлу
+type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean };
+const ups = ref<Up[]>([]);
+const upStat = computed(() => ({ ok: ups.value.filter((u) => u.status === "ok").length, fail: ups.value.filter((u) => u.status === "fail").length, miss: ups.value.filter((u) => u.status === "miss").length, total: ups.value.length }));
+const stage = ref<"" | "cards" | "files" | "done">("");
 
 async function run() {
   if (!xlsx.value || !plan.value) return;
-  const warn = [plan.value.errors ? `${plan.value.errors} строк с ошибками будут пропущены` : "", plan.value.unresolved.length ? `${plan.value.unresolved.length} ненайденных связей будут пропущены` : "", files.value.miss.length ? `${files.value.miss.length} файлов из таблицы нет в папке — карточки создадутся без них` : ""].filter(Boolean).join("; ");
-  if (!confirm(`Создать ${plan.value.creates}, обновить ${plan.value.updates}${warn ? ". " + warn : ""}. Продолжить?`)) return;
-  busy.value = "Создаём карточки и связи…";
+  stage.value = "cards"; busy.value = "Создаём карточки и связи…"; ups.value = [];
   try {
     const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
-    // файлы — по строкам результата, первый файл карточки становится обложкой
-    let up = 0, failed: string[] = []; const total = r.rows.reduce((a: number, x: any) => a + x.files.filter((n: string) => folder.value.has(keyOf(n))).length, 0);
-    for (const row of r.rows) {
-      let first = true;
-      for (const n of row.files) {
-        const f = folder.value.get(keyOf(n)); if (!f) continue;
-        busy.value = `Загружаем файлы: ${up + 1} из ${total}`;
-        try {
-          const m = await uploadFile(f, row.id);
-          if (first && m?.thumb) { await api("/entities/" + row.id, { method: "PATCH", body: JSON.stringify({ payload: { cover: m.id, img: m.thumb, imgBig: m.med || m.thumb } }) }); }
-          first = false; up++;
-        } catch (e: any) { failed.push(`${n} → ${row.title}: ${e.message}`); }
-      }
+    // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
+    for (const row of r.rows) row.files.forEach((n: string, i: number) => { const f = folder.value.get(keyOf(n)); ups.value.push({ name: n, card: row.title, cardId: row.id, url: f ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover: i === 0 }); });
+    stage.value = "files";
+    for (const u of ups.value) {
+      if (u.status !== "wait") continue;
+      u.status = "up"; busy.value = `Загружаем фото: ${upStat.value.ok + upStat.value.fail + 1} из ${ups.value.filter((x) => x.status !== "miss").length}`;
+      try {
+        const m = await uploadFile(folder.value.get(keyOf(u.name))!, u.cardId);
+        if (u.cover && m?.thumb) await api("/entities/" + u.cardId, { method: "PATCH", body: JSON.stringify({ payload: { cover: m.id, img: m.thumb, imgBig: m.med || m.thumb } }) });
+        u.status = "ok";
+      } catch (e: any) { u.status = "fail"; u.err = e.message; }
     }
     await load();
-    done.value = { ...r, uploaded: up, failed };
+    done.value = r; stage.value = "done";
     plan.value = null; xlsx.value = null; folder.value = new Map(); resolve.value = {};
-    toast("Импорт завершён");
-  } catch (e: any) { toast("Ошибка импорта: " + e.message); }
+  } catch (e: any) { toast("Ошибка импорта: " + e.message); stage.value = ""; }
   busy.value = "";
 }
 const tplUrl = () => `${API}/import/template`;
@@ -153,17 +156,31 @@ async function downloadTpl() {
       <span v-else class="muted" style="font-size:13px">В таблице нет колонки «Файлы» с именами — папка не нужна.</span>
     </div>
     <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
+    <div v-if="files.have.length" class="upgrid" style="margin-top:12px">
+      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img :src="thumbOf(n)" alt=""></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
+    </div>
   </div>
 
-  <div v-if="plan" style="margin-top:16px;display:flex;gap:12px;align-items:center">
-    <button class="btn dark" :disabled="!canRun" @click="run">Загрузить в архив</button>
-    <span v-if="busy" class="muted" style="font-size:13px">{{ busy }}</span>
+  <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 3. Загрузка</b>
+    <div style="font-size:14px;margin:8px 0">Будет создано <b>{{ plan.creates }}</b>, обновлено <b>{{ plan.updates }}</b>, связей <b>{{ plan.links }}</b><template v-if="plan.errors">, строк с ошибками пропущено <b>{{ plan.errors }}</b></template><template v-if="plan.unresolved.length">, ненайденных связей без решения <b>{{ plan.unresolved.length }}</b> (не создадутся)</template>.
+      Фото: <b>{{ files.have.length }}</b> из {{ files.need.length }}<template v-if="files.miss.length">, <span style="color:#9a2e2e">{{ files.miss.length }} нет в папке</span></template>.</div>
+    <div style="display:flex;gap:12px;align-items:center"><button class="btn dark" :disabled="!canRun" @click="run">{{ busy ? busy : "Загрузить в архив" }}</button></div>
   </div>
-  <div v-else-if="busy" class="muted" style="margin-top:12px;font-size:13px">{{ busy }}</div>
+  <div v-if="stage === 'cards'" class="card" style="margin-top:16px"><b>Создаём карточки и связи…</b><div class="muted" style="font-size:12px;margin-top:4px">Обычно несколько секунд.</div></div>
 
+  <div v-if="ups.length" class="card" style="margin-top:16px"><b>{{ stage === 'files' ? 'Загружаем фото' : 'Фото' }}</b> <span class="muted" style="font-size:12px">загружено {{ upStat.ok }} из {{ upStat.total - upStat.miss }}<template v-if="upStat.fail"> · <span style="color:#9a2e2e">ошибок {{ upStat.fail }}</span></template><template v-if="upStat.miss"> · нет в папке {{ upStat.miss }}</template></span>
+    <div style="background:var(--fill);height:6px;margin:8px 0 12px"><div style="background:var(--ink);height:6px;transition:width .3s" :style="{ width: Math.round(((upStat.ok + upStat.fail) / Math.max(1, upStat.total - upStat.miss)) * 100) + '%' }"></div></div>
+    <div class="upgrid">
+      <div v-for="u in ups" :key="u.cardId + u.name" class="upitem" :class="u.status">
+        <div class="upthumb"><img v-if="u.url" :src="u.url" alt=""><span v-else class="muted">нет файла</span><i v-if="u.cover" title="Обложка">★</i></div>
+        <div class="upname" :title="u.name">{{ u.name }}</div>
+        <div class="muted upcard" :title="u.card">{{ u.card }}</div>
+        <div class="upst">{{ u.status === 'ok' ? 'загружено' : u.status === 'up' ? 'загружается…' : u.status === 'wait' ? 'в очереди' : u.status === 'miss' ? 'нет в папке' : 'ошибка: ' + u.err }}</div>
+      </div>
+    </div>
+  </div>
   <div v-if="done" class="card" style="margin-top:16px"><b>Готово</b>
-    <div style="font-size:14px;margin-top:8px">Создано: <b>{{ done.created }}</b> · обновлено: <b>{{ done.updated }}</b> · связей: <b>{{ done.linked }}</b> · файлов загружено: <b>{{ done.uploaded }}</b><template v-if="done.skipped"> · пропущено строк с ошибками: <b>{{ done.skipped }}</b></template></div>
-    <div v-for="f in done.failed" :key="f" class="admbar err" style="margin:6px 0 0">{{ f }}</div>
+    <div style="font-size:14px;margin-top:8px">Создано: <b>{{ done.created }}</b> · обновлено: <b>{{ done.updated }}</b> · связей: <b>{{ done.linked }}</b> · фото загружено: <b>{{ upStat.ok }}</b><template v-if="upStat.fail"> · <span style="color:#9a2e2e">не загрузилось: {{ upStat.fail }}</span></template><template v-if="done.skipped"> · пропущено строк с ошибками: <b>{{ done.skipped }}</b></template></div>
     <div class="muted" style="font-size:12px;margin-top:8px">Карточки: <template v-for="(r, i) in done.rows" :key="r.id"><router-link :to="'/edit/' + r.id">{{ r.title }}</router-link><span v-if="i < done.rows.length - 1">, </span></template></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Все изменения записаны в журнал с пометкой «импорт». Карточки — в разделе «Сущности».</div>
   </div>
@@ -172,6 +189,19 @@ async function downloadTpl() {
   <Picker v-if="picking" :title="`${TYPES[picking.type]?.l}: «${picking.name}»`" :items="pickItems" @pick="(o) => setResolve(picking!, o.id)" @close="picking = null" />
 </template>
 <style scoped>
+.upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.upitem{font-size:12px;line-height:16px}
+.upthumb{position:relative;aspect-ratio:1;background:var(--fill);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:4px;border:2px solid transparent}
+.upthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.upthumb i{position:absolute;right:4px;top:2px;color:#fff;text-shadow:0 0 3px #000;font-style:normal}
+.upitem.ok .upthumb{border-color:#2a8c4a}
+.upitem.fail .upthumb{border-color:#9a2e2e}
+.upitem.up .upthumb{border-color:var(--ink)}
+.upitem.up .upthumb img{opacity:.5}
+.upname,.upcard{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upst{color:var(--muted)}
+.upitem.ok .upst{color:#2a8c4a}
+.upitem.fail .upst{color:#9a2e2e;white-space:normal}
 .dropzone{position:relative;min-height:60vh}
 .dropzone.over::after{content:"";position:absolute;inset:-8px;border:2px dashed var(--ink);background:rgba(255,255,255,.6);pointer-events:none}
 .dropHint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--ink);color:#fff;padding:14px 22px;font-size:15px;z-index:50;pointer-events:none}

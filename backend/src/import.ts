@@ -107,6 +107,11 @@ function parse(buf: Buffer) {
     const cols = colsOf(s);
     const idx = (label: string) => head.indexOf(key(label));
     if (idx("Название") < 0) { problems.push(`Лист «${s.sheet}»: нет колонки «Название» — лист пропущен`); continue; }
+    const known = new Set(cols.map((c) => key(c.label)));
+    const unknown = head.map((h, i) => [h, i] as const).filter(([h]) => h && !known.has(h));
+    const dataRows = rows.slice(1).filter((r) => norm(r[idx("Название")]) && !String(r[idx("Название")]).toUpperCase().startsWith(EXAMPLE));
+    for (const [h, i] of unknown) if (dataRows.some((r) => norm(r[i]))) problems.push(`Лист «${s.sheet}»: колонка «${rows[0][i]}» не из шаблона — её значения не загружаются`);
+    for (const c of cols) if (c.key === "files" && idx(c.label) < 0) problems.push(`Лист «${s.sheet}»: нет колонки «Файлы» — фото к этим карточкам не привяжутся`);
     for (let r = 1; r < rows.length; r++) {
       const row = rows[r]; const get = (label: string) => { const i = idx(label); return i < 0 ? "" : norm(row[i]); };
       const title = get("Название");
