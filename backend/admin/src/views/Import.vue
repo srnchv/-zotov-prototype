@@ -6,7 +6,9 @@ import { ref, computed } from "vue";
 import { API, S, api, load, toast, canEdit, uploadFile, all } from "../lib/store";
 import { TYPES, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
-type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: string[]; notes: string[] };
+type FileSpec = { name: string; caption?: string; author?: string; year?: string };
+type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[] };
+const capOf = (f: FileSpec) => [f.caption, [f.author, f.year].filter(Boolean).join(", ")].filter(Boolean).join(" — ");
 type Unresolved = { key: string; type: string; name: string; rows: string[]; similar: { id: string; title: string }[] };
 type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
 const xlsx = ref<File | null>(null), plan = ref<Plan | null>(null), busy = ref(""), done = ref<any>(null);
@@ -75,10 +77,11 @@ const files = computed(() => {
 });
 const thumbs = new Map<string, string>();
 const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const f = findFile(n); if (f) thumbs.set(k, URL.createObjectURL(f)); } return thumbs.get(k) || ""; };
-const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x) === keyOf(n))).map((r) => r.title).join(", ") || "";
+const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x.name) === keyOf(n))).map((r) => r.title).join(", ") || "";
+const specOf = (n: string) => plan.value?.rows.flatMap((r) => r.files).find((x) => keyOf(x.name) === keyOf(n));
 const canRun = computed(() => !!plan.value && plan.value.rows.some((r) => r.action !== "error") && !busy.value);
 // очередь загрузки фото: превью из папки, статус по каждому файлу
-type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean; kind: string; subs: { file: File; lang: string }[] };
+type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean; kind: string; subs: { file: File; lang: string }[]; spec: FileSpec };
 // вид файла по расширению: фото, видео, аудио, документ
 const extOf = (n: string) => (n.split(".").pop() || "").toLowerCase();
 const kindOf = (n: string) => { const e = extOf(n); return ["jpg", "jpeg", "png", "webp", "tif", "tiff", "gif"].includes(e) ? "image" : ["mp4", "mov", "webm", "avi", "m4v"].includes(e) ? "video" : ["mp3", "wav", "m4a", "ogg", "flac", "aac"].includes(e) ? "audio" : ["pdf", "doc", "docx", "txt"].includes(e) ? "doc" : ["srt", "vtt"].includes(e) ? "subs" : "other"; };
@@ -100,13 +103,16 @@ async function run() {
     const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
     // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
-    for (const row of r.rows) { let coverSet = false; for (const n of row.files) { const f = findFile(n); const k = kindOf(f ? f.name : n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [] }); } }
+    for (const row of r.rows) { let coverSet = false; for (const sp of row.files as FileSpec[]) { const n = sp.name; const f = findFile(n); const k = kindOf(f ? f.name : n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [], spec: sp }); } }
     stage.value = "files";
     for (const u of ups.value) {
       if (u.status !== "wait") continue;
       u.status = "up"; busy.value = `Загружаем фото: ${upStat.value.ok + upStat.value.fail + 1} из ${ups.value.filter((x) => x.status !== "miss").length}`;
       try {
         const m = await uploadFile(findFile(u.name)!, u.cardId);
+        // подпись файла из таблицы: название, автор, год
+        const meta: Record<string, string> = {}; if (u.spec.caption) meta.caption = u.spec.caption; if (u.spec.author) meta.author = u.spec.author; if (u.spec.year) meta.year = u.spec.year;
+        if (Object.keys(meta).length) await api("/entities/" + m.id, { method: "PATCH", body: JSON.stringify({ payload: meta }) });
         if (u.cover && m?.thumb) await api("/entities/" + u.cardId, { method: "PATCH", body: JSON.stringify({ payload: { cover: m.id, img: m.thumb, imgBig: m.med || m.thumb } }) });
         for (const sb of u.subs) { const fd = new FormData(); fd.append("file", sb.file); fd.append("lang", sb.lang); await api(`/media/${m.id}/subtitles`, { method: "POST", body: fd }); }
         u.status = "ok";
@@ -162,13 +168,13 @@ async function downloadTpl() {
       <tbody><tr v-for="r in plan.rows" :key="r.sheet + r.row" :style="r.action === 'error' ? 'color:#9a2e2e' : ''">
         <td>{{ r.sheet }}</td><td>{{ r.row }}</td><td>{{ r.title }}</td>
         <td>{{ ACT[r.action] }}<router-link v-if="r.id" :to="'/edit/' + r.id" class="muted" style="margin-left:6px;font-size:12px">открыть</router-link></td>
-        <td>{{ r.links || "" }}</td><td>{{ r.files.join(", ") }}</td><td>{{ r.notes.join("; ") }}</td>
+        <td>{{ r.links || "" }}</td><td>{{ r.files.map(f => f.name).join(", ") }}</td><td>{{ r.notes.join("; ") }}</td>
       </tr></tbody>
     </table>
   </div>
 
   <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с файлами</b> <span class="muted" style="font-size:12px">— необязательно</span>
-    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы». Берутся только файлы из таблицы; первое фото строки станет обложкой. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
+    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы». Берутся только файлы из таблицы; первое фото строки станет обложкой. Подпись файла на сайте (название, автор, год) задаётся в таблице через «|» после имени. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
       <button class="btn sm" :disabled="!!busy" @click="inpDir?.click()">Выбрать папку</button>
@@ -177,7 +183,7 @@ async function downloadTpl() {
     </div>
     <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
     <div v-if="files.have.length" class="upgrid" style="margin-top:12px">
-      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(findFile(n)?.name || n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(findFile(n)?.name || n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div></div>
+      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(findFile(n)?.name || n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(findFile(n)?.name || n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div><div v-if="specOf(n) && capOf(specOf(n)!)" class="upcap">{{ capOf(specOf(n)!) }}</div></div>
     </div>
   </div>
 
@@ -195,6 +201,7 @@ async function downloadTpl() {
         <div class="upthumb"><img v-if="u.url" :src="u.url" alt=""><span v-else class="muted">{{ u.status === 'miss' ? 'нет файла' : KIND_L[u.kind] }}<template v-if="u.subs.length"><br>+ субтитры ({{ u.subs.map(x => x.lang).join(', ') }})</template></span><i v-if="u.cover" title="Обложка">★</i></div>
         <div class="upname" :title="u.name">{{ u.name }}</div>
         <div class="muted upcard" :title="u.card">{{ u.card }}</div>
+        <div v-if="capOf(u.spec)" class="upcap">{{ capOf(u.spec) }}</div>
         <div class="upst">{{ u.status === 'ok' ? 'загружено' : u.status === 'up' ? 'загружается…' : u.status === 'wait' ? 'в очереди' : u.status === 'miss' ? 'нет в папке' : 'ошибка: ' + u.err }}</div>
       </div>
     </div>
@@ -218,7 +225,8 @@ async function downloadTpl() {
 .upitem.fail .upthumb{border-color:#9a2e2e}
 .upitem.up .upthumb{border-color:var(--ink)}
 .upitem.up .upthumb img{opacity:.5}
-.upname,.upcard{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upname,.upcard,.upcap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upcap{color:var(--ink);font-style:italic}
 .upst{color:var(--muted)}
 .upitem.ok .upst{color:#2a8c4a}
 .upitem.fail .upst{color:#9a2e2e;white-space:normal}

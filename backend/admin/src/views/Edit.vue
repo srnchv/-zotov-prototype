@@ -89,6 +89,8 @@ async function onFile() {
   uplStatus.value = ""; if (fileInput.value) fileInput.value.value = "";
 }
 const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%" } });
+// поля подписи файла сохраняются сразу при уходе из поля
+async function patchMedia(mid: string, payload: Record<string, string>) { try { await api("/entities/" + mid, { method: "PATCH", body: JSON.stringify({ payload }) }); await load(); toast("Сохранено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 const subsUpload = (mid: string) => { subsFor.value = mid; subsInput.value?.click(); };
 async function onSubs() {
   const file = subsInput.value?.files?.[0]; if (!file) return;
@@ -179,6 +181,12 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
                   <span v-else class="lnk" style="font-size:12px;white-space:nowrap" @click="setCover(m)">Сделать обложкой</span>
                 </template>
                 <span v-if="canEdit" class="lnk" style="color:#9a2e2e" @click="del(m.id)">✕</span>
+              </div>
+              <!-- подпись к файлу на сайте: название, автор, год (необязательно; без названия подписывается названием материала) -->
+              <div v-if="k !== 'tour' && k !== 'doc'" style="margin:6px 0 0 44px;display:flex;gap:6px;flex-wrap:wrap">
+                <input class="inp" style="flex:3 1 200px;font-size:12px;padding:5px 8px" placeholder="Название (подпись на сайте)" :value="m.caption || ''" :disabled="!canEdit" @change="patchMedia(m.id, { caption: ($event.target as HTMLInputElement).value.trim() })">
+                <input class="inp" style="flex:2 1 140px;font-size:12px;padding:5px 8px" placeholder="Автор" :value="m.author || ''" :disabled="!canEdit" @change="patchMedia(m.id, { author: ($event.target as HTMLInputElement).value.trim() })">
+                <input class="inp" style="flex:0 1 80px;font-size:12px;padding:5px 8px" placeholder="Год" :value="m.year || ''" :disabled="!canEdit" @change="patchMedia(m.id, { year: ($event.target as HTMLInputElement).value.trim() })">
               </div>
               <div v-if="(k === 'video' || k === 'audio')" style="margin:4px 0 0 44px;font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="muted">Субтитры:</span>

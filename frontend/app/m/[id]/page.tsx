@@ -84,7 +84,9 @@ export default async function EntityPage({ params }: Props) {
   const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
   // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
-  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || m.title || e.title), pos: m.focus ? String(m.focus) : undefined })) : [];
+  // подпись к фото: своё название файла (caption), иначе название материала; ниже — автор и год файла (необязательные поля)
+  const metaOf = (m: Entity) => [s(m, "author"), s(m, "year")].filter(Boolean).join(", ");
+  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: m.focus ? String(m.focus) : undefined, sub: metaOf(m) })) : [];
   if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
   // 3D-туры — в ту же галерею после фото (эмбед из админки)
   const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
@@ -153,8 +155,13 @@ export default async function EntityPage({ params }: Props) {
                 : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
                 : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
                 : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}
-              {topKind !== "images" || slides.length <= 1 ? <><div>{e.title}</div>
-              <div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div></> : null}
+              {topKind !== "images" || slides.length <= 1 ? (() => {
+                // одно фото с собственной подписью — её и показываем; иначе название материала + первая личность и дата
+                const one = topKind === "images" && slides.length === 1 && slides[0].kind === "image" ? images[0] : null;
+                const own = one && (s(one, "caption") || metaOf(one));
+                return own ? <><div>{s(one!, "caption") || e.title}</div><div className="grey">{metaOf(one!)}</div></>
+                  : <><div>{e.title}</div><div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div></>;
+              })() : null}
             </div>
 
             <div className="div8" id="a-desc" />

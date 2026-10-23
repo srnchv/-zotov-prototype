@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Player, { type Track } from "./Player";
 export type MSlide =
-  | { kind: "image"; src: string; title: string; pos?: string }
+  | { kind: "image"; src: string; title: string; pos?: string; sub?: string } // sub — «Автор, год» из полей файла
   | { kind: "video" | "audio"; src: string; title: string; poster?: string; tracks?: Track[] }
   | { kind: "tour"; src: string; title: string };
 const Arrow = ({ left }: { left?: boolean }) => (
@@ -31,7 +31,7 @@ export default function MediaGallery({ slides, caption }: { slides: MSlide[]; ca
           <button type="button" className="mgal-arr r" aria-label="Следующий" onClick={() => go(1)}><Arrow /></button>
         </> : null}
       </div>
-      <div className="mgal-cap"><span>{caption || label}</span>{n > 1 ? <b>{i + 1}/{n}</b> : null}</div>
+      <div className="mgal-cap"><span>{caption || label}{cur.kind === "image" && cur.sub ? <small>{cur.sub}</small> : null}</span>{n > 1 ? <b>{i + 1}/{n}</b> : null}</div>
     </div>
   );
 }

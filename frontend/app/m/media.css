@@ -32,6 +32,7 @@
 .mgal-arr:hover{background:var(--red)}
 .mgal-arr:hover svg path{fill:#fff}
 .mgal-cap{display:flex;justify-content:space-between;gap:12px;padding-top:8px;font-size:14.1px;line-height:16px}
+.mgal-cap small{display:block;font-size:14.1px;line-height:16px;color:var(--grey2)} /* автор, год файла */
 .mgal-cap b{font-weight:500;font-size:14.3px;letter-spacing:.143px;font-variant-numeric:tabular-nums;flex:0 0 48px;text-align:right}
 /* блок медиа после описания: видео 16:9, аудио — тёмная плашка 80 со скруглением 8, PDF-читалка */
 .embed2{display:flex;flex-direction:column;gap:8px;padding:8px 0}

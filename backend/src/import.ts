@@ -13,7 +13,7 @@ const COMMON_TAIL: Col[] = [
   { key: "desc", label: "Описание", hint: "текст карточки; абзацы — с новой строки (Alt+Enter)" },
   { key: "access", label: "Доступ", hint: "открытый / по запросу / ограниченный (пусто = открытый)" },
   { key: "status", label: "Публикация", hint: "опубликовано / черновик (пусто = опубликовано)" },
-  { key: "files", label: "Файлы", hint: "имена файлов из папки через «;»: фото, видео, аудио, PDF; первое фото — обложка: rodchenko-01.jpg; film.mp4" },
+  { key: "files", label: "Файлы", hint: "имена файлов через «;», у файла можно задать подпись через «|»: имя | название | автор | год. Пример: cover.jpg | Обложка книги | Александр Родченко | 1918; film.mp4" },
   { key: "tags", label: "Теги", hint: "служебные теги через «;»" },
 ];
 const LINK_COLS: [string, string][] = [["person", "Личности"], ["place", "Места"], ["event", "События"], ["theme", "Темы"], ["project", "Проекты Центра"], ["collection", "Коллекции"], ["org", "Организации"], ["material", "Материалы"], ["source", "Тексты"]];
@@ -62,6 +62,7 @@ export async function template(): Promise<Buffer> {
     ["4. Типы и подтипы — из справочников (списки ниже). Новое значение добавится в справочник, в отчёте будет предупреждение."],
     ["5. Даты: год или диапазон «с–по» (1920–1929). Неточные даты задаются диапазоном: «1920-е» → 1920–1929. У личности — годы жизни, у проекта — даты проведения."],
     ["6. «Файлы» — имена файлов из папки через «;»: фото (JPG/PNG/WebP/TIFF), видео (MP4/WebM), аудио (MP3/M4A/WAV), документы (PDF). Первое фото строки станет обложкой. Папка выбирается в админке на втором шаге; из неё берутся только файлы, упомянутые в таблице."],
+    ["   Подпись к файлу на сайте (название, автор, год) — через «|» после имени: cover.jpg | Обложка книги «Маяковский улыбается» | Александр Родченко | 1918. Все части необязательны; без названия файл подписывается названием карточки."],
     ["   Субтитры к видео и аудио — файлом рядом с тем же именем: film.mp4 → film.ru.srt, film.en.vtt (без языка = русский). В таблицу субтитры писать не нужно, они подхватятся сами."],
     ["   Требования: имена латиницей, без пробелов (rodchenko-01.jpg); одна папка без вложенных; имя уникально в папке; до 100 МБ на файл (длинное видео лучше сжать)."],
     ["7. «Доступ»: открытый (по умолчанию), по запросу, ограниченный. «Публикация»: опубликовано (по умолчанию) или черновик."],
@@ -74,7 +75,7 @@ export async function template(): Promise<Buffer> {
   const ws0 = XLSX.utils.aoa_to_sheet(instr); ws0["!cols"] = [{ wch: 160 }];
   XLSX.utils.book_append_sheet(wb, ws0, "Инструкция");
   const EX: Record<string, Row> = {
-    material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg", desc: "Афиша к открытию выставки." },
+    material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg | Афиша выставки | Александр Родченко | 1927; afisha-1927-back.jpg | Оборот афиши", desc: "Афиша к открытию выставки." },
     person: { title: "ПРИМЕР Александр Родченко", group: "Конструктивисты", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
     place: { title: "ПРИМЕР Дом Моссельпрома", placeType: "Здание", subtype: "административное", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "существует", date: "1923–1925", lat: "55.7563", lon: "37.6010" },
     event: { title: "ПРИМЕР Открытие выставки «1927»", evType: "Открытие выставки", date: "12 марта 1927", "link:place": "Дом Моссельпрома" },
@@ -96,7 +97,10 @@ export async function template(): Promise<Buffer> {
 }
 
 // ---- разбор файла ----
-type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: string[]; tags: string[]; access?: string; status?: string; dictKey?: string };
+export type FileSpec = { name: string; caption?: string; author?: string; year?: string };
+type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
+// «имя | название | автор | год» → спецификация файла
+const parseFile = (v: string): FileSpec => { const [name, caption, author, year] = v.split("|").map((x) => norm(x)); return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
 function parse(buf: Buffer) {
   const wb = XLSX.read(buf, { type: "buffer" });
   const out: Parsed[] = []; const problems: string[] = [];
@@ -119,7 +123,7 @@ function parse(buf: Buffer) {
       if (!title) continue;
       if (r === 1 && title === cols[0].hint) continue; // строка подсказок
       if (r === 2 && title.toUpperCase().startsWith(EXAMPLE)) continue; // строка-пример шаблона
-      const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: split(get("Файлы")), tags: split(get("Теги")) };
+      const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: split(get("Файлы")).map(parseFile).filter((f) => f.name), tags: split(get("Теги")) };
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       const d = get("Описание"); if (d) p.fields.desc = d;
       const acc = key(get("Доступ")); if (acc) { if (ACCESS[acc]) p.access = ACCESS[acc]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестный доступ «${get("Доступ")}»`); }
@@ -132,7 +136,7 @@ function parse(buf: Buffer) {
 }
 
 // ---- план: что создастся, что обновится, какие связи найдены ----
-export type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: string[]; notes: string[] };
+export type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[] };
 // ненайденная связь: тип + название из таблицы, где встречается; решается в админке (выбрать карточку / создать / пропустить)
 export type Unresolved = { key: string; type: string; name: string; rows: string[]; similar: { id: string; title: string }[] };
 export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
@@ -168,7 +172,7 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
       notes.push(`не найдено: ${LINK_COLS.find(([x]) => x === t)?.[1]} → «${n}»`);
     }
     if (p.dictKey && p.fields[p.dictKey]) { const v = p.fields[p.dictKey]; const have = (dicts[p.dictKey] || []).some((x) => key(x) === key(v)); if (!have) { newDict.add(`${p.dictKey}:${v}`); notes.push(`новое значение справочника «${v}» — добавится`); } }
-    for (const f of p.files) files.add(f);
+    for (const f of p.files) files.add(f.name);
     rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes });
   }
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
@@ -181,7 +185,7 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}) {
   const { plan, items, byKey, dicts } = await buildPlan(buf, resolve);
   const okRows = plan.rows.filter((r) => r.action !== "error");
   const ids = new Map<string, string>(byKey);
-  const result: { sheet: string; row: number; title: string; id: string; action: string; files: string[] }[] = [];
+  const result: { sheet: string; row: number; title: string; id: string; action: string; files: FileSpec[] }[] = [];
   // 1. карточки
   for (const r of okRows) {
     const p = items.find((x) => x.sheet === r.sheet && x.row === r.row)!;
