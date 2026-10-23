@@ -1,10 +1,8 @@
 import "./map.css";
 import type { Metadata } from "next";
-import Sidebar from "@/components/Sidebar";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
-import HomeScale from "@/components/HomeScale";
 import YMap, { type Pin } from "@/components/YMap";
 import { getSite } from "@/lib/site";
 import { loadArchive, ofType, linked, getConfig, coordsOf } from "@/lib/api";
@@ -19,9 +17,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
   const places = ofType(db, "place").map((p) => ({ p, c: coordsOf(p) })).filter((x) => x.c);
   const pins: Pin[] = places.map(({ p, c }) => ({ id: p.id, title: p.title, lat: c![0], lon: c![1] }));
   return (
-    <div className="pg">
-      <HomeScale />
-      <div id="stage"><Sidebar variant="mat" active="/map" centerUrl={site.centerUrl} /></div>
+    <>
       <div id="rest" className="mapp">
         <div id="mapp">
           <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
@@ -42,6 +38,6 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         </div>
         <Footer site={site} />
       </div>
-    </div>
+    </>
   );
 }

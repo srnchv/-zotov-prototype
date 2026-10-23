@@ -3,6 +3,7 @@
 // «Меню» открывает панель поверх страницы (мобайл — почти во весь экран, планшет — 384 слева):
 // крестик слева сверху, логотип с «АРХИВ» справа, список разделов, внизу «Войти».
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { NAV, LOGIN_URL, CENTER_URL, ExtIcon, Logo } from "./Sidebar";
 
 const LETTERS = ["a", "r", "h", "i", "v"];
@@ -18,7 +19,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
   return (
     <>
       <div className="mmenu">
-        <a className="mlogo" href="/"><Logo /></a>
+        <Link className="mlogo" href="/"><Logo /></Link>
         <button type="button" className="mbtn" onClick={() => setOpen(true)}>Меню</button>
       </div>
       <a className="mcenter" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span></a>
@@ -33,7 +34,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
               <div className="marh">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
             </div>
             <nav className="mnav">
-              {NAV.map(([t, h]) => <a key={t} href={h}>{t}</a>)}
+              {NAV.map(([t, h]) => <Link key={t} href={h} onClick={() => setOpen(false)}>{t}</Link>)}
               <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span><ExtIcon /></a>
             </nav>
             <a className="mlogin" href={LOGIN_URL}>Войти</a>

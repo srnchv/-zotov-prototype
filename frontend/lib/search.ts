@@ -135,14 +135,8 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Record<C
     if (k === "event") { const t = typeTest(c.groups, chosen, "event"); tests.push((e) => selfOrLinked(db, e, t)); }
     if (k === "coll") tests.push((e) => selfOrLinked(db, e, (x) => x.type === "collection" && chosen.has(s(x, "colType"))));
     if (k === "text") tests.push((e) => selfOrLinked(db, e, (x) => kindOf(x) === "text" && chosen.has(s(x, "srcType"))));
-    if (k === "theme") for (const id of chosen) tests.push((e) => e.id === id || (e.links || []).includes(id)); // темы — «И»
-    if (k === "person") {
-      // целиком выбранный тип личности — «ИЛИ» по его участникам; отдельно выбранные личности — «И»
-      const full = c.groups.filter((g) => g.items.every((i) => chosen.has(i.id)));
-      const anyOf = new Set(full.flatMap((g) => g.items.map((i) => i.id)));
-      if (anyOf.size) tests.push((e) => anyOf.has(e.id) || (e.links || []).some((id) => anyOf.has(id)));
-      for (const id of chosen) if (!anyOf.has(id)) tests.push((e) => e.id === id || (e.links || []).includes(id));
-    }
+    // темы и личности — «ИЛИ» внутри категории (решение от 23.10: в ТЗ было «И», но снятие одного чипса из группы давало пустую выдачу)
+    if (k === "theme" || k === "person") tests.push((e) => chosen.has(e.id) || (e.links || []).some((id) => chosen.has(id)));
     if (k === "per") { const ys = new Set([...chosen].map(Number)); tests.push((e) => periodYears(e).some((y) => ys.has(y))); } // по своей дате
   }
   return (e: Entity) => tests.every((t) => t(e));
@@ -209,7 +203,7 @@ export function runSearch(db: Record<string, Entity>, p: Params, cats: Cat[]) {
   // алфавит — без кавычек и скобок в начале названия («Про это» — на «П»)
   const key = (e: Entity) => e.title.replace(/^[\s«»"„“”'(\[]+/, "");
   const az = (a: Entity, b: Entity) => key(a).localeCompare(key(b), "ru");
-  const sort = p.sort || (toks.length ? "rel" : "az");
+  const sort = p.sort || "rel"; // по умолчанию релевантность; без запроса она равна у всех — порядок по алфавиту
   list = [...list].sort((a, b) => (sort === "za" ? az(b.e, a.e) : sort === "rel" ? b.r - a.r || az(a.e, b.e) : az(a.e, b.e)));
   const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const page = Math.min(Math.max(1, p.page), pages);

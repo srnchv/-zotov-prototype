@@ -1,10 +1,8 @@
 import "./search.css";
 import type { Metadata } from "next";
-import Sidebar from "@/components/Sidebar";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
-import HomeScale from "@/components/HomeScale";
 import SoftNav from "@/components/SoftNav";
 import SearchFilters, { SelectedChips, type Chip } from "@/components/SearchFilters";
 import Dropdown from "@/components/Dropdown";
@@ -83,9 +81,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   );
 
   return (
-    <div className="pg">
-      <HomeScale />
-      <div id="stage"><Sidebar variant="mat" active="/search" centerUrl={site.centerUrl} /></div>
+    <>
       <div id="rest" className="srch">
         <div id="srch">
           <SoftNav />
@@ -147,6 +143,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
         </div>
         <Footer site={site} />
       </div>
-    </div>
+    </>
   );
 }

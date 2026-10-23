@@ -1,8 +1,6 @@
 import "./home.css";
-import Sidebar from "@/components/Sidebar";
 import MobileMenu from "@/components/MobileMenu";
 import Footer from "@/components/Footer";
-import HomeScale from "@/components/HomeScale";
 import MiniOnScroll from "@/components/MiniOnScroll";
 import Gallery from "@/components/Gallery";
 import MapCollage, { BUILDINGS } from "@/components/MapCollage";
@@ -82,10 +80,8 @@ export default async function Home() {
   );
 
   return (
-    <div className="pg">
-      <HomeScale />
+    <>
       <MiniOnScroll />
-      <div id="stage"><Sidebar centerUrl={site.centerUrl} /></div>
 
       <div id="rest" className="home">
         {/* ---- первый экран ---- */}
@@ -246,6 +242,6 @@ export default async function Home() {
 
         <Footer site={site} />
       </div>
-    </div>
+    </>
   );
 }

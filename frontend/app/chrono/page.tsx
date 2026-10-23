@@ -1,10 +1,8 @@
 import "./chrono.css";
 import type { Metadata } from "next";
-import Sidebar from "@/components/Sidebar";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
-import HomeScale from "@/components/HomeScale";
 import SoftNav from "@/components/SoftNav";
 import ChronoClient from "@/components/ChronoClient";
 import FilterBar, { type Filter } from "@/components/FilterBar";
@@ -70,9 +68,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
   ];
 
   return (
-    <div className="pg">
-      <HomeScale />
-      <div id="stage"><Sidebar variant="mat" active="/chrono" centerUrl={site.centerUrl} /></div>
+    <>
       <div id="rest" className="chr">
         <div id="chr">
           <SoftNav root="chr" prefix="/chrono" />
@@ -121,6 +117,6 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
         </div>
         <Footer site={site} />
       </div>
-    </div>
+    </>
   );
 }

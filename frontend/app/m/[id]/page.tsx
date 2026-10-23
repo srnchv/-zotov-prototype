@@ -5,12 +5,10 @@ import PdfReader from "@/components/PdfReader";
 import MediaGallery, { Tour, type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
 import { getSite } from "@/lib/site";
-import HomeScale from "@/components/HomeScale";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
 import NavRel from "@/components/NavRel";
@@ -113,10 +111,8 @@ export default async function EntityPage({ params }: Props) {
   const gid = (t: string) => "g-" + t;
 
   return (
-    <div className="pg">
-      <HomeScale />
+    <>
       <ViewPing id={e.id} />
-      <div id="stage"><Sidebar variant="mat" centerUrl={site.centerUrl} /></div>
 
       <div id="rest" className="mat">
         <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
@@ -237,6 +233,6 @@ export default async function EntityPage({ params }: Props) {
 
         <Footer site={site} />
       </div>
-    </div>
+    </>
   );
 }
