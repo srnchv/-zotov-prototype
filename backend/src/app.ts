@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import * as repo from "./repo.js";
 import * as media from "./media.js";
+import * as imp from "./import.js";
 import * as users from "./users.js";
 import path from "node:path";
 import os from "node:os";
@@ -269,6 +270,19 @@ export function createApp() {
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
   // ассеты сайта: PNG/SVG иллюстраций → публичный URL (администратор)
+  // импорт пачкой из Excel (редакторы): шаблон, предпросмотр без записи, запуск
+  app.get("/api/import/template", auth, ah(async (_req, res) => {
+    res.set({ "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": "attachment; filename=\"zotov-import.xlsx\"" }).send(await imp.template());
+  }));
+  app.post("/api/import/preview", auth, upload.single("file"), ah(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    res.json(await imp.preview(req.file.buffer));
+  }));
+  app.post("/api/import/run", auth, upload.single("file"), ah(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    res.json(await imp.run(req.file.buffer, actor(req)));
+  }));
+
   app.post("/api/assets", adminOnly, upload.single("file"), fixFile, ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
     if (!req.file) return res.status(400).json({ error: "no file" });

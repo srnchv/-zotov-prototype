@@ -11,6 +11,7 @@ export const router = createRouter({
     { path: "/edit/:id", component: () => import("./views/Edit.vue"), props: true },
     { path: "/dict", component: () => import("./views/Dict.vue") },
     { path: "/media", component: () => import("./views/Media.vue") },
+    { path: "/import", component: () => import("./views/Import.vue") },
     { path: "/home", component: () => import("./views/Home.vue") },
     { path: "/site", component: () => import("./views/Site.vue") },
     { path: "/stats", component: () => import("./views/Stats.vue"), meta: { admin: true } },

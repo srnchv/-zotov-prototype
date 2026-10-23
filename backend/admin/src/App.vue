@@ -7,7 +7,7 @@ import { ROLE_LABEL } from "./lib/model";
 import { JOB } from "./lib/tourJob";
 const route = useRoute();
 const TABS = computed(() => [
-  ["/dash", "Дашборд"], ["/entities", "Сущности"], ["/dict", "Справочники"], ["/media", "Медиатека"], ["/home", "Главная страница"], ["/site", "Тексты сайта"],
+  ["/dash", "Дашборд"], ["/entities", "Сущности"], ["/dict", "Справочники"], ["/media", "Медиатека"], ["/import", "Импорт"], ["/home", "Главная страница"], ["/site", "Тексты сайта"],
   ...(isAdmin.value ? [["/stats", "Статистика"], ["/users", "Пользователи"]] : []),
 ]);
 onMounted(() => { if (logged.value) load(); window.addEventListener("beforeunload", (e) => { if (JOB.cur?.running) { e.preventDefault(); e.returnValue = ""; } }); });
