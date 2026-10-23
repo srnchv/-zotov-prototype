@@ -32,7 +32,7 @@ export const subKeyOf = (t: string) => SUBKEY[t] || "subtype";
 export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
 // специфичные поля после общих
 export const SPECIFIC: Record<string, [string, string, string?][]> = {
-  place: [["city", "Город", "Москва"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "Существует / утрачено / реконструировано"]],
+  place: [["city", "Город", "Москва"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"]],
   project: [["curators", "Кураторы"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],

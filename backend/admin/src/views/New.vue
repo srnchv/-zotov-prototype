@@ -48,7 +48,9 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <div class="field" v-if="!rec && t !== 'theme'"><label>{{ SUBLABEL[t] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label><select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
       <div class="field"><label>{{ DATELABEL[t] || "Дата / период" }}</label><input class="inp" v-model="f[dk]" :placeholder="DATEPH[t] || 'например 1927'"></div>
       <div class="field" v-if="t === 'material'"><label>Уровень доступа</label><div class="chips"><span v-for="(l, v) in ACCESS" :key="v" class="fchip" :class="{ on: f.access === v }" @click="f.access = f.access === v ? '' : v">{{ l }}</span></div></div>
-      <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label><input class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
+      <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label>
+          <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
+          <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
       <div class="field"><label>Публикация</label><div class="chips"><span class="fchip" :class="{ on: f.status === 'published' }" @click="f.status = 'published'">Опубликовать сразу</span><span class="fchip" :class="{ on: f.status === 'draft' }" @click="f.status = 'draft'">Создать черновиком</span></div>
         <div class="muted" style="font-size:12px;margin-top:4px">Черновик не виден на публичном сайте — можно доработать и опубликовать позже.</div></div>

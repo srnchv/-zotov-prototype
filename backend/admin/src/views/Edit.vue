@@ -132,7 +132,9 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
         <div class="field" v-if="!rec && o.type !== 'theme'"><label>{{ SUBLABEL[o.type] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label>
           <select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
         <div class="field"><label>{{ DATELABEL[o.type] || "Дата / период" }}</label><input class="inp" v-model="f[dk]"></div>
-        <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label><input class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
+        <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label>
+          <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
+          <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
         <template v-if="o.type === 'place'">
           <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Широта</label><input class="inp" v-model="f.lat" placeholder="55.7558"></div><div class="field" style="flex:1"><label>Долгота</label><input class="inp" v-model="f.lon" placeholder="37.6176"></div></div>
           <GeoPick :lat="f.lat" :lon="f.lon" :address="[f.city, f.address].filter(Boolean).join(', ')" @update="(a, b) => { f.lat = a; f.lon = b; }" />
