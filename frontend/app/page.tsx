@@ -1,7 +1,6 @@
 import "./home.css";
 import MobileMenu from "@/components/MobileMenu";
 import Footer from "@/components/Footer";
-import MiniOnScroll from "@/components/MiniOnScroll";
 import Gallery from "@/components/Gallery";
 import MapCollage, { BUILDINGS } from "@/components/MapCollage";
 import SearchPh from "@/components/SearchPh";
@@ -82,7 +81,6 @@ export default async function Home() {
 
   return (
     <>
-      <MiniOnScroll />
 
       <div id="rest" className="home">
         {/* ---- первый экран ---- */}

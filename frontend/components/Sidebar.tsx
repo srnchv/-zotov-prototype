@@ -5,6 +5,7 @@
 // Активный раздел и режим (главная / внутренняя) — по адресу.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 const LETTERS = ["a", "r", "h", "i", "v"];
 export const NAV = [
   ["поиск", "/search"], ["темы", "/cat/theme"], ["проекты центра", "/cat/project"], ["хронограф", "/chrono"],
@@ -21,12 +22,20 @@ export const ExtIcon = () => (
 );
 export default function Sidebar({ centerUrl = CENTER_URL }: { centerUrl?: string }) {
   const path = usePathname() || "/";
-  const variant = path === "/" ? "home" : "mat";
+  const home = path === "/";
+  // мини-«АРХИВ» под логотипом: на внутренних страницах всегда; на главной — когда большой леттеринг первого экрана ушёл за верх
+  const [mini, setMini] = useState(!home);
+  useEffect(() => {
+    if (!home) { setMini(true); return; }
+    const on = () => { const word = document.getElementById("word"); setMini(word ? word.getBoundingClientRect().bottom < 0 : window.scrollY > 340); };
+    on(); window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
+  }, [home]);
   const active = NAV.map(([, h]) => h).find((h) => path === h || path.startsWith(h + "/") || path.startsWith(h + "?"));
   return (
     <aside id="sidebar" className="mat">
       <Link className="logo" href="/"><Logo /></Link>
-      <div id="mini-arhiv" className={variant === "mat" ? "on" : undefined}>
+      <div id="mini-arhiv" className={mini ? "on" : undefined}>
         {LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}
       </div>
       <nav id="menu" className="mat">
