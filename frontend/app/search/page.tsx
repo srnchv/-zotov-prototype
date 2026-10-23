@@ -50,6 +50,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const [db, site] = await Promise.all([loadArchive(), getSite()]);
   const cats = buildCats(db);
   const sel = Object.fromEntries(CAT_KEYS.map((k) => [k, arr(raw[k])])) as Record<CatKey, string[]>;
+  sel.per.sort(); // годы в чипсах по порядку
   const q = one(raw.q).trim();
   const type = KINDS.some(([k]) => k === one(raw.type)) ? one(raw.type) : "";
   const sortIn = SORTS.some(([k]) => k === one(raw.sort)) ? one(raw.sort) : "";

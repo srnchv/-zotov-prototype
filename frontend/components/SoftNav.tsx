@@ -15,8 +15,12 @@ export default function SoftNav({ root = "srch", prefix = "/search" }: { root?: 
       const h = a.getAttribute("href")!;
       router.push(h, { scroll: false });
       // пагинация ведёт к началу выдачи (#results) — прокручиваем после подгрузки
-      const hash = h.split("#")[1];
-      if (hash) setTimeout(() => document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+      const hash = h.split("#")[1], target = h.split("#")[0].split("?")[1] || "";
+      if (hash) { // ждём, пока адрес сменится (выдача подгрузилась), и прокручиваем
+        const t0 = Date.now();
+        const tick = () => { if (location.search.replace(/^\?/, "") === target) document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" }); else if (Date.now() - t0 < 4000) setTimeout(tick, 80); };
+        setTimeout(tick, 80);
+      }
     };
     const onSubmit = (e: Event) => {
       const f = e.target as HTMLFormElement;

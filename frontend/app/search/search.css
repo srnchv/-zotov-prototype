@@ -55,7 +55,7 @@ a.dd-row:hover{color:var(--red)}
 #grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding-top:64px}
 .rc{display:flex;flex-direction:column;gap:8px;height:368px;border-top:8px solid var(--ink);padding-top:8px;min-width:0;color:var(--ink)}
 .rc .tx{flex:1 1 auto;display:flex;flex-direction:column;gap:4px;min-height:0}
-.rc h3{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase;overflow:hidden;hyphens:auto;overflow-wrap:break-word;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
+.rc h3{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase;overflow:hidden;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
 .rc .y{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
 .rc .vb{flex:1 1 auto;min-height:36px;border-left:4px solid var(--ink)}
 .rc .k{font-size:14.1px;line-height:16px}
