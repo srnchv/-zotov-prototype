@@ -249,15 +249,12 @@ a{color:inherit;text-decoration:none}
 
 /* пустая выдача: картинка с «?», «ничего не найдено», подсказка; 144 сверху и снизу */
 #empty{display:flex;flex-direction:column;align-items:center;gap:24px;padding:132px 0 144px;text-align:center}
-#empty .eimg{position:relative;width:262px;height:320px;}
-#empty .eimg span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Zotov Bold',sans-serif;font-size:220px;line-height:1;color:var(--red)}
-#empty .eimg.has-img span{display:none}
+#empty .eimg{width:262px;height:320px;display:block}
 #empty h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500;margin-bottom:-20px}
 #empty p{font-size:18px;line-height:20px;letter-spacing:-.18px;font-weight:500}
 
 @media (max-width:599px){
   #schips{display:none} /* на мобайле строки выбранных нет: количество видно в названиях категорий */
   #empty .eimg{width:213px;height:260px}
-  #empty .eimg span{font-size:180px}
-  #empty h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px;margin-bottom:-20px}
+    #empty h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px;margin-bottom:-20px}
 }

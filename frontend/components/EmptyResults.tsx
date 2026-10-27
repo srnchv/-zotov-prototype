@@ -2,7 +2,7 @@
 export default function EmptyResults({ text = "Попробуйте изменить запрос." }: { text?: string }) {
   return (
     <div id="empty">
-      <div className="eimg" aria-hidden="true"><span>?</span></div>
+      <img className="eimg" src="/assets/nothing-found.svg" alt="" aria-hidden="true" />
       <h2>ничего не найдено</h2>
       <p>{text}</p>
     </div>

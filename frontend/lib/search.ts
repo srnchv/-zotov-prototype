@@ -5,10 +5,10 @@ import { published, linked, type Entity } from "./api";
 export type Leaf = { id: string; title: string };
 // группа фильтра: title "" — плоский список; leaf — тип без подтипов (одна строка с чекбоксом на уровне групп)
 export type Group = { id: string; title: string; items: Leaf[]; leaf?: boolean };
-export type CatKey = "mat" | "theme" | "place" | "person" | "event" | "coll" | "text" | "per";
+export type CatKey = "per" | "person" | "city" | "theme" | "event" | "coll" | "mat";
 export type Cat = { key: CatKey; label: string; chip: string; ph: string; groups: Group[] }; // = FCat из SearchFilters с типизированным ключом
 export type Params = { q: string; sel: Record<CatKey, string[]>; type: string; sort: string; page: number };
-export const CAT_KEYS: CatKey[] = ["mat", "theme", "place", "person", "event", "coll", "text", "per"];
+export const CAT_KEYS: CatKey[] = ["per", "person", "city", "theme", "event", "coll", "mat"]; // порядок по апдейту ТЗ
 export const PER_PAGE = 48;
 
 // типология: ключ в URL → подпись в списке (порядок как в макете)
@@ -94,16 +94,16 @@ export function buildCats(db: Record<string, Entity>): Cat[] {
     for (let y = Math.max(d, from); y <= Math.min(d + 9, to); y++) items.push({ id: String(y), title: String(y) });
     if (items.length) decades.push({ id: "d" + d, title: `${d}-е`, items });
   }
-  const texts = all.filter((e) => kindOf(e) === "text");
+  // города: общий справочник (места и события)
+  const cities = dict(db, "city", uniq([...of("place").map((p) => s(p, "city")), ...of("event").map((e) => s(e, "city"))]));
   return [
-    { key: "mat", label: "Материал", chip: "Материал", ph: "Название", groups: twoLevel("material", "mtype", MTYPES) },
-    { key: "theme", label: "Тема", chip: "Тема", ph: "Название", groups: [{ id: "", title: "", items: of("theme").sort(byTitle).map((t) => ({ id: t.id, title: t.title })) }] },
-    { key: "place", label: "Место", chip: "Место", ph: "Название", groups: twoLevel("place", "placeType", []) },
-    { key: "person", label: "Личность", chip: "Личность", ph: "Имя, фамилия", groups: personGroups },
-    { key: "event", label: "Событие", chip: "Событие", ph: "Название", groups: twoLevel("event", "evType", []) },
-    { key: "coll", label: "Коллекция", chip: "Коллекция", ph: "Название", groups: flat(dict(db, "colType", uniq(of("collection").map((c) => s(c, "colType"))))) },
-    { key: "text", label: "Текст", chip: "Текст", ph: "Название", groups: flat(dict(db, "srcType", uniq(texts.map((t) => s(t, "srcType"))))) },
     { key: "per", label: "Период", chip: "Период", ph: "Год", groups: decades },
+    { key: "person", label: "Личность", chip: "Личность", ph: "Имя, фамилия", groups: personGroups },
+    { key: "city", label: "Город", chip: "Город", ph: "Город", groups: [{ id: "", title: "", items: cities.map((c) => ({ id: c, title: c })) }] },
+    { key: "theme", label: "Тема", chip: "Тема", ph: "Тема", groups: [{ id: "", title: "", items: of("theme").sort(byTitle).map((t) => ({ id: t.id, title: t.title })) }] },
+    { key: "event", label: "Событие", chip: "Событие", ph: "Событие", groups: twoLevel("event", "evType", []) },
+    { key: "coll", label: "Коллекция", chip: "Коллекция", ph: "Коллекция", groups: flat(dict(db, "colType", uniq(of("collection").map((c) => s(c, "colType"))))) },
+    { key: "mat", label: "Материал", chip: "Материал", ph: "Материал", groups: twoLevel("material", "mtype", MTYPES) },
   ];
 }
 
@@ -131,10 +131,10 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Record<C
     if (!chosen.size) continue;
     const c = b.cat[k];
     if (k === "mat") { const t = typeTest(c.groups, chosen, "material"); tests.push((e) => selfOrLinked(db, e, t)); }
-    if (k === "place") { const t = typeTest(c.groups, chosen, "place"); tests.push((e) => selfOrLinked(db, e, t)); }
+    // город: у самой сущности (место, событие) или у связанного места/события
+    if (k === "city") tests.push((e) => selfOrLinked(db, e, (x) => (x.type === "place" || x.type === "event") && chosen.has(s(x, "city"))));
     if (k === "event") { const t = typeTest(c.groups, chosen, "event"); tests.push((e) => selfOrLinked(db, e, t)); }
     if (k === "coll") tests.push((e) => selfOrLinked(db, e, (x) => x.type === "collection" && chosen.has(s(x, "colType"))));
-    if (k === "text") tests.push((e) => selfOrLinked(db, e, (x) => kindOf(x) === "text" && chosen.has(s(x, "srcType"))));
     // темы и личности — «ИЛИ» внутри категории (решение от 23.10: в ТЗ было «И», но снятие одного чипса из группы давало пустую выдачу)
     if (k === "theme" || k === "person") tests.push((e) => chosen.has(e.id) || (e.links || []).some((id) => chosen.has(id)));
     if (k === "per") { const ys = new Set([...chosen].map(Number)); tests.push((e) => periodYears(e).some((y) => ys.has(y))); } // по своей дате

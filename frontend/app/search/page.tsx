@@ -64,7 +64,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   for (const c of cats) {
     const chosen = sel[c.key]; if (!chosen.length) continue;
     const title = new Map(c.groups.flatMap((g) => g.items.map((i) => [i.id, i.title] as const)));
-    for (const id of chosen) chips.push({ cat: c.key, catLabel: c.chip, id, title: c.key === "mat" || c.key === "place" || c.key === "event" ? (title.get(id) || id) : title.get(id) || id, href: href(base, { [c.key]: chosen.filter((x) => x !== id) }) });
+    for (const id of chosen) chips.push({ cat: c.key, catLabel: c.chip, id, title: title.get(id) || id, href: href(base, { [c.key]: chosen.filter((x) => x !== id) }) });
   }
   const clearAll = href({ ...(q ? { q: [q] } : {}), ...(type ? { type: [type] } : {}), ...(sortIn ? { sort: [sortIn] } : {}) }, {});
 

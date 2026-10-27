@@ -19,7 +19,7 @@ const COMMON_TAIL: Col[] = [
 const LINK_COLS: [string, string][] = [["person", "Личности"], ["place", "Места"], ["event", "События"], ["theme", "Темы"], ["project", "Проекты Центра"], ["collection", "Коллекции"], ["org", "Организации"], ["material", "Материалы"], ["source", "Тексты"]];
 const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string }[] = [
   { type: "material", sheet: "Материалы", dateKey: "date", cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Дата", hint: "год или диапазон: 1927 или 1920–1929" }] },
-  { type: "person", sheet: "Личности", dateKey: "life", cols: [{ key: "group", label: "Тип личности", hint: "Конструктивисты / …", dict: "group" }, { key: "role", label: "Роль", hint: "художник, архитектор…" }, { key: "life", label: "Годы жизни", hint: "1891–1956" }] },
+  { type: "person", sheet: "Личности", dateKey: "life", cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "role", label: "Роль", hint: "художник, архитектор…" }, { key: "life", label: "Годы жизни", hint: "1891–1956" }] },
   { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "lat", label: "Широта", hint: "55.7563" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
   { type: "event", sheet: "События", dateKey: "date", cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "date", label: "Дата", hint: "1927 или 12 марта 1927" }] },
   { type: "theme", sheet: "Темы", dateKey: "", cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
@@ -76,7 +76,7 @@ export async function template(): Promise<Buffer> {
   XLSX.utils.book_append_sheet(wb, ws0, "Инструкция");
   const EX: Record<string, Row> = {
     material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg | Афиша выставки | Александр Родченко | 1927; afisha-1927-back.jpg | Оборот афиши", desc: "Афиша к открытию выставки." },
-    person: { title: "ПРИМЕР Александр Родченко", group: "Конструктивисты", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
+    person: { title: "ПРИМЕР Александр Родченко", group: "Деятели эпохи", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
     place: { title: "ПРИМЕР Дом Моссельпрома", placeType: "Здание", subtype: "административное", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "Существует", date: "1923–1925", lat: "55.7563", lon: "37.6010" },
     event: { title: "ПРИМЕР Открытие выставки «1927»", evType: "Открытие выставки", date: "12 марта 1927", "link:place": "Дом Моссельпрома" },
     theme: { title: "ПРИМЕР Фотомонтаж", def: "Техника соединения фотографий в одно изображение." },

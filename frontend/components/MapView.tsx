@@ -20,8 +20,8 @@ function loadV3(key: string) {
   loading.catch(() => { loading = null; });
   return loading;
 }
-// флажок 36×37 по библиотеке: древко + полотнище (цвет по статусу)
-const flagSvg = (c: string) => `<svg width="36" height="37" viewBox="0 0 36 37" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h4v35H6z" fill="${c}"/><path d="M10 3l24 9-24 10V3z" fill="${c}"/></svg>`;
+// флажок 36×37 из библиотеки (map/signs): чёрное древко, полотнище по статусу
+const flagSvg = (c: string) => `<svg width="36" height="37" viewBox="0 0 36 37" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="4" height="37" fill="#262626"/><path d="M6 0L36 12.093L6 26V0Z" fill="${c}"/></svg>`;
 const Arrow = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.3h9.6L8 3.7l1-1L14.3 8 9 13.3l-1-1 3.6-3.6H2V7.3Z" fill="currentColor" /></svg>;
 const X = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2.4 8 6.9l4.5-4.5 1.1 1.1L9.1 8l4.5 4.5-1.1 1.1L8 9.1l-4.5 4.5-1.1-1.1L6.9 8 2.4 3.5l1.1-1.1Z" fill="currentColor" /></svg>;
 const Chev = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 6l5 5 5-5" stroke="currentColor" strokeWidth="1.4" fill="none" /></svg>;
@@ -66,7 +66,7 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
       };
       // кластер — круг с числом; клик приближает, кластер распадается
       const cluster = (coords: [number, number], feats: any[]) => {
-        const el = document.createElement("button"); el.type = "button"; el.className = "mcluster"; el.innerHTML = `<i></i><b>${feats.length}</b>`;
+        const el = document.createElement("button"); el.type = "button"; el.className = "mcluster"; el.innerHTML = `<b>${feats.length}</b>`; // круг из библиотеки (map-cluster.svg) — фоном в CSS
         el.onclick = (e) => { e.stopPropagation(); map.update({ location: { center: coords, zoom: map.zoom + 2, duration: 400 } }); };
         return new YMapMarker({ coordinates: coords, source: "pl" }, el);
       };
