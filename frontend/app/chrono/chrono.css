@@ -3,7 +3,8 @@
 #chr{position:relative}
 
 /* вводный текст: Algorytm 24.1/24, 852 шириной, отступ сверху 244 / 160 / 120 / 64 */
-#intro{padding:244px 12px 16px;max-width:calc(852px + 24px);font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;white-space:pre-line}
+/* ширина текста — половина контентной зоны, как в макетах (852 из 1740 на 1920, 532 из 1100 на 1280) */
+#intro{padding:244px 12px 16px;max-width:calc(49cqw + 24px);font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;white-space:pre-line}
 
 /* панель: линия 8 → фильтры (5 в ряд) → таймлайн → выбранные фильтры; промежутки 12 / 24; снизу 12 и серая линия 8 */
 #cpanel{display:flex;flex-direction:column;gap:12px;padding:0 12px}
@@ -24,7 +25,7 @@
 /* счётчик: 37/36 (мобайл 24.1); блоки годов: год слева 276 (линия 8 + 50/48) + сетка 5 × 276, между годами 24 */
 #ccount{padding:12px 12px 0}
 #ccount h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500}
-#years{padding:16px 12px 0;display:flex;flex-direction:column;gap:24px}
+#years{padding:64px 12px 0;display:flex;flex-direction:column;gap:24px} /* от счётчика до первого года — 64, как в макете */
 .yblock{display:grid;grid-template-columns:276px 1fr;gap:12px;align-items:start;scroll-margin-top:64px}
 .ylab{display:flex;flex-direction:column;gap:8px;position:sticky;top:64px} /* год остаётся слева под закреплённым таймлайном, пока листаешь его события */
 .ylab .yn{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
@@ -41,7 +42,7 @@
 
 /* ==== маленький десктоп (1024–1599): контент 1100, год слева 260, сетка 3 ==== */
 @media (max-width:1599px){
-  #intro{padding-top:160px;max-width:calc(532px + 24px)}
+  #intro{padding-top:160px}
   .yblock{grid-template-columns:260px 1fr}
   .ygrid{grid-template-columns:repeat(3,1fr)}
 }
