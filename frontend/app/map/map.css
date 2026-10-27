@@ -72,7 +72,7 @@
 .mcard .im .go{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:var(--red);color:#fff;display:none;align-items:center;justify-content:center}
 .mcard .im .go svg{width:36px;height:36px}
 .mcard-open{display:none}
-.mcard-x{position:absolute;right:12px;top:16px;width:24px;height:24px;padding:4px;border:0;background:var(--grey4);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mcard-x{position:absolute;right:12px;top:28px;width:24px;height:24px;padding:4px;border:0;background:var(--grey4);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .mcard-in:hover{color:var(--red)}
 .mcard-in:hover .dv{background:var(--red)}
 .mcard-in:hover .vb{border-color:var(--red)}
