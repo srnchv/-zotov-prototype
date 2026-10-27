@@ -53,8 +53,9 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
       const { YMapClusterer, clusterByGrid } = await Y.import("@yandex/ymaps3-clusterer@0.0.1");
       const lons = places.map((p) => p.lon), lats = places.map((p) => p.lat);
       const init = initial ? places.find((p) => p.id === initial) : null;
+      const pad = 0.02; // небольшой запас, чтобы крайние флажки не прилипали к краю
       const location = init ? { center: [init.lon, init.lat], zoom: 15 }
-        : places.length > 1 ? { bounds: [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]] } : { center: [places[0].lon, places[0].lat], zoom: 14 };
+        : places.length > 1 ? { bounds: [[Math.min(...lons) - pad, Math.min(...lats) - pad], [Math.max(...lons) + pad, Math.max(...lats) + pad]] } : { center: [places[0].lon, places[0].lat], zoom: 14 };
       map = new YMap(box.current, { location, margin: [60, 60, 60, 60], showScaleInCopyrights: false }, [new YMapDefaultSchemeLayer({ customization: STYLE }), new YMapDefaultFeaturesLayer({})]);
       mapRef.current = map;
       // метка-флажок
@@ -62,13 +63,13 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
         const p = f.properties as MPlace;
         const el = document.createElement("button"); el.type = "button"; el.className = "mflag " + p.status; el.innerHTML = flagSvg(p.status === "lost" ? INK : RED); el.title = p.title;
         el.onclick = (e) => { e.stopPropagation(); setPlace(p.id); map.update({ location: { center: [p.lon, p.lat], zoom: Math.max(map.zoom, 15), duration: 400 } }); };
-        return new YMapMarker({ coordinates: f.geometry.coordinates, source: "pl" }, el);
+        return new YMapMarker({ coordinates: f.geometry.coordinates }, el);
       };
       // кластер — круг с числом; клик приближает, кластер распадается
       const cluster = (coords: [number, number], feats: any[]) => {
         const el = document.createElement("button"); el.type = "button"; el.className = "mcluster"; el.innerHTML = `<b>${feats.length}</b>`; // круг из библиотеки (map-cluster.svg) — фоном в CSS
         el.onclick = (e) => { e.stopPropagation(); map.update({ location: { center: coords, zoom: map.zoom + 2, duration: 400 } }); };
-        return new YMapMarker({ coordinates: coords, source: "pl" }, el);
+        return new YMapMarker({ coordinates: coords }, el);
       };
       const clusterer = new YMapClusterer({ method: clusterByGrid({ gridSize: 64 }), features: places.map((p) => ({ type: "Feature", id: p.id, geometry: { type: "Point", coordinates: [p.lon, p.lat] }, properties: p })), marker, cluster });
       map.addChild(clusterer);
