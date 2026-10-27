@@ -13,7 +13,7 @@ const nf = ref<HTMLInputElement>();
 const links = ref<Entity[]>([]), tags = ref<string[]>([]), file = ref<File | null>(null), picker = ref<null | "link" | "tag">(null), newTag = ref(""), busy = ref(false);
 const t = computed(() => f.type as string), tk = computed(() => TYPEKEY[t.value] || "subtype"), sk = computed(() => SUBKEY[t.value] || "subtype"), dk = computed(() => DATEKEY[t.value] || "date");
 const rec = computed(() => t.value === "source" && f.srcKind === "record");
-const typeVals = computed(() => (t.value === "person" && !dictValues("group").length ? ["Конструктивисты", "Связанные личности"] : dictValues(tk.value)));
+const typeVals = computed(() => (t.value === "person" && !dictValues("group").length ? ["Деятели эпохи", "Исследователи конструктивизма"] : dictValues(tk.value)));
 const subVals = computed(() => subOptions(tk.value, f[tk.value]));
 const pool = computed(() => S.raw.filter((x) => (picker.value === "tag" ? x.type === "tag" : !["media", "dict", "tag"].includes(x.type)) && !links.value.some((l) => l.id === x.id)));
 async function create() {
