@@ -32,13 +32,13 @@ export const subKeyOf = (t: string) => SUBKEY[t] || "subtype";
 export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
 // специфичные поля после общих
 export const SPECIFIC: Record<string, [string, string, string?][]> = {
-  place: [["city", "Город", "Москва"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"]],
+  place: [["city", "Город", "dict:city"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"], ["okn", "Статус ОКН", "dictsel:okn"], ["functions", "Функция", "multi:func"], ["authors", "Автор", "multi:author"], ["customers", "Заказчик", "multi:customer"]],
   event: [["city", "Город", "dict:city"]], // для фильтра «Город» в хронографе; подставляется из привязанного места
   project: [["curators", "Кураторы"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],
 };
-export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
+export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "okn", "functions", "authors", "customers", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
 // источник: текстовый материал (полная карточка) или библиографическая запись (короткая)
 export const SRCKIND: Record<string, string> = { text: "Текстовый материал", record: "Библиографическая запись" };
 export const isRecord = (o: { type: string; srcKind?: string }) => o.type === "source" && o.srcKind === "record";
@@ -81,6 +81,7 @@ export const HOME_DEF: Record<string, string> = {
 };
 // остальные тексты сайта (раздел «Тексты сайта»)
 export const SITE_DEF: [string, [string, string, string, boolean?][]][] = [
+  ["Карта", [["mapIntro", "Вводный текст на странице карты", "Архив Центра «Зотов» — это связанная система материалов, людей, мест\nи событий. Ищите по ключевым словам, уточняйте фильтрами и переходите по связям: каждый объект ведёт к другим.", true], ["mapSearchPh", "Плейсхолдер поиска по карте", "Название или адрес"]]],
   ["Хронограф", [["chronoIntro", "Вводный текст на странице хронографа", "История конструктивизма и Центра «Зотов» на шкале времени: выставки, премьеры, публикации и дискуссии по годам.", true]]],
   ["Поиск", [["searchIntro", "Вводный текст на странице поиска (перенос строки — как в макете)", "Архив Центра «Зотов» — это связанная система материалов, людей, мест\nи событий. Ищите по ключевым словам, уточняйте фильтрами и переходите по связям: каждый объект ведёт к другим.", true]]],
   ["Ссылки", [["centerUrl", "Сайт Центра «Зотов» (ссылка «Зотов Центр»)", "https://zotov.center"], ["privacyUrl", "Политика конфиденциальности (ссылка)", ""], ["personalUrl", "Обработка персональных данных (ссылка)", ""], ["offerUrl", "Публичная оферта (ссылка)", ""], ["copyright", "Копирайт в футере", "© Центр Зотов, 2022–2026"]]],

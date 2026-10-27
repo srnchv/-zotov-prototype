@@ -7,6 +7,8 @@ import { TYPES, TYPEKEY, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, DATEPH
 import Picker from "../components/Picker.vue";
 const router = useRouter();
 const f = reactive<Record<string, any>>({ type: "material", status: "published", srcKind: "text" });
+// многозначные поля (функции, авторы, заказчики): массив строк из справочника
+function toggleMulti(k: string, v: string) { const cur: string[] = Array.isArray(f[k]) ? [...f[k]] : []; const i = cur.indexOf(v); if (i < 0) cur.push(v); else cur.splice(i, 1); f[k] = cur; }
 const nf = ref<HTMLInputElement>();
 const links = ref<Entity[]>([]), tags = ref<string[]>([]), file = ref<File | null>(null), picker = ref<null | "link" | "tag">(null), newTag = ref(""), busy = ref(false);
 const t = computed(() => f.type as string), tk = computed(() => TYPEKEY[t.value] || "subtype"), sk = computed(() => SUBKEY[t.value] || "subtype"), dk = computed(() => DATEKEY[t.value] || "date");
@@ -51,6 +53,14 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
           <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>
+          <select v-else-if="ph && ph.startsWith('dictsel:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in dictValues(ph.slice(8))" :key="v" :value="v">{{ v }}</option></select>
+          <template v-else-if="ph && ph.startsWith('multi:')">
+            <div class="muted" style="font-size:12px;margin-bottom:4px">Несколько значений — из справочника «{{ ph.slice(6) === 'func' ? 'Функции' : ph.slice(6) === 'author' ? 'Авторы' : 'Заказчики' }}» (клик отмечает)</div>
+            <template v-if="dictValues('sub:' + ph.slice(6)).length"><div v-for="g in dictValues(ph.slice(6))" :key="g" style="margin-bottom:6px"><div class="kicker">{{ g }}</div>
+              <div class="chips" style="margin-top:4px"><span v-for="v in dictValues('sub:' + ph.slice(6)).filter(x => x.startsWith(g + ' › '))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v.slice(g.length + 3) }}</span></div></div></template>
+            <div v-else class="chips"><span v-for="v in dictValues(ph.slice(6))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v }}</span></div>
+            <div v-if="!dictValues(ph.slice(6)).length" class="muted" style="font-size:12px">Справочник пуст — заполните его в разделе «Справочники».</div>
+          </template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
       <div class="field"><label>Публикация</label><div class="chips"><span class="fchip" :class="{ on: f.status === 'published' }" @click="f.status = 'published'">Опубликовать сразу</span><span class="fchip" :class="{ on: f.status === 'draft' }" @click="f.status = 'draft'">Создать черновиком</span></div>

@@ -18,6 +18,10 @@ const SECS: Sec[] = [
   { key: "prType", title: "Проекты Центра — типы", where: "карточка проекта", sub: true, addLabel: "тип" },
   { key: "orgType", title: "Организации — типы", where: "карточка организации", sub: true, addLabel: "тип" },
   { key: "city", title: "Города", where: "карточка места и события; фильтр «Город» в хронографе и на карте", sub: false, addLabel: "город" },
+  { key: "func", title: "Функции зданий — группы и функции", where: "карточка места; фильтр «Функция» на карте", sub: true, addLabel: "группу" },
+  { key: "author", title: "Авторы — группы и авторы", where: "карточка места; фильтр «Автор» на карте. Архитекторы и инженеры на сайте — по алфавиту, «Неизвестный архитектор» всегда последним; проектные организации — в заданном порядке", sub: true, addLabel: "группу" },
+  { key: "customer", title: "Заказчики", where: "карточка места; фильтр «Заказчик» на карте", sub: false, addLabel: "тип" },
+  { key: "okn", title: "Статус ОКН", where: "карточка места; фильтр «Статус ОКН» на карте", sub: false, addLabel: "статус" },
   { key: "a11y", title: "Доступность", where: "карточка материала: субтитры, РЖЯ, расшифровка…", sub: false, addLabel: "значение" },
 ];
 const NAV = computed(() => [["period", "Период"], ...SECS.map((s) => [s.key, s.title.split(" — ")[0]]), ["tags", "Теги"], ["access", "Уровни доступа"]]);
@@ -30,7 +34,7 @@ const LIMIT = 6;
 const visible = (key: string) => { const v = dictValues(key); return openSec[key] || v.length <= LIMIT ? v : v.slice(0, LIMIT); };
 const subsOf = (key: string, t: string) => dictValues("sub:" + key).filter((v) => v.startsWith(t + " › "));
 const used = (key: string, v: string) => dictUsage(key, v).length;
-const subLabel = (key: string) => (key === "group" ? "роль" : "подтип");
+const subLabel = (key: string) => (key === "group" ? "роль" : key === "func" ? "функцию" : key === "author" ? "автора" : "подтип");
 
 async function add(key: string, type?: string) {
   const v = ask(type ? `Новый ${subLabel(key)} для «${type}»:` : "Новое значение:"); if (!v) return;

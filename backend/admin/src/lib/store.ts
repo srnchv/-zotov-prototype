@@ -91,6 +91,13 @@ export const DICTDEF = (): DictDef[] => [
   { key: "colType", label: "Типы коллекций", base: () => dvals("collection", "colType") },
   { key: "orgType", label: "Типы организаций", base: () => dvals("org", "orgType") },
   { key: "prType", label: "Типы проектов Центра", base: () => dvals("project", "prType") },
+  // карта: функции (группа › функция), авторы (группа › автор), заказчики, статус ОКН
+  { key: "func", label: "Функции — группы", base: () => [...new Set(all("place").flatMap((o) => (o.functions || []) as string[]).map((v) => v.split(" › ")[0]))] },
+  { key: "sub:func", label: "Функции", base: () => [...new Set(all("place").flatMap((o) => (o.functions || []) as string[]).filter((v) => v.includes(" › ")))] },
+  { key: "author", label: "Авторы — группы", base: () => ["Архитекторы", "Инженеры", "Проектные организации"] },
+  { key: "sub:author", label: "Авторы", base: () => [...new Set(["Архитекторы › Неизвестный архитектор", ...all("place").flatMap((o) => (o.authors || []) as string[]).filter((v) => v.includes(" › "))])] },
+  { key: "customer", label: "Заказчики", base: () => [...new Set(["правительство", "ведомство", "управление", "муниципалитет", "кооператив", "профсоюз", "общественная организация", "неустановленный застройщик", ...all("place").flatMap((o) => (o.customers || []) as string[])])] },
+  { key: "okn", label: "Статус ОКН", base: () => [...new Set(["федерального значения", "регионального значения", "местного значения", "выявленный", "не является ОКН", ...all("place").map((o) => String(o.okn || "").trim()).filter(Boolean)])] },
   { key: "city", label: "Города", base: () => [...new Set([...all("place").map((o) => String(o.city || "").trim()), ...all("event").map((o) => String(o.city || "").trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru")) },
   ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", placeType: "мест", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({
     key: "sub:" + tk, label: "Подтипы " + l, base: () => {
@@ -131,6 +138,8 @@ export function dictUsage(key: string, v: string): Entity[] {
   const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
   if (tk === "a11y") return S.raw.filter((o) => (o.a11y || []).includes(v));
   if (tk === "city") return S.raw.filter((o) => (o.type === "place" || o.type === "event") && String(o.city || "").trim() === v);
+  if (tk === "func" || tk === "author" || tk === "customer") { const fk = tk === "func" ? "functions" : tk === "author" ? "authors" : "customers"; return all("place").filter((o) => ((o[fk] || []) as string[]).some((x) => (sub ? x === v : x.split(" › ")[0] === v))); }
+  if (tk === "okn") return all("place").filter((o) => String(o.okn || "").trim() === v);
   const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
   return S.raw.filter((o) => {
     if (!types.includes(o.type)) return false;
@@ -143,6 +152,11 @@ export async function dictRename(key: string, from: string, to: string) {
   const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
   const users = dictUsage(key, from);
   if (tk === "city") { for (const o of users) await api("/entities/" + o.id, { method: "PATCH", body: JSON.stringify({ payload: { city: to } }) }); }
+  else if (tk === "okn") { for (const o of users) await api("/entities/" + o.id, { method: "PATCH", body: JSON.stringify({ payload: { okn: to } }) }); }
+  else if (tk === "func" || tk === "author" || tk === "customer") {
+    const fk = tk === "func" ? "functions" : tk === "author" ? "authors" : "customers";
+    for (const o of users) { const vals = ((o[fk] || []) as string[]).map((x) => (sub ? (x === from ? to : x) : (x.split(" › ")[0] === from ? to + x.slice(from.length) : x))); await api("/entities/" + o.id, { method: "PATCH", body: JSON.stringify({ payload: { [fk]: vals } }) }); }
+  }
   else for (const o of users) {
     const sk = SUBKEY[o.type] || "subtype";
     const [t, st] = typeSubOf(o, tk);

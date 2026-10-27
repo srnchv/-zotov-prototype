@@ -1,26 +1,120 @@
-/* Карта: леттеринг, вводный текст, карта во всю ширину, под ней список мест */
+/* Карта — по макетам ТЗ DEV «Карта» (123:27632): десктоп 1920 (контент 1740), 1280 (1100), планшет 768, мобайл 360.
+   Каркас, леттеринг, шапка, футер, строка фильтров, окно фильтра, чипсы, пустая выдача — общие (globals.css). */
 #mapp{position:relative}
-#mapp #intro{padding:220px 12px 16px;max-width:588px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.24px;font-weight:500}
-#mapp .div8{margin:0 12px}
-.ymap{position:relative;background:var(--grey5);width:100%;aspect-ratio:3/2;overflow:hidden}
-.ymap.big{aspect-ratio:auto;height:800px;margin:12px 12px 0;width:auto}
-.ymap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
-.ypin{display:flex;align-items:center;gap:6px;margin:-9px 0 0 -9px;color:var(--ink);text-decoration:none;white-space:nowrap}
-.ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
-.ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
-a.ypin:hover b,a.ypin:hover i{background:var(--red);color:#fff}
-#plist{display:grid;grid-template-columns:repeat(6,1fr);gap:24px 12px;padding:48px 12px 0}
-.pl{display:flex;flex-direction:column;gap:4px;min-width:0}
-.pl .dv{height:8px;background:var(--ink);margin-bottom:4px}
-.pl h3{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
-.pl .sub{font-size:16px;line-height:18px;letter-spacing:-.08px;padding-top:2px}
-.pl .inf{font-size:14.1px;line-height:16px;padding-top:8px}
-.pl .inf b{display:block;font-weight:700}
-.pl:hover{color:var(--red)}
-.pl:hover .dv{background:var(--red)}
-#empty{padding:40px 12px;font-size:18px;line-height:20px;color:var(--grey2)}
-#mapp .end{margin-top:48px;margin-bottom:var(--pb)}
-@media (max-width:1599px){#plist{grid-template-columns:repeat(4,1fr)}.ymap.big{height:620px}}
-@media (max-width:1023px){#mapp{padding-top:110px}#mapp #intro{padding-top:120px}#plist{grid-template-columns:repeat(3,1fr);padding-top:32px}.ymap.big{height:520px}}
-@media (max-width:599px){#mapp #intro{padding:64px 12px 16px;max-width:none;font-size:20px;line-height:20px;letter-spacing:0}#plist{grid-template-columns:1fr}.ymap.big{height:70vh}}
-.pl.on{color:var(--red)} .pl.on .dv{background:var(--red)}
+#intro{padding:244px 12px 16px;max-width:calc(49cqw + 24px);font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;white-space:pre-line}
+
+/* панель: линия 8 → поиск → фильтры (6 в ряд) → выбранные; снизу 12 и серая линия 8 */
+#spanel{display:flex;flex-direction:column;gap:24px;padding:0 12px 12px;border-bottom:8px solid var(--grey4)}
+#sform form{display:flex;flex-direction:column;gap:4px;padding-top:4px}
+#sform label{font-size:14.1px;line-height:16px;font-weight:500}
+#sform .in{display:flex;align-items:center;gap:12px;border:4px solid var(--ink);border-top:0;padding:8px 8px 8px 12px;height:44px}
+#sform input{flex:1 1 auto;min-width:0;border:0;outline:0;background:transparent;font-family:var(--hf);font-weight:500;font-size:24.1px;line-height:24px;letter-spacing:-.241px;color:var(--ink)}
+#sform input::placeholder{color:var(--grey3)}
+#sform button{border:0;background:none;padding:0;width:24px;height:24px;cursor:pointer;display:flex}
+#mfilters #sfbar{grid-template-columns:repeat(6,1fr)}
+
+/* счётчик и карта: 1716×867 в потоке; снизу 144 до футера */
+#mcount{padding:12px 12px 24px}
+#mcount h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500}
+.mapbox{position:relative;margin:0 12px 144px;height:867px;background:var(--grey5);overflow:hidden}
+.mapbox .mcanvas{position:absolute;inset:0}
+.mapbox .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
+.mapp .ymap.big{margin:0 12px 144px;aspect-ratio:auto;height:867px}
+
+/* легенда: белая плашка слева сверху */
+.mlegend{position:absolute;left:12px;top:12px;z-index:5;display:flex;gap:12px;background:#fff;padding:8px;font-size:14.1px;line-height:16px;font-weight:500}
+.mlegend span{display:flex;align-items:center;gap:4px}
+.mlegend i{width:16px;height:16px;flex:0 0 auto;background:no-repeat center/contain}
+.mlegend i.lost{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 37'%3E%3Cpath d='M6 2h4v35H6z' fill='%23262626'/%3E%3Cpath d='M10 3l24 9-24 10V3z' fill='%23262626'/%3E%3C/svg%3E")}
+.mlegend i.exists{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 37'%3E%3Cpath d='M6 2h4v35H6z' fill='%23f43c3a'/%3E%3Cpath d='M10 3l24 9-24 10V3z' fill='%23f43c3a'/%3E%3C/svg%3E")}
+
+/* метки: флажок 36×37, низ древка в точке; кластер: красный круг 40 с кольцом 48 и числом */
+.mflag{display:block;width:36px;height:37px;padding:0;border:0;background:none;cursor:pointer;transform:translate(-8px,-36px)}
+.mflag:hover{filter:brightness(.8)}
+.mcluster{position:relative;display:flex;align-items:center;justify-content:center;width:48px;height:48px;padding:0;border:0;background:none;cursor:pointer;transform:translate(-24px,-24px)}
+.mcluster i{position:absolute;inset:0;border-radius:50%;border:2px solid var(--red);background:transparent}
+.mcluster i::after{content:"";position:absolute;inset:2px;border-radius:50%;background:var(--red)}
+.mcluster b{position:relative;color:#fff;font-size:14.1px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums}
+
+/* кнопка «Открыть список» и панель списка справа (420): крестик слева, сортировка, элементы с линией сверху */
+.mlist-btn{position:absolute;right:12px;top:12px;z-index:5;display:flex;align-items:center;gap:4px;background:var(--ink);color:#fff;border:0;padding:12px;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;cursor:pointer}
+.mlist-btn span{padding:0 4px}
+.mlist-btn:hover{background:var(--red)}
+.mlist{position:absolute;right:12px;top:12px;bottom:12px;z-index:6;display:flex;gap:8px;align-items:flex-start}
+.mlist-x{width:40px;height:40px;flex:0 0 40px;border:0;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mlist-x:hover{background:var(--red)}
+.mlist-panel{width:420px;max-height:100%;background:#fff;padding:16px;display:flex;flex-direction:column;gap:24px;box-sizing:border-box}
+.mlist-sort{position:relative;border-top:8px solid var(--grey4);padding-top:8px;display:flex;gap:4px;font-size:14.1px;line-height:16px;font-weight:500;flex:0 0 auto}
+.mlist-sort .g{color:var(--grey3)}
+.mlist-sort .v{display:flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:var(--ink);cursor:pointer}
+.mlist-sort .v:hover{color:var(--red)}
+.mlist-sort .dd-list{position:absolute;left:0;top:100%;width:200px;z-index:3;display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.mlist-sort .dd-row{border:0;font:inherit;text-align:left;cursor:pointer}
+.mlist-items{flex:1 1 auto;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey4);scrollbar-width:thin}
+.mlist-it{display:flex;flex-direction:column;gap:4px;border:0;border-top:4px solid var(--grey4);padding:8px 0 0;background:none;font:inherit;text-align:left;color:var(--ink);cursor:pointer}
+.mlist-it b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
+.mlist-it span{font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
+.mlist-it.on{border-top-color:var(--ink)}
+.mlist-it:hover{color:var(--red);border-top-color:var(--red)}
+
+/* карточка места поверх карты: 414, белая, хвостик снизу; ховер — всё красным, на фото круглая кнопка */
+.mcard{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-100% - 20px));z-index:7;width:414px;background:#fff;padding:12px;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+.mcard::after{content:"";position:absolute;left:50%;bottom:-16px;margin-left:-12px;border:12px solid transparent;border-top:16px solid #fff;border-bottom:0}
+.mcard-in{display:flex;flex-direction:column;gap:8px;color:var(--ink)}
+.mcard .dv{height:8px;background:var(--ink)}
+.mcard .tx{display:flex;flex-direction:column;gap:4px;padding-right:28px}
+.mcard h3{font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;text-transform:uppercase}
+.mcard .sub{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
+.mcard .vb{min-height:36px;border-left:4px solid var(--ink);flex:1 1 auto}
+.mcard .inf{font-size:14.1px;line-height:16px}
+.mcard .inf b{display:block;font-weight:700}
+.mcard .inf span{display:block;font-weight:500}
+.mcard .im{position:relative;aspect-ratio:3/2;overflow:hidden;background:var(--grey5)}
+.mcard .im img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.mcard .im .go{position:absolute;left:50%;top:50%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:var(--red);color:#fff;display:none;align-items:center;justify-content:center}
+.mcard .im .go svg{width:36px;height:36px}
+.mcard-open{display:none}
+.mcard-x{position:absolute;right:12px;top:16px;width:24px;height:24px;padding:4px;border:0;background:var(--grey4);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mcard-in:hover{color:var(--red)}
+.mcard-in:hover .dv{background:var(--red)}
+.mcard-in:hover .vb{border-color:var(--red)}
+.mcard-in:hover .im .go{display:flex}
+.mcard:has(.mcard-in:hover) .mcard-x{color:var(--red)}
+
+/* ==== маленький десктоп (1024–1599): карта 720, список 339 ==== */
+@media (max-width:1599px){
+  #intro{padding-top:160px}
+  .mapbox,.mapp .ymap.big{height:720px}
+  .mlist-panel{width:339px}
+}
+
+/* ==== планшет вертикальный (600–1023): фильтры 3×2, карта во всю ширину 744, список 240, карточка 300 с кнопкой ==== */
+@media (max-width:1023px){
+  #mapp{padding-top:110px}
+  #intro{padding-top:120px;max-width:none;white-space:normal}
+  #mfilters #sfbar{grid-template-columns:repeat(3,1fr)}
+  .mapbox,.mapp .ymap.big{margin-left:0;margin-right:0;height:744px}
+  .mlist-panel{width:240px;padding:12px;gap:16px}
+  .mlist-it b{font-size:14.1px;line-height:16px;font-family:var(--hf)}
+  .mlist-it span{font-size:12px;line-height:14px;letter-spacing:.12px}
+  .mcard{width:300px}
+  .mcard h3{font-size:20px;line-height:20px;letter-spacing:0}
+  .mcard .im{aspect-ratio:auto;height:184px}
+  .mcard .im .go{display:none!important}
+  .mcard-open{display:flex;align-items:center;justify-content:center;gap:4px;background:var(--ink);color:#fff;padding:4px;font-size:14.1px;line-height:16px;font-weight:500;margin-top:4px}
+}
+
+/* ==== мобайл (<600): фильтры 2 колонки, легенда над картой, карта 560 во всю ширину, списка нет ==== */
+@media (max-width:599px){
+  #intro{padding-top:64px;font-size:18px;line-height:20px;letter-spacing:-.18px}
+  #sform input{font-size:20px;line-height:20px;letter-spacing:0}
+  #mfilters #sfbar{grid-template-columns:1fr 1fr}
+  #mcount{padding-bottom:12px}
+  #mcount h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
+  .mapbox{height:auto;padding-top:calc(32px + 4px + 560px);background:#fff}
+  .mapbox .mcanvas{top:36px;height:560px;background:var(--grey5)}
+  .mlegend{position:absolute;left:4px;top:0;padding:4px 8px;height:32px;box-sizing:border-box}
+  .mlist-btn,.mlist{display:none}
+  .mcard{top:calc(36px + 60px);transform:translate(-50%,0);width:300px}
+  .mcard::after{display:none}
+}

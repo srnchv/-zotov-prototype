@@ -49,7 +49,7 @@ async function save() {
   const chk = HOME_TYPES.includes(e.type) ? homeCheck(draft) : { errors: [], warnings: [] };
   if (chk.errors.length) { toast(chk.errors[0]); return; }
   const payload: Record<string, any> = {};
-  PAYLOAD_KEYS.forEach((k) => (payload[k] = f[k] ?? ""));
+  PAYLOAD_KEYS.forEach((k) => (payload[k] = Array.isArray(f[k]) ? f[k] : (f[k] ?? "")));
   if (HOME_TYPES.includes(e.type)) Object.assign(payload, draft, { id: undefined });
   delete payload.id;
   try {
@@ -96,6 +96,8 @@ async function onFile() {
 const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%" } });
 // поля подписи файла сохраняются сразу при уходе из поля
 async function patchMedia(mid: string, payload: Record<string, string>) { try { await api("/entities/" + mid, { method: "PATCH", body: JSON.stringify({ payload }) }); await load(); toast("Сохранено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+// многозначные поля (функции, авторы, заказчики): массив строк из справочника
+function toggleMulti(k: string, v: string) { const cur: string[] = Array.isArray(f[k]) ? [...f[k]] : []; const i = cur.indexOf(v); if (i < 0) cur.push(v); else cur.splice(i, 1); f[k] = cur as any; }
 const subsUpload = (mid: string) => { subsFor.value = mid; subsInput.value?.click(); };
 async function onSubs() {
   const file = subsInput.value?.files?.[0]; if (!file) return;
@@ -140,6 +142,14 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
         <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
           <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>
+          <select v-else-if="ph && ph.startsWith('dictsel:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in dictValues(ph.slice(8))" :key="v" :value="v">{{ v }}</option></select>
+          <template v-else-if="ph && ph.startsWith('multi:')">
+            <div class="muted" style="font-size:12px;margin-bottom:4px">Несколько значений — из справочника «{{ ph.slice(6) === 'func' ? 'Функции' : ph.slice(6) === 'author' ? 'Авторы' : 'Заказчики' }}» (клик отмечает)</div>
+            <template v-if="dictValues('sub:' + ph.slice(6)).length"><div v-for="g in dictValues(ph.slice(6))" :key="g" style="margin-bottom:6px"><div class="kicker">{{ g }}</div>
+              <div class="chips" style="margin-top:4px"><span v-for="v in dictValues('sub:' + ph.slice(6)).filter(x => x.startsWith(g + ' › '))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v.slice(g.length + 3) }}</span></div></div></template>
+            <div v-else class="chips"><span v-for="v in dictValues(ph.slice(6))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v }}</span></div>
+            <div v-if="!dictValues(ph.slice(6)).length" class="muted" style="font-size:12px">Справочник пуст — заполните его в разделе «Справочники».</div>
+          </template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
         <template v-if="o.type === 'place'">
           <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Широта</label><input class="inp" v-model="f.lat" placeholder="55.7558"></div><div class="field" style="flex:1"><label>Долгота</label><input class="inp" v-model="f.lon" placeholder="37.6176"></div></div>
