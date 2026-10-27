@@ -6,13 +6,14 @@
 #intro{padding:244px 12px 16px;max-width:calc(852px + 24px);font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;white-space:pre-line}
 
 /* панель: линия 8 → фильтры (5 в ряд) → таймлайн → выбранные фильтры; промежутки 12 / 24; снизу 12 и серая линия 8 */
-#cpanel{display:flex;flex-direction:column;gap:12px;padding:0 12px 12px;border-bottom:8px solid var(--grey4)}
-#cfilters #sfbar{grid-template-columns:repeat(5,1fr);gap:4px}
-#cfilters .fcell{background:var(--grey4)}
-#cpanel #schips{margin-top:12px}
+#cpanel{display:flex;flex-direction:column;gap:12px;padding:0 12px}
+#cfilters #sfbar{grid-template-columns:repeat(5,1fr)}
+#cbelow{padding:0 12px 12px;border-bottom:8px solid var(--grey4)}
+#cbelow #schips{margin-top:24px}
 
-/* таймлайн: серая полоса 40, годы с линией слева 4, распределены по ширине; закрепляется у верха (12) при прокрутке */
-#tline{position:sticky;top:12px;z-index:30;background:var(--grey4);height:40px;padding:8px 0;box-sizing:border-box}
+/* таймлайн: серая полоса 40, годы с линией слева 4, распределены по ширине; закрепляется у верха (12) при прокрутке —
+   лежит прямо в #chr, поэтому держится на всю длину страницы */
+#tline{position:sticky;top:12px;z-index:30;margin:12px 12px 0;background:var(--grey4);height:40px;padding:8px 0;box-sizing:border-box}
 #tline .tl-row{display:flex;justify-content:space-between;overflow-x:auto;scrollbar-width:none;height:24px}
 #tline .tl-row::-webkit-scrollbar{display:none}
 #tline a,#tline span{flex:0 0 auto;border-left:4px solid var(--ink);padding:4px 8px;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
@@ -25,14 +26,13 @@
 #ccount h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500}
 #years{padding:16px 12px 0;display:flex;flex-direction:column;gap:24px}
 .yblock{display:grid;grid-template-columns:276px 1fr;gap:12px;align-items:start;scroll-margin-top:64px}
-.ylab{display:flex;flex-direction:column;gap:8px}
+.ylab{display:flex;flex-direction:column;gap:8px;position:sticky;top:64px} /* год остаётся слева под закреплённым таймлайном, пока листаешь его события */
 .ylab .yn{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
 .ygrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
 .vcard.ev{width:auto;height:368px}
 .vcard.ev h3{overflow:hidden;overflow-wrap:anywhere}
 .vcard.ev .im{width:184px;height:184px}
 .rend{height:8px;background:var(--ink);margin:12px 12px 144px}
-#chr:has(#empty) #cpanel{border-bottom-color:var(--grey4)}
 
 /* кнопка «наверх»: 40×40, серая, справа внизу — вместе с закреплённым таймлайном */
 #totop{position:fixed;right:12px;bottom:12px;z-index:50;display:none;align-items:center;justify-content:center;width:40px;height:40px;padding:12px;background:var(--grey4);border:0;color:var(--ink);cursor:pointer}

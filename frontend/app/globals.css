@@ -231,7 +231,9 @@ a{color:inherit;text-decoration:none}
 /* картинки в карточках и галереях не ловят мышь: без «Сохранить изображение» и перетаскивания (ссылки-карточки работают как прежде) */
 .vcard .im img,.tile>img,.pcard .im img,.theme .im img,.gal img,.mc-b img{pointer-events:none;user-select:none;-webkit-user-drag:none}
 
-/* ==== общие блоки поиска, хронографа, карты: строка выбранных фильтров, пустая выдача ==== */
+/* ==== общие блоки поиска, хронографа, карты: строка фильтров, строка выбранных фильтров, пустая выдача ==== */
+#sfbar{display:grid;gap:4px}
+#sfbar .fcell{background:var(--grey4)}
 /* выбранные фильтры: серая подложка, чипсы в один поток с подписью категории */
 #schips{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--grey4);font-size:14.1px;line-height:16px;font-weight:500}
 .schip-w{display:contents}

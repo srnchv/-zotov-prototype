@@ -16,8 +16,7 @@
 #sform button{border:0;background:none;padding:0;width:24px;height:24px;cursor:pointer;display:flex}
 
 /* строка фильтров: 8 в ряд (1920), 4×2 (1280, 768), 2×4 (мобайл); ячейки — .fcell из globals */
-#sfbar{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
-#sfbar .fcell{background:var(--grey4)}
+#sfbar{grid-template-columns:repeat(8,1fr)}
 
 
 /* выдача: счётчик 37/36 → панель «Типология / Сортировка» (линия 4 сверху) → сетка */

@@ -64,19 +64,20 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
           <div id="intro">{site.chronoIntro}</div>
 
           {/* панель: чёрная линия → фильтры → таймлайн (закрепляется) → выбранные фильтры */}
+          {/* панель: чёрная линия → фильтры; таймлайн — отдельным блоком, чтобы закрепляться на всю длину страницы; ниже чипсы и серая линия */}
           <div id="cpanel">
             <div className="div8" />
             <div id="cfilters"><SearchFilters cats={cats} sel={selCount} prefix="/chrono" groupTokens /></div>
-            <div id="tline" className={years.length ? undefined : "all-dim"}>
-              <div className="tl-row">
-                {yearsAll.map((y) => {
-                  const ok = anyFilter ? hasFound.has(y) : hasAny.has(y);
-                  return ok ? <a key={y} data-y={y} className={yearSel === y ? "on" : undefined} href={href(tokens, { y: [String(y)] }) + "#y-" + y}>{y}</a> : <span key={y} className="dim">{y}</span>;
-                })}
-              </div>
-            </div>
-            {anyFilter ? <SelectedChips chips={chips} clearHref="/chrono" /> : null}
           </div>
+          <div id="tline" className={years.length ? undefined : "all-dim"}>
+            <div className="tl-row">
+              {yearsAll.map((y) => {
+                const ok = anyFilter ? hasFound.has(y) : hasAny.has(y);
+                return ok ? <a key={y} data-y={y} className={yearSel === y ? "on" : undefined} href={href(tokens, { y: [String(y)] }) + "#y-" + y}>{y}</a> : <span key={y} className="dim">{y}</span>;
+              })}
+            </div>
+          </div>
+          <div id="cbelow">{anyFilter ? <SelectedChips chips={chips} clearHref="/chrono" /> : null}</div>
 
           {found.length ? (
             <>
