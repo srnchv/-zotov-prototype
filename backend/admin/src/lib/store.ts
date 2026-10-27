@@ -91,6 +91,7 @@ export const DICTDEF = (): DictDef[] => [
   { key: "colType", label: "Типы коллекций", base: () => dvals("collection", "colType") },
   { key: "orgType", label: "Типы организаций", base: () => dvals("org", "orgType") },
   { key: "prType", label: "Типы проектов Центра", base: () => dvals("project", "prType") },
+  { key: "city", label: "Города", base: () => [...new Set([...all("place").map((o) => String(o.city || "").trim()), ...all("event").map((o) => String(o.city || "").trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru")) },
   ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", placeType: "мест", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({
     key: "sub:" + tk, label: "Подтипы " + l, base: () => {
       const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
@@ -129,6 +130,7 @@ export function typeSubOf(o: Entity, tk: string): [string, string] {
 export function dictUsage(key: string, v: string): Entity[] {
   const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
   if (tk === "a11y") return S.raw.filter((o) => (o.a11y || []).includes(v));
+  if (tk === "city") return S.raw.filter((o) => (o.type === "place" || o.type === "event") && String(o.city || "").trim() === v);
   const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
   return S.raw.filter((o) => {
     if (!types.includes(o.type)) return false;
@@ -140,7 +142,8 @@ export function dictUsage(key: string, v: string): Entity[] {
 export async function dictRename(key: string, from: string, to: string) {
   const sub = key.startsWith("sub:"), tk = sub ? key.slice(4) : key;
   const users = dictUsage(key, from);
-  for (const o of users) {
+  if (tk === "city") { for (const o of users) await api("/entities/" + o.id, { method: "PATCH", body: JSON.stringify({ payload: { city: to } }) }); }
+  else for (const o of users) {
     const sk = SUBKEY[o.type] || "subtype";
     const [t, st] = typeSubOf(o, tk);
     const composite = tk === "placeType" && String(o[tk] || "").includes(" · ");
@@ -163,6 +166,13 @@ export async function dictRename(key: string, from: string, to: string) {
   return users.length;
 }
 // диапазон Периода для фильтра поиска (dict-period: from/to)
+// диапазон лет таймлайна хронографа (dict-chrono: from/to) — отдельно от периода поиска
+export const chronoVal = () => { const d = S.db["dict-chrono"] || {}; return { from: String(d.from || ""), to: String(d.to || "") }; };
+export async function saveChrono(from: number, to: number) {
+  if (S.db["dict-chrono"]) await api("/entities/dict-chrono", { method: "PATCH", body: JSON.stringify({ payload: { from, to } }) });
+  else await api("/entities", { method: "POST", body: JSON.stringify({ id: "dict-chrono", type: "dict", title: "Справочник: диапазон хронографа", payload: { from, to } }) });
+  await load();
+}
 export const periodVal = () => { const d = S.db["dict-period"] || {}; return { from: String(d.from || ""), to: String(d.to || "") }; };
 export async function savePeriod(from: number, to: number) {
   if (S.db["dict-period"]) await api("/entities/dict-period", { method: "PATCH", body: JSON.stringify({ payload: { from, to } }) });

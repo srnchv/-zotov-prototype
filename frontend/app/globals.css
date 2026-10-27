@@ -230,3 +230,32 @@ a{color:inherit;text-decoration:none}
 
 /* картинки в карточках и галереях не ловят мышь: без «Сохранить изображение» и перетаскивания (ссылки-карточки работают как прежде) */
 .vcard .im img,.tile>img,.pcard .im img,.theme .im img,.gal img,.mc-b img{pointer-events:none;user-select:none;-webkit-user-drag:none}
+
+/* ==== общие блоки поиска, хронографа, карты: строка выбранных фильтров, пустая выдача ==== */
+/* выбранные фильтры: серая подложка, чипсы в один поток с подписью категории */
+#schips{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--grey4);font-size:14.1px;line-height:16px;font-weight:500}
+.schip-w{display:contents}
+.schip-l{color:var(--grey2);padding:4px}
+.schip{display:flex;align-items:center;gap:4px;background:#fff;padding:4px;color:var(--ink)}
+.schip span{padding:0 4px}
+.schip:hover{color:var(--red)}
+.schip-more{display:flex;align-items:center;gap:4px;background:var(--ink);color:#fff;border:0;padding:4px;font:inherit;cursor:pointer}
+.schip-more span{padding:0 4px}
+.schip-more:hover{background:var(--red)}
+.schip-clear{color:var(--red);padding:4px 8px}
+.schip-clear:hover{color:var(--ink)}
+
+/* пустая выдача: картинка с «?», «ничего не найдено», подсказка; 144 сверху и снизу */
+#empty{display:flex;flex-direction:column;align-items:center;gap:24px;padding:132px 0 144px;text-align:center}
+#empty .eimg{position:relative;width:262px;height:320px;}
+#empty .eimg span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Zotov Bold',sans-serif;font-size:220px;line-height:1;color:var(--red)}
+#empty .eimg.has-img span{display:none}
+#empty h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500;margin-bottom:-20px}
+#empty p{font-size:18px;line-height:20px;letter-spacing:-.18px;font-weight:500}
+
+@media (max-width:599px){
+  #schips{display:none} /* на мобайле строки выбранных нет: количество видно в названиях категорий */
+  #empty .eimg{width:213px;height:260px}
+  #empty .eimg span{font-size:180px}
+  #empty h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px;margin-bottom:-20px}
+}

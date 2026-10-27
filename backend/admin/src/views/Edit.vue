@@ -67,7 +67,12 @@ async function del(id = props.id) {
 }
 async function link(x: Entity) {
   if ((o.value.links || []).includes(x.id)) { toast("Уже связано"); return; }
-  try { await api(`/entities/${props.id}/links`, { method: "POST", body: JSON.stringify({ targetId: x.id }) }); await load(); toast(x.type === "media" ? "Файл прикреплён" : "Связь добавлена — у обеих сущностей"); } catch (e: any) { toast("Ошибка: " + e.message); }
+  try {
+    await api(`/entities/${props.id}/links`, { method: "POST", body: JSON.stringify({ targetId: x.id }) });
+    // событие + место: город события подставляется из места (если ещё не задан) — для фильтра «Город» в хронографе
+    if (o.value.type === "event" && x.type === "place" && !String(o.value.city || "").trim() && String(x.city || "").trim()) { await api(`/entities/${props.id}`, { method: "PATCH", body: JSON.stringify({ payload: { city: x.city } }) }); f.city = String(x.city); }
+    await load(); toast(x.type === "media" ? "Файл прикреплён" : "Связь добавлена — у обеих сущностей");
+  } catch (e: any) { toast("Ошибка: " + e.message); }
 }
 async function unlink(tid: string) {
   try { await api(`/entities/${props.id}/links/${tid}`, { method: "DELETE" }); await load(); toast("Связь удалена — у обеих сущностей"); } catch (e: any) { toast("Ошибка: " + e.message); }
@@ -134,6 +139,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
         <div class="field"><label>{{ DATELABEL[o.type] || "Дата / период" }}</label><input class="inp" v-model="f[dk]"></div>
         <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
+          <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
         <template v-if="o.type === 'place'">
           <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Широта</label><input class="inp" v-model="f.lat" placeholder="55.7558"></div><div class="field" style="flex:1"><label>Долгота</label><input class="inp" v-model="f.lon" placeholder="37.6176"></div></div>

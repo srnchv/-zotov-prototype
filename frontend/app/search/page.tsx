@@ -7,6 +7,7 @@ import SoftNav from "@/components/SoftNav";
 import SearchFilters, { SelectedChips, type Chip } from "@/components/SearchFilters";
 import Dropdown from "@/components/Dropdown";
 import SearchPh from "@/components/SearchPh";
+import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
 import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
 import { buildCats, runSearch, toCard, fmt, resultsWord, CAT_KEYS, KINDS, SORTS, type CatKey } from "@/lib/search";
@@ -132,13 +133,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
                 <div className="rend" />
                 {r.pages > 1 ? <>{nav(10, "d")}{nav(3, "m")}</> : null}
               </>
-            ) : (
-              <div id="empty">
-                <div className="eimg" aria-hidden="true"><span>?</span></div>
-                <h2>ничего не найдено</h2>
-                <p>Попробуйте изменить запрос.</p>
-              </div>
-            )}
+            ) : <EmptyResults />}
           </div>
         </div>
         <Footer site={site} />

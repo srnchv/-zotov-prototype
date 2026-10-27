@@ -6,7 +6,9 @@
 // Строка выбранных фильтров — чипсы по категориям, «Ещё»/«Свернуть», «Очистить все» (на мобайле не показывается).
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Cat, CatKey, Group } from "@/lib/search";
+import type { Group } from "@/lib/search";
+import { encodeSel, type FCat } from "@/lib/chrono";
+export type { FCat };
 
 const Plus = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v5.2H14v1.6H8.8V14H7.2V8.8H2V7.2h5.2V2Z" fill="currentColor" /></svg>;
 const Minus = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h12v1.6H2z" fill="currentColor" /></svg>;
@@ -16,20 +18,21 @@ const Dots = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle
 const Up = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 2.6h12V4H2zM8 5.5l4.5 4.5-1.1 1.1-2.6-2.6V14H7.2V8.5l-2.6 2.6L3.5 10 8 5.5Z" fill="currentColor" /></svg>;
 const Search = <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg>;
 
-// адрес с новым набором значений категории; при смене фильтров выдача — с первой страницы
-function useUrl() {
+// адрес с новым набором значений категории; при смене фильтров выдача — с первой страницы (и без выбранного года)
+function useUrl(prefix: string) {
   const sp = useSearchParams();
   return (patch: Partial<Record<string, string[]>>) => {
     const p = new URLSearchParams(sp.toString());
     for (const [k, vals] of Object.entries(patch)) { p.delete(k); for (const v of vals || []) p.append(k, v); }
-    p.delete("page");
+    p.delete("page"); p.delete("y");
     const q = p.toString();
-    return "/search" + (q ? "?" + q : "");
+    return prefix + (q ? "?" + q : "");
   };
 }
 
-export default function SearchFilters({ cats, sel }: { cats: Cat[]; sel: Record<CatKey, string[]> }) {
-  const [open, setOpen] = useState<CatKey | null>(null);
+// groupTokens — записывать выбор в адрес группами (g:/x:, «остаток группы» по ТЗ хронографа); иначе — список id
+export default function SearchFilters({ cats, sel, prefix = "/search", groupTokens = false }: { cats: FCat[]; sel: Record<string, string[]>; prefix?: string; groupTokens?: boolean }) {
+  const [open, setOpen] = useState<string | null>(null);
   const cur = cats.find((c) => c.key === open) || null;
   return (
     <>
@@ -40,14 +43,15 @@ export default function SearchFilters({ cats, sel }: { cats: Cat[]; sel: Record<
           </button>
         ))}
       </div>
-      {cur ? <Panel key={cur.key} c={cur} selected={sel[cur.key] || []} onClose={() => setOpen(null)} /> : null}
+      {cur ? <Panel key={cur.key} c={cur} selected={sel[cur.key] || []} prefix={prefix} groupTokens={groupTokens} onClose={() => setOpen(null)} /> : null}
     </>
   );
 }
 
-function Panel({ c, selected, onClose }: { c: Cat; selected: string[]; onClose: () => void }) {
+function Panel({ c, selected, prefix, groupTokens, onClose }: { c: FCat; selected: string[]; prefix: string; groupTokens: boolean; onClose: () => void }) {
   const router = useRouter();
-  const url = useUrl();
+  const url = useUrl(prefix);
+  const prevTokens = useSearchParams().getAll(c.key);
   const [sel, setSel] = useState<string[]>(selected);
   const [q, setQ] = useState("");
   const [onlySel, setOnlySel] = useState(false);
@@ -73,7 +77,7 @@ function Panel({ c, selected, onClose }: { c: Cat; selected: string[]; onClose: 
     const all = ids.every((id) => sel.includes(id));
     setSel((s) => (all ? s.filter((x) => !ids.includes(x)) : [...new Set([...s, ...ids])]));
   };
-  const apply = (ids: string[]) => { router.push(url({ [c.key]: ids }), { scroll: false }); onClose(); };
+  const apply = (ids: string[]) => { router.push(url({ [c.key]: groupTokens ? encodeSel(c, ids, prevTokens) : ids }), { scroll: false }); onClose(); };
   const flat = c.groups.length === 1 && !c.groups[0].title;
   return (
     <div className="fpanel-wrap" onClick={onClose}>
@@ -124,7 +128,7 @@ function Panel({ c, selected, onClose }: { c: Cat; selected: string[]; onClose: 
 }
 
 // строка выбранных фильтров: чипсы по категориям, свёрнуто — первые 10 + «Ещё»
-export type Chip = { cat: CatKey; catLabel: string; id: string; title: string; href: string };
+export type Chip = { cat: string; catLabel: string; id: string; title: string; href: string };
 const COLLAPSED = 10;
 export function SelectedChips({ chips, clearHref }: { chips: Chip[]; clearHref: string }) {
   const [open, setOpen] = useState(false);

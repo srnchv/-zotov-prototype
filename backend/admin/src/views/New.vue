@@ -50,6 +50,7 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <div class="field" v-if="t === 'material'"><label>Уровень доступа</label><div class="chips"><span v-for="(l, v) in ACCESS" :key="v" class="fchip" :class="{ on: f.access === v }" @click="f.access = f.access === v ? '' : v">{{ l }}</span></div></div>
       <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
+          <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
       <div class="field"><label>Публикация</label><div class="chips"><span class="fchip" :class="{ on: f.status === 'published' }" @click="f.status = 'published'">Опубликовать сразу</span><span class="fchip" :class="{ on: f.status === 'draft' }" @click="f.status = 'draft'">Создать черновиком</span></div>

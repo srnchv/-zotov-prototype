@@ -33,6 +33,7 @@ export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
 // специфичные поля после общих
 export const SPECIFIC: Record<string, [string, string, string?][]> = {
   place: [["city", "Город", "Москва"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"]],
+  event: [["city", "Город", "dict:city"]], // для фильтра «Город» в хронографе; подставляется из привязанного места
   project: [["curators", "Кураторы"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],

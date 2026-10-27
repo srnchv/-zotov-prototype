@@ -17,6 +17,7 @@ const SECS: Sec[] = [
   { key: "srcType", title: "Тексты — типы", where: "карточка текста (источника); фильтр «Текст»", sub: true, addLabel: "тип" },
   { key: "prType", title: "Проекты Центра — типы", where: "карточка проекта", sub: true, addLabel: "тип" },
   { key: "orgType", title: "Организации — типы", where: "карточка организации", sub: true, addLabel: "тип" },
+  { key: "city", title: "Города", where: "карточка места и события; фильтр «Город» в хронографе и на карте", sub: false, addLabel: "город" },
   { key: "a11y", title: "Доступность", where: "карточка материала: субтитры, РЖЯ, расшифровка…", sub: false, addLabel: "значение" },
 ];
 const NAV = computed(() => [["period", "Период"], ...SECS.map((s) => [s.key, s.title.split(" — ")[0]]), ["tags", "Теги"], ["access", "Уровни доступа"]]);

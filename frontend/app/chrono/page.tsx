@@ -5,67 +5,53 @@ import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
 import SoftNav from "@/components/SoftNav";
 import ChronoClient from "@/components/ChronoClient";
-import FilterBar, { type Filter } from "@/components/FilterBar";
-import { groupItems } from "@/lib/filters";
+import SearchFilters, { SelectedChips, type Chip } from "@/components/SearchFilters";
+import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
-import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, type Entity } from "@/lib/api";
+import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
+import { fmt, resultsWord } from "@/lib/search";
+import { CKEYS, allEvents, buildChronoCats, chronoRange, decodeSel, removeOne, makeChronoMatch, eventDate, sortInYear, type Sel } from "@/lib/chrono";
 
+// Хронограф по ТЗ DEV (Figma 450:71516): все события по годам, пять категорий фильтров (общий компонент с поиском),
+// таймлайн по диапазону из админки, закрепляется при прокрутке; состояние — в адресе (?person=…&y=1927).
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Хронограф — ЗОТОВ. Архив" };
 
 type SP = Record<string, string | string[] | undefined>;
 const s = (e: Entity, k: string) => String(e[k] ?? "");
-const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
-const list = (v: string | string[] | undefined) => first(v).split(",").filter(Boolean);
-const plural = (n: number) => { const a = n % 10, b = n % 100; return b >= 11 && b <= 14 ? "событий" : a === 1 ? "событие" : a >= 2 && a <= 4 ? "события" : "событий"; };
-const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]).join(",");
-// фильтры по связям (макет: Период · Тип события · Тема · Место · Личности · Выставки)
-const LINK_FILTERS: [string, string, string][] = [["theme", "theme", "Тема"], ["place", "place", "Место"], ["person", "person", "Личности"], ["proj", "project", "Выставки"]];
-const PARAMS = ["dec", "ev", "theme", "place", "person", "proj", "y"];
-
-function mk(sp: Record<string, string>, patch: Record<string, string | undefined>) {
+const arr = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
+function href(base: Record<string, string[]>, patch: Record<string, string[] | undefined>) {
   const p = new URLSearchParams();
-  for (const [k, v] of Object.entries({ ...sp, ...patch })) if (v) p.set(k, v);
+  for (const [k, vs] of Object.entries({ ...base, ...patch })) for (const v of vs || []) if (v) p.append(k, v);
   const q = p.toString();
   return "/chrono" + (q ? "?" + q : "");
 }
-const X = <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2.4 8 6.9l4.5-4.5 1.1 1.1L9.1 8l4.5 4.5-1.1 1.1L8 9.1l-4.5 4.5-1.1-1.1L6.9 8 2.4 3.5l1.1-1.1Z" fill="#262626" /></svg>;
 
 export default async function ChronoPage({ searchParams }: { searchParams: Promise<SP> }) {
   const raw = await searchParams;
-  const sp: Record<string, string> = {};
-  for (const k of PARAMS) if (first(raw[k])) sp[k] = first(raw[k]);
   const [db, site] = await Promise.all([loadArchive(), getSite()]);
-
-  const all = ofType(db, "event").filter((e) => yearOf(e.date)).sort((a, b) => yearOf(a.date) - yearOf(b.date) || a.title.localeCompare(b.title, "ru"));
-  const decs = list(sp.dec), evs = list(sp.ev);
-  const linkSel: Record<string, string[]> = {};
-  for (const [param] of LINK_FILTERS) linkSel[param] = list(sp[param]);
-  const events = all.filter((e) => {
-    const y = yearOf(e.date);
-    if (decs.length && !decs.includes(String(Math.floor(y / 10) * 10))) return false;
-    if (evs.length && !evs.includes(s(e, "evType"))) return false;
-    for (const [param] of LINK_FILTERS) { const sel = linkSel[param]; if (sel.length && !sel.some((id) => (e.links || []).includes(id))) return false; }
-    return true;
-  });
-  const years = [...new Set(events.map((e) => yearOf(e.date)))];
-  const allYears = [...new Set(all.map((e) => yearOf(e.date)))];
-  const decades = [...new Set(all.map((e) => Math.floor(yearOf(e.date) / 10) * 10))];
-  const evTypes = [...new Set(all.map((e) => s(e, "evType")).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru"));
-  const options = (t: string) => ofType(db, t).filter((o) => all.some((e) => (e.links || []).includes(o.id))).sort((a, b) => a.title.localeCompare(b.title, "ru"));
-  const year = Number(sp.y) || 0;
-
-  // чипы выбранных фильтров
-  const chips: { label: string; tags: { t: string; href: string }[] }[] = [];
-  if (decs.length) chips.push({ label: "Период", tags: decs.map((d) => ({ t: `${d}-е`, href: mk(sp, { dec: toggle(decs, d) }) })) });
-  if (evs.length) chips.push({ label: "Тип события", tags: evs.map((v) => ({ t: v, href: mk(sp, { ev: toggle(evs, v) }) })) });
-  for (const [param, , label] of LINK_FILTERS) if (linkSel[param].length) chips.push({ label, tags: linkSel[param].map((id) => ({ t: db[id]?.title || id, href: mk(sp, { [param]: toggle(linkSel[param], id) }) })) });
-
-  const filters: Filter[] = [
-    { param: "dec", label: "Период", selected: decs, groups: [{ title: "", items: decades.map((d) => ({ id: String(d), title: `${d}-е` })) }] },
-    { param: "ev", label: "Тип события", selected: evs, groups: [{ title: "", items: evTypes.map((v) => ({ id: v, title: v })) }] },
-    ...LINK_FILTERS.map(([param, t, label]) => ({ param, label, selected: linkSel[param], groups: groupItems(options(t), t), ph: t === "person" ? "Имя, фамилия" : "Название" })),
-  ];
+  const events = allEvents(db);
+  const cats = buildChronoCats(db, events);
+  const tokens = Object.fromEntries(CKEYS.map((k) => [k, arr(raw[k])])) as Record<string, string[]>;
+  const sel = Object.fromEntries(cats.map((c) => [c.key, decodeSel(c, tokens[c.key] || [])])) as Record<string, Sel>;
+  const match = makeChronoMatch(db, cats, sel);
+  const found = events.filter((e) => eventDate(e).y && match(e));
+  const [from, to] = chronoRange(db, events);
+  const yearsAll = Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const hasAny = new Set(events.map((e) => eventDate(e).y)), hasFound = new Set(found.map((e) => eventDate(e).y));
+  const years = yearsAll.filter((y) => hasFound.has(y));
+  const yearSel = Number(one(raw.y)) || 0;
+  const anyFilter = CKEYS.some((k) => sel[k].ids.length);
+  // чипсы: каждый выбранный элемент отдельно; снятие элемента из группы оставляет остальных по «ИЛИ»
+  const chips: Chip[] = [];
+  for (const c of cats) {
+    const sl = sel[c.key]; if (!sl.ids.length) continue;
+    const title = new Map(c.groups.flatMap((g) => g.items.map((i) => [i.id, i.title] as const)));
+    for (const id of sl.ids) chips.push({ cat: c.key, catLabel: c.chip, id, title: title.get(id) || id, href: href(tokens, { [c.key]: removeOne(c, sl.tokens, id), y: undefined }) });
+  }
+  // количество элементов в кнопке категории — выбранные элементы
+  const selCount = Object.fromEntries(cats.map((c) => [c.key, sel[c.key].ids.map((id) => id)]));
 
   return (
     <>
@@ -77,43 +63,46 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
           <Lettering text="хронограф" />
           <div id="intro">{site.chronoIntro}</div>
 
-          {/* панель: чёрная линия → фильтры → лента лет (липкая при скролле) → чипы */}
-          <div id="panel">
+          {/* панель: чёрная линия → фильтры → таймлайн (закрепляется) → выбранные фильтры */}
+          <div id="cpanel">
             <div className="div8" />
-            <FilterBar prefix="/chrono" sp={sp} filters={filters} />
-          </div>
-          <div id="ystrip">
-            {allYears.map((y) => <a key={y} data-y={y} className={(year === y ? "on" : "") + (years.includes(y) ? "" : " dim")} href={mk(sp, { y: String(y) })}>{y}</a>)}
-          </div>
-          {chips.length ? (
-            <div id="chips">
-              {chips.map((g) => <div className="chg" key={g.label}><span className="l">{g.label}</span><span className="tags">{g.tags.map((t) => <a key={t.href} href={t.href}>{t.t}{X}</a>)}</span></div>)}
-              <a className="clr" href={mk({}, { y: sp.y })}>Очистить</a>
+            <div id="cfilters"><SearchFilters cats={cats} sel={selCount} prefix="/chrono" groupTokens /></div>
+            <div id="tline" className={years.length ? undefined : "all-dim"}>
+              <div className="tl-row">
+                {yearsAll.map((y) => {
+                  const ok = anyFilter ? hasFound.has(y) : hasAny.has(y);
+                  return ok ? <a key={y} data-y={y} className={yearSel === y ? "on" : undefined} href={href(tokens, { y: [String(y)] }) + "#y-" + y}>{y}</a> : <span key={y} className="dim">{y}</span>;
+                })}
+              </div>
             </div>
-          ) : null}
-
-          {/* годы: слева год с линией, справа сетка карточек по 276 */}
-          <div id="years">
-            {years.map((y) => (
-              <section className="yblock" key={y} id={"y-" + y}>
-                <div className="ylab"><div className="div8" /><div className="yn">{y}</div><div className="yc">{(() => { const n = events.filter((e) => yearOf(e.date) === y).length; return `${n} ${plural(n)}`; })()}</div></div>
-                <div className="ygrid">
-                  {events.filter((e) => yearOf(e.date) === y).map((e) => {
-                    const im = imgOf(db, e);
-                    const place = linked(db, e, "place")[0];
-                    return (
-                      <a className="vcard small ev" key={e.id} href={`/m/${e.id}`}>
-                        <div className="dv" />
-                        <div className="tx"><h3>{e.title}</h3><div className="sub">{s(e, "date")}</div><div className="vb" /><div className="inf"><b>{s(e, "evType") || "Событие"}</b>{place ? <span>{place.title}</span> : null}</div></div>
-                        {im ? <div className="im"><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
-                      </a>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-            {!years.length ? <div id="empty">По выбранным фильтрам событий нет.</div> : null}
+            {anyFilter ? <SelectedChips chips={chips} clearHref="/chrono" /> : null}
           </div>
+
+          {found.length ? (
+            <>
+              <div id="ccount"><h2>{fmt(found.length)} {resultsWord(found.length)}</h2></div>
+              <div id="years">
+                {years.map((y) => (
+                  <section className="yblock" key={y} id={"y-" + y}>
+                    <div className="ylab"><div className="div8" /><div className="yn">{y}</div></div>
+                    <div className="ygrid">
+                      {found.filter((e) => eventDate(e).y === y).sort(sortInYear).map((e) => {
+                        const im = imgOf(db, e);
+                        return (
+                          <a className="vcard small ev" key={e.id} href={`/m/${e.id}`}>
+                            <div className="dv" />
+                            <div className="tx"><h3>{e.title}</h3><div className="vb" /><div className="inf"><b>Событие</b>{(() => { const t = s(e, "subtype") || s(e, "evType"); return t && t !== "Событие" ? <span>{t}</span> : null; })()}</div></div>
+                            {im ? <div className="im"><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <div className="rend" />
+            </>
+          ) : <EmptyResults />}
         </div>
         <Footer site={site} />
       </div>

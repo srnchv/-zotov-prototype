@@ -6,7 +6,7 @@ export type Leaf = { id: string; title: string };
 // группа фильтра: title "" — плоский список; leaf — тип без подтипов (одна строка с чекбоксом на уровне групп)
 export type Group = { id: string; title: string; items: Leaf[]; leaf?: boolean };
 export type CatKey = "mat" | "theme" | "place" | "person" | "event" | "coll" | "text" | "per";
-export type Cat = { key: CatKey; label: string; chip: string; ph: string; groups: Group[] };
+export type Cat = { key: CatKey; label: string; chip: string; ph: string; groups: Group[] }; // = FCat из SearchFilters с типизированным ключом
 export type Params = { q: string; sel: Record<CatKey, string[]>; type: string; sort: string; page: number };
 export const CAT_KEYS: CatKey[] = ["mat", "theme", "place", "person", "event", "coll", "text", "per"];
 export const PER_PAGE = 48;

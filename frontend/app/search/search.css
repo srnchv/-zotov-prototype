@@ -19,18 +19,6 @@
 #sfbar{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
 #sfbar .fcell{background:var(--grey4)}
 
-/* выбранные фильтры: серая подложка, чипсы в один поток с подписью категории */
-#schips{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--grey4);font-size:14.1px;line-height:16px;font-weight:500}
-.schip-w{display:contents}
-.schip-l{color:var(--grey2);padding:4px}
-.schip{display:flex;align-items:center;gap:4px;background:#fff;padding:4px;color:var(--ink)}
-.schip span{padding:0 4px}
-.schip:hover{color:var(--red)}
-.schip-more{display:flex;align-items:center;gap:4px;background:var(--ink);color:#fff;border:0;padding:4px;font:inherit;cursor:pointer}
-.schip-more span{padding:0 4px}
-.schip-more:hover{background:var(--red)}
-.schip-clear{color:var(--red);padding:4px 8px}
-.schip-clear:hover{color:var(--ink)}
 
 /* выдача: счётчик 37/36 → панель «Типология / Сортировка» (линия 4 сверху) → сетка */
 #results{padding:12px 12px 0}
@@ -79,13 +67,6 @@ a.pg-n:hover,a.pg-arr:hover{color:var(--red)}
 .pg-arr.off{color:var(--grey3)}
 #results:not(:has(.pgn)) .rend{margin-bottom:144px}
 
-/* пустая выдача: картинка с «?», «ничего не найдено», подсказка; 144 сверху и снизу */
-#empty{display:flex;flex-direction:column;align-items:center;gap:24px;padding:132px 0 144px;text-align:center}
-#empty .eimg{position:relative;width:262px;height:320px;}
-#empty .eimg span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:'Zotov Bold',sans-serif;font-size:220px;line-height:1;color:var(--red)}
-#empty .eimg.has-img span{display:none}
-#empty h2{font-family:var(--hf);font-size:37px;line-height:36px;letter-spacing:-.74px;text-transform:uppercase;font-weight:500;margin-bottom:-20px}
-#empty p{font-size:18px;line-height:20px;letter-spacing:-.18px;font-weight:500}
 
 /* ==== маленький десктоп (1024–1599): контент 1100 ==== */
 @media (max-width:1599px){
@@ -106,16 +87,12 @@ a.pg-n:hover,a.pg-arr:hover{color:var(--red)}
   #intro{padding-top:64px;font-size:20px;line-height:20px;letter-spacing:0}
   #sform input{font-size:20px;line-height:20px;letter-spacing:0}
   #sfbar{grid-template-columns:1fr 1fr}
-  #schips{display:none} /* на мобайле строки выбранных нет: количество видно в названиях категорий */
   #rhead h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
   #rtools{flex-direction:column;gap:16px}
   #grid{grid-template-columns:1fr;row-gap:24px;padding-top:48px}
   .rc{height:368px}
   .pgn.d{display:none}
   .pgn.m{display:flex}
-  #empty .eimg{width:213px;height:260px}
-  #empty .eimg span{font-size:180px}
-  #empty h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px;margin-bottom:-20px}
 }
 
 /* вводный текст: перенос строки из админки — только на десктопах (на планшете и мобайле текст течёт свободно) */
