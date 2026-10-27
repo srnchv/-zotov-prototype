@@ -1,7 +1,7 @@
 // Логика хронографа по ТЗ DEV «Хронограф»: все события архива по годам, пять категорий фильтров
 // (Личность, Организация, Тема, Событие, Город), таймлайн по диапазону из админки.
-// Правило «остатка группы»: в адресе группа хранится как g:<группа>, снятые из неё элементы — как x:<id>;
-// такие элементы работают по «ИЛИ». Элементы, выбранные по одному (обычные id), — по «И».
+// Внутри категории всё по «ИЛИ». Группы в адресе хранятся как g:<группа>, снятые из неё элементы — как x:<id>
+// (компактный адрес и чипсы по элементам).
 import { published, type Entity } from "./api";
 import type { Group, Leaf } from "./search";
 // категория фильтра (структура общая с поиском)
@@ -119,11 +119,8 @@ export function makeChronoMatch(db: Record<string, Entity>, cats: FCat[], sel: R
   const linkedHas = (e: Entity, id: string) => e.id === id || (e.links || []).includes(id);
   for (const c of cats) {
     const sl = sel[c.key]; if (!sl || !sl.ids.length) continue;
-    if (c.key === "person" || c.key === "org" || c.key === "theme") {
-      const anyOf = sl.ids.filter((id) => sl.grouped.has(id)), each = sl.ids.filter((id) => !sl.grouped.has(id));
-      if (anyOf.length) tests.push((e) => anyOf.some((id) => linkedHas(e, id))); // остаток группы — ИЛИ
-      for (const id of each) tests.push((e) => linkedHas(e, id)); // по одному — И
-    }
+    // личности, организации, темы — «ИЛИ» внутри категории (решение 27.10, как и в поиске; в ТЗ было «И» для выбранных по одному)
+    if (c.key === "person" || c.key === "org" || c.key === "theme") { const ids = sl.ids; tests.push((e) => ids.some((id) => linkedHas(e, id))); }
     if (c.key === "event") {
       const chosen = new Set(sl.ids);
       const fullTypes = new Set(c.groups.filter((g) => g.items.every((i) => chosen.has(i.id))).map((g) => g.id));
