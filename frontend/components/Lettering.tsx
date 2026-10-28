@@ -1,8 +1,10 @@
 // Леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине; пробел — отдельный слот.
 // Высота и кегль — по брейкпоинту (переменные --lt-* в globals.css: 120/137, 86/97, 64/57).
-export const Lettering = ({ text, cream }: { text: string; cream?: boolean }) => (
-  <div className={"lt" + (cream ? " cream" : "")}>{[...text].map((c, i) => <span key={i} className={c === " " ? "sp" : undefined}>{c}</span>)}</div>
-);
+// h1 — заголовок страницы (поиск, разделы, хронограф, карта): тот же вид, но семантический H1 для поисковиков
+export const Lettering = ({ text, cream, h1 }: { text: string; cream?: boolean; h1?: boolean }) => {
+  const Tag = h1 ? "h1" : "div";
+  return <Tag className={"lt" + (cream ? " cream" : "")}>{[...text].map((c, i) => <span key={i} className={c === " " ? "sp" : undefined}>{c}</span>)}</Tag>;
+};
 // Ссылка «Все …» под секцией (section-link): линия сверху 8, текст справа, кружок со стрелкой
 // textM — подпись для планшета и мобайла, если отличается («Смотреть на карте» / «Все места»)
 export const SectionLink = ({ href, text, textM }: { href: string; text: string; textM?: string }) => (

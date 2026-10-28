@@ -60,7 +60,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
           <SoftNav root="chr" prefix="/chrono" />
           <ChronoClient />
           <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
-          <Lettering text="хронограф" />
+          <Lettering text="хронограф" h1 />
           <div id="intro">{site.chronoIntro}</div>
 
           {/* панель: чёрная линия → фильтры → таймлайн (закрепляется) → выбранные фильтры */}

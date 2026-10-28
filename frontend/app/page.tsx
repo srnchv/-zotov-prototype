@@ -86,6 +86,7 @@ export default async function Home() {
         {/* ---- первый экран ---- */}
         <div className="mhead sticky"><MobileMenu centerUrl={site.centerUrl} /></div>
         <section id="hero">
+          <h1 className="vh">Цифровой архив Центра «Зотов»</h1>
           <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
           <div id="lede">{heroL.map((t, i) => <span className={HERO_AL[i]} key={i}>{t}</span>)}</div>
           <div id="lede-m">

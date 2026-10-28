@@ -57,7 +57,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
         <div id="mapp">
           <SoftNav root="mapp" prefix="/map" />
           <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
-          <Lettering text="карта" />
+          <Lettering text="карта" h1 />
           <div id="intro">{site.mapIntro}</div>
 
           <div id="spanel">

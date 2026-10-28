@@ -115,6 +115,7 @@ export function createApp() {
     app.get(/^\/admin(\/.*)?$/, (_req, res) => res.sendFile(path.join(adminDir, "index.html")));
   }
 
+  app.get("/robots.txt", (_req, res) => res.type("text/plain").send("User-agent: *\nDisallow: /\n"));
   app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.4.0" }));
   // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
   // ymapsV3 — ключ открыт для JavaScript API 3.0 (YANDEX_JS_V3=1): фронт включает векторную карту со стилями дизайнера; иначе 2.1

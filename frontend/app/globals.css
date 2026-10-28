@@ -69,6 +69,8 @@ a{color:inherit;text-decoration:none}
 .mlogin:hover{background:var(--red)}
 
 /* ==== леттеринг секции (title-section/big): буквы Zotov Bold, разнесены по ширине ==== */
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h1.lt{margin:0;font-weight:inherit}
 .lt{display:flex;justify-content:space-between;align-items:center;height:var(--lt-h);padding:0 8px;font-family:'Zotov Bold',sans-serif;font-size:var(--lt-fs);line-height:var(--lt-lh);color:var(--ink);overflow:hidden}
 .lt span{display:inline-block;min-width:55px;text-align:center} /* широкие буквы (ф, ш) шире ячейки 55 — ячейка растёт, крайняя не вылезает за край */
 .lt.cream{color:#fffadc}

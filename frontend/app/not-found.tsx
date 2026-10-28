@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+export const metadata: Metadata = { title: "Не найдено", robots: { index: false, follow: false } };
 export default function NotFound() {
   return (<div id="rest" style={{ padding: "120px 24px 24px", fontSize: 20, minHeight: "100vh" }}>
     <h1 style={{ fontSize: 50, lineHeight: "48px", textTransform: "uppercase", letterSpacing: -1.5 }}>Не найдено</h1>

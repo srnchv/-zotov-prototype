@@ -16,6 +16,11 @@ npm i && NEXT_PUBLIC_API_URL=https://srnchv-zotov-prototype-27ea.twc1.net/api np
 ## Деплой (Timeweb App Platform)
 Новое приложение → Docker → тот же репозиторий, подпапка `frontend/`, порт 3000. Переменная `NEXT_PUBLIC_API_URL` — адрес API (по умолчанию стенд).
 
+## Домен и индексация
+- `SITE_URL` — основной домен (по умолчанию `https://archive.centrezotov.ru`): canonical, sitemap, OG-ссылки.
+- Любой другой хост (тестовый стенд `*.twc1.net`, превью) автоматически отдаёт `noindex` и `robots.txt: Disallow: /`, sitemap пустой. `NOINDEX=1` закрывает сайт принудительно, `NOINDEX=0` — открывает независимо от хоста.
+- `/robots.txt`, `/sitemap.xml` (только опубликованные карточки), свои title/description/canonical/og:image у карточек, `noindex` у поиска и разделов с параметрами. Разделы меню (`/cat/theme`, `/cat/person`, `/texts`…) — серверные страницы на базе поиска.
+
 ## Локальный просмотр без деплоя
 ```bash
 cd frontend && npm install && npm run dev

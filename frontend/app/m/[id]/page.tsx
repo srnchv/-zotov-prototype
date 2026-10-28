@@ -12,16 +12,30 @@ import { getSite } from "@/lib/site";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
 import NavRel from "@/components/NavRel";
-import { API, getEntity, loadArchive, linked, mediaKind, imgPos, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
 import YMap from "@/components/YMap";
+import { abs, descOf } from "@/lib/seo";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ id: string }> };
 
+// Свои title / description / canonical / картинка превью у каждой карточки
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const e = await getEntity((await params).id);
-  return { title: e ? `${e.title} — ЗОТОВ. Архив` : "ЗОТОВ — Архив" };
+  const { id } = await params;
+  const [e, db] = await Promise.all([getEntity(id), loadArchive()]);
+  if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) return { title: "Не найдено", robots: { index: false } };
+  const kind = TYPES[e.type]?.l || "";
+  const sub = [kind, s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "role"), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
+  const description = descOf(s(e, "desc"), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
+  const img = imgOf(db, { ...e, links: e.links.map((l) => l.id) } as unknown as Entity, true);
+  const url = abs(`/m/${encodeURIComponent(e.id)}`);
+  return {
+    title: e.title, description,
+    alternates: { canonical: url },
+    openGraph: { type: "article", url, title: e.title, description, images: img ? [{ url: img }] : undefined },
+    twitter: { card: img ? "summary_large_image" : "summary", title: e.title, description, images: img ? [img] : undefined },
+  };
 }
 
 const s = (e: { [k: string]: unknown }, k: string) => String(e[k] ?? "");
