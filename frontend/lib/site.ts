@@ -23,6 +23,9 @@ export const SITE_DEFAULTS = {
   aboutEmail: "archive@centrezotov.ru",
   centerUrl: "https://zotov.center", privacyUrl: "", personalUrl: "", offerUrl: "", copyright: "© Центр Зотов, 2022–2026",
   vk: "", tg: "", yt: "", dzen: "",
+  // SEO (раздел «Тексты сайта» → SEO и «Описания разделов»)
+  seoTitle: "", seoDesc: "", ogImage: "", gscCode: "", ywCode: "", metrikaId: "",
+  catDesc_theme: "", catDesc_project: "", catDesc_person: "", catDesc_collection: "", catDesc_text: "", catDesc_search: "", catDesc_chrono: "", catDesc_map: "",
 };
 export type Site = typeof SITE_DEFAULTS;
 export async function getSite(): Promise<Site> {

@@ -237,6 +237,9 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
             <span v-if="canEdit" class="chip add" style="font-size:12px;padding:4px 8px" @click="picker = 'tag'">＋ тег</span></span></span></div>
         </div>
         <div class="muted" style="font-size:11px;margin-top:6px">Теги служебные: помогают поиску, на сайте не выводятся.</div>
+        <details v-if="o.type !== 'media'" style="margin-top:10px"><summary class="muted" style="font-size:12px;cursor:pointer">SEO-описание <span v-if="o.seoDesc">· задано</span></summary>
+          <div class="muted" style="font-size:11px;margin:6px 0">Необязательно. Текст для поисковой выдачи и превью ссылки, до 160 знаков. Если пусто — берётся первый абзац описания.</div>
+          <textarea class="inp" style="min-height:64px;font-size:13px" maxlength="200" :value="o.seoDesc || ''" :disabled="!canEdit" @change="patch({ payload: { seoDesc: ($event.target as HTMLTextAreaElement).value.trim() } })"></textarea></details>
         <h3>Статистика карточки</h3>
         <div class="metabox">
           <div class="r"><span class="k">Просмотры</span><span class="v">{{ o.views || 0 }}</span></div>

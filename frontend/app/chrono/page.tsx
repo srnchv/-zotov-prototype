@@ -8,6 +8,7 @@ import ChronoClient from "@/components/ChronoClient";
 import SearchFilters, { SelectedChips, type Chip } from "@/components/SearchFilters";
 import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
+import { abs } from "@/lib/seo";
 import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
 import { fmt, resultsWord } from "@/lib/search";
 import { CKEYS, allEvents, buildChronoCats, chronoRange, decodeSel, removeOne, makeChronoMatch, eventDate, sortInYear, type Sel } from "@/lib/chrono";
@@ -15,7 +16,11 @@ import { CKEYS, allEvents, buildChronoCats, chronoRange, decodeSel, removeOne, m
 // Хронограф по ТЗ DEV (Figma 450:71516): все события по годам, пять категорий фильтров (общий компонент с поиском),
 // таймлайн по диапазону из админки, закрепляется при прокрутке; состояние — в адресе (?person=…&y=1927).
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Хронограф — ЗОТОВ. Архив" };
+// описание — из админки («Описания разделов»), варианты с фильтрами в индекс не идут
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
+  const [sp, site] = await Promise.all([searchParams, getSite()]);
+  return { title: "Хронограф", description: site.catDesc_chrono || "История конструктивизма и Центра «Зотов» на шкале времени: события, выставки, премьеры и публикации по годам.", alternates: { canonical: abs("/chrono") }, robots: Object.keys(sp).length ? { index: false, follow: true } : undefined };
+}
 
 type SP = Record<string, string | string[] | undefined>;
 const s = (e: Entity, k: string) => String(e[k] ?? "");

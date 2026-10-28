@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) return { title: "Не найдено", robots: { index: false } };
   const kind = TYPES[e.type]?.l || "";
   const sub = [kind, s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "role"), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
-  const description = descOf(s(e, "desc"), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
+  const description = s(e, "seoDesc") || descOf(s(e, "desc"), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
   const img = imgOf(db, { ...e, links: e.links.map((l) => l.id) } as unknown as Entity, true);
   const url = abs(`/m/${encodeURIComponent(e.id)}`);
   return {

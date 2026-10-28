@@ -9,6 +9,7 @@ import EmptyResults from "@/components/EmptyResults";
 import MapView, { type MPlace } from "@/components/MapView";
 import YMap from "@/components/YMap";
 import { getSite } from "@/lib/site";
+import { abs } from "@/lib/seo";
 import { loadArchive, getConfig, imgOf, imgPos, type Entity } from "@/lib/api";
 import { fmt, resultsWord } from "@/lib/search";
 import { removeOne } from "@/lib/chrono";
@@ -17,7 +18,11 @@ import { MKEYS, allPlaces, buildMapCats, runMap, coordsOf, placeStatus, placeTyp
 // Карта по ТЗ DEV (Figma 123:27632): поиск по названию и адресу, шесть категорий фильтров (общий компонент),
 // счётчик, карта с флажками и кластерами, карточка места, список; состояние — в адресе (?q=…&city=…&place=…).
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Карта — ЗОТОВ. Архив" };
+// описание — из админки («Описания разделов»), варианты с фильтрами в индекс не идут
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
+  const [sp, site] = await Promise.all([searchParams, getSite()]);
+  return { title: "Карта", description: site.catDesc_map || "Конструктивистские адреса на карте: здания, клубы и инженерные сооружения, связанные с героями архива.", alternates: { canonical: abs("/map") }, robots: Object.keys(sp).length ? { index: false, follow: true } : undefined };
+}
 
 type SP = Record<string, string | string[] | undefined>;
 const s = (e: Entity, k: string) => String(e[k] ?? "");
