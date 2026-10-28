@@ -33,17 +33,17 @@ npm test
 | DELETE | /api/entities/:id/links/:targetId | развязать 🔒 |
 | GET | /api/search?q= | поиск: прямые совпадения + связанные, группировка по типам |
 
-🔒 — заголовок `Authorization: Bearer <ADMIN_TOKEN>` (по умолчанию `dev-token`).
+🔒 — заголовок `Authorization: Bearer <токен сессии>` (логин в админке) или служебный `<ADMIN_TOKEN>`.
 
 ## Переменные окружения
-`PORT` (3000) · `DB_PATH` (./data/zotov.db) · `ADMIN_TOKEN` (dev-token — на стенде сменить!)
+`PORT` (3000) · `DB_PATH` (./data/zotov.db) · `ADMIN_TOKEN` и `JWT_SECRET` (обязательны в production) · `ADMIN_LOGIN` / `ADMIN_PASSWORD` (первый администратор при пустой базе) · `CORS_ORIGINS` (домены сайта и админки через запятую)
 
 ## Деплой на тестовый хостинг
 Docker-образ самодостаточен (`Dockerfile`), БД — файл в volume `/data`, при первом
 старте сидится автоматически. Подходит любой хостинг с Docker и volume:
 - **Timeweb Cloud / Amvera** (РФ-карты): «приложение из Git» → каталог `backend/`, Dockerfile подхватится.
 - **Railway / Render**: New Service → repo, Root Directory = `backend`.
-Обязательно задать `ADMIN_TOKEN` в переменных окружения стенда.
+Без `ADMIN_TOKEN` и `JWT_SECRET` production-сервер (NODE_ENV=production или задан DATABASE_URL) не стартует; значений по умолчанию нет.
 
 ## Что дальше (план разработки)
 - [ ] PostgreSQL-адаптер (pg) + миграции

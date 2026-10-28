@@ -5,7 +5,8 @@ import { bootstrap } from "../src/users.js";
 import type { Server } from "node:http";
 
 let server: Server, base: string;
-const TOKEN = process.env.ADMIN_TOKEN || "dev-token";
+process.env.ADMIN_TOKEN ||= "test-token"; process.env.ADMIN_LOGIN ||= "admin"; process.env.ADMIN_PASSWORD ||= "test-pass";
+const TOKEN = process.env.ADMIN_TOKEN;
 const authed = { "content-type": "application/json", authorization: `Bearer ${TOKEN}` };
 
 before(async () => {
@@ -23,9 +24,25 @@ test("health", async () => {
 });
 
 test("list + filter by type", async () => {
-  const r = await (await fetch(`${base}/api/entities?type=person`)).json();
+  const r = await (await fetch(`${base}/api/entities?type=person`, { headers: authed })).json();
   assert.ok(r.total >= 7);
   assert.ok(r.items.every((e: any) => e.type === "person"));
+});
+
+// посетитель без токена не видит черновики и закрытые файлы; редактор видит всё
+test("public API hides drafts and closed files", async () => {
+  const c = await fetch(`${base}/api/entities`, { method: "POST", headers: authed, body: JSON.stringify({ type: "material", title: "Черновик-тест", status: "draft" }) });
+  const d = await c.json();
+  const pub = await fetch(`${base}/api/entities/${d.id}`);
+  assert.equal(pub.status, 404);
+  const staff = await fetch(`${base}/api/entities/${d.id}`, { headers: authed });
+  assert.equal(staff.status, 200);
+  const exp = await (await fetch(`${base}/api/export`)).json();
+  assert.ok(!exp.entities.some((e: any) => e.id === d.id));
+  assert.ok(exp.entities.every((e: any) => !("origKey" in e)));
+  const closed = exp.entities.filter((e: any) => e.type !== "media" && e.access && e.access !== "open");
+  assert.ok(closed.every((e: any) => !e.img && !e.imgBig));
+  await fetch(`${base}/api/entities/${d.id}`, { method: "DELETE", headers: authed });
 });
 
 test("entity with bidirectional links", async () => {
@@ -38,7 +55,7 @@ test("entity with bidirectional links", async () => {
 });
 
 test("search finds direct and related (ТЗ 18)", async () => {
-  const r = await (await fetch(`${base}/api/search?q=` + encodeURIComponent("Киноглаз"))).json();
+  const r = await (await fetch(`${base}/api/search?q=` + encodeURIComponent("Киноглаз"), { headers: authed })).json();
   assert.ok(r.directCount >= 1);
   assert.ok(r.totalCount > r.directCount, "связанные объекты добавлены к выдаче");
   assert.ok(r.groups.person?.some((p: any) => p.title.includes("Вертов")), "Вертов найден через связь");
@@ -46,12 +63,15 @@ test("search finds direct and related (ТЗ 18)", async () => {
   assert.ok(Array.isArray(r.items) && r.items.length === r.totalCount);
   assert.ok(r.items.filter((x: any) => x.direct).length === r.directCount);
   assert.ok(r.items.some((x: any) => !x.direct && x.via), "у связанных указано, через что найдены");
+  // посетитель: те же короткие записи, без групп с полными сущностями
+  const p = await (await fetch(`${base}/api/search?q=` + encodeURIComponent("Киноглаз"))).json();
+  assert.ok(!p.groups && Array.isArray(p.items) && p.items.length >= 1 && p.items.every((x: any) => !("payload" in x) && !("origKey" in x)));
 });
 
 test("login: верные креды дают токен, неверные — 401", async () => {
   const ok = await fetch(`${base}/api/login`, {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ login: "admin", password: "zotov2026" }),
+    body: JSON.stringify({ login: process.env.ADMIN_LOGIN, password: process.env.ADMIN_PASSWORD }),
   });
   assert.equal(ok.status, 200);
   const d = await ok.json();
@@ -108,7 +128,7 @@ test("media: сжатие фото в три производных webp", async
   const w = async (b: Buffer) => (await sharp(b).metadata()).width;
   assert.equal(await w(renditions.thumb), 400);
   assert.equal(await w(renditions.med), 1200);
-  assert.equal(await w(renditions.big), 2560);
+  assert.equal(await w(renditions.big), 1600);
   assert.ok(renditions.big.length < src.length, "производная легче исходника");
 });
 

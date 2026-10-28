@@ -1,6 +1,8 @@
 import { createApp } from "./app.js";
 import { q } from "./db.js";
-import { bootstrap } from "./users.js";
+import { bootstrap, requireSecrets } from "./users.js";
+
+requireSecrets();
 
 // автосид: пустая база наполняется данными прототипа при первом старте
 const count = Number((await q.get("SELECT count(*) c FROM entities")).c);

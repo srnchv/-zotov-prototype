@@ -17,21 +17,33 @@ const ah = (fn: (req: express.Request, res: express.Response) => Promise<unknown
 
 export function createApp() {
   const app = express();
-  app.use(cors());
+  // CORS: только домены сайта и админки (CORS_ORIGINS через запятую); без переменной — любой (локальная разработка)
+  const origins = (process.env.CORS_ORIGINS || "").split(",").map((x) => x.trim()).filter(Boolean);
+  app.use(cors(origins.length ? { origin: (o, cb) => cb(null, !o || origins.includes(o)) } : {}));
+  // ограничение частоты: вход и загрузки (в памяти процесса; окно 1 минута)
+  const buckets = new Map<string, { n: number; t: number }>();
+  const limit = (max: number): express.RequestHandler => (req, res, next) => {
+    if (buckets.size > 10000) buckets.clear();
+    const key = req.path + "|" + (req.ip || ""); const now = Date.now(); const b = buckets.get(key);
+    if (!b || now - b.t > 60000) { buckets.set(key, { n: 1, t: now }); return next(); }
+    if (++b.n > max) return res.status(429).json({ error: "too many requests" });
+    next();
+  };
   app.use(express.json({ limit: "1mb" }));
 
   // Авторизация: сессионный токен пользователя (роли admin / editor / moderator) либо служебный ADMIN_TOKEN (скрипты, интеграции).
-  const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-token";
+  const ADMIN_TOKEN = process.env.ADMIN_TOKEN || ""; // пустой — служебный токен выключен
   type Who = { uid: string; role: users.Role; name: string };
-  const whoIs = (req: express.Request): Who | null => {
+  const whoIs = async (req: express.Request): Promise<Who | null> => {
+    if ((req as any).who !== undefined) return (req as any).who;
     const h = String(req.headers.authorization || "");
-    if (!h.startsWith("Bearer ")) return null;
-    const t = h.slice(7);
-    if (t === ADMIN_TOKEN) return { uid: "api", role: "admin", name: "API" };
-    return users.verifyToken(t);
+    let w: Who | null = null;
+    if (h.startsWith("Bearer ")) { const t = h.slice(7); w = ADMIN_TOKEN && t === ADMIN_TOKEN ? { uid: "api", role: "admin", name: "API" } : await users.verifyToken(t); }
+    (req as any).who = w;
+    return w;
   };
-  const auth: express.RequestHandler = (req, res, next) => {
-    const w = whoIs(req);
+  const auth: express.RequestHandler = async (req, res, next) => {
+    const w = await whoIs(req);
     if (!w) return res.status(401).json({ error: "unauthorized" });
     (req as any).who = w;
     // модератор меняет только статус публикации, остальное — чтение
@@ -41,15 +53,15 @@ export function createApp() {
     }
     next();
   };
-  const adminOnly: express.RequestHandler = (req, res, next) => {
-    const w = whoIs(req);
+  const adminOnly: express.RequestHandler = async (req, res, next) => {
+    const w = await whoIs(req);
     if (!w) return res.status(401).json({ error: "unauthorized" });
     if (w.role !== "admin") return res.status(403).json({ error: "forbidden" });
     (req as any).who = w; next();
   };
 
   // Вход: логин/пароль → токен на 30 дней
-  app.post("/api/login", ah(async (req, res) => {
+  app.post("/api/login", limit(10), ah(async (req, res) => {
     const { login, password } = z.object({ login: z.string(), password: z.string() }).parse(req.body);
     const u = await users.findByLogin(login);
     if (!u || !Number(u.active) || !users.checkPassword(password, u.pass_hash)) return res.status(401).json({ error: "bad credentials" });
@@ -57,7 +69,7 @@ export function createApp() {
     res.json({ token: users.issueToken(u), name: u.name, role: u.role, id: u.id });
   }));
   app.get("/api/me", ah(async (req, res) => {
-    const w = whoIs(req);
+    const w = await whoIs(req);
     if (!w) return res.status(401).json({ error: "unauthorized" });
     res.json(w);
   }));
@@ -146,8 +158,28 @@ export function createApp() {
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
   // ключ оригинала в хранилище — служебное поле, наружу не уходит (оригиналы только через /api/media/:id/file)
   const hideOrig = (e: any) => { if (e && e.type === "media" && "origKey" in e) { const { origKey: _o, ...rest } = e; return rest; } return e; };
-  const isStaff = (req: express.Request) => !!whoIs(req);
-  app.get("/api/export", ah(async (req, res) => { const d = await repo.exportAll(); res.json(isStaff(req) ? d : { ...d, entities: d.entities.map(hideOrig) }); }));
+  const isStaff = async (req: express.Request) => !!(await whoIs(req));
+  // что видит посетитель без токена: опубликованные записи; у закрытых материалов (по запросу / ограниченный) —
+  // без ссылок на файлы и копии; медиафайлы закрытых материалов не отдаются вовсе
+  const isPublic = (e: any) => e && !["draft", "moderation"].includes(String(e.status || ""));
+  const FILE_KEYS = ["thumb", "med", "big", "img", "imgBig", "origKey", "embed", "subtitles", "tourPrefix", "url"];
+  const scrub = (e: any) => { const o = { ...e }; for (const k of FILE_KEYS) delete o[k]; return o; };
+  const publicView = (entities: any[]) => {
+    const closed = new Set(entities.filter((e) => e.type !== "media" && String(e.access || "open") !== "open").map((e) => e.id));
+    const out: any[] = [];
+    for (const e of entities) {
+      if (!isPublic(e)) continue;
+      if (e.type === "media") { if (e.parent && closed.has(String(e.parent))) continue; out.push(hideOrig(e)); continue; }
+      out.push(closed.has(e.id) ? scrub(e) : e);
+    }
+    return out;
+  };
+  app.get("/api/export", ah(async (req, res) => {
+    const d = await repo.exportAll();
+    if (await isStaff(req)) return res.json(d);
+    const ents = publicView(d.entities), ids = new Set(ents.map((e) => e.id));
+    res.json({ entities: ents, links: d.links.filter((l: any[]) => ids.has(l[0]) && ids.has(l[1])) });
+  }));
 
   app.get("/api/entities", ah(async (req, res) => {
     const query = z.object({
@@ -158,7 +190,9 @@ export function createApp() {
       offset: z.coerce.number().int().min(0).optional(),
     }).parse(req.query);
     const r = await repo.listEntities(query);
-    res.json(isStaff(req) ? r : { ...r, items: r.items.map(hideOrig) });
+    if (await isStaff(req)) return res.json(r);
+    const items = publicView(r.items);
+    res.json({ total: items.length, items });
   }));
 
   // пересборка медиатеки: закрыть оригиналы, пересчитать копии (водяной знак, ≤1600) — администратор
@@ -172,7 +206,11 @@ export function createApp() {
   app.get("/api/entities/:id", ah(async (req, res) => {
     const e = await repo.getEntity(String(req.params.id));
     if (!e) return res.status(404).json({ error: "not found" });
-    res.json(isStaff(req) ? e : { ...hideOrig(e), links: e.links.map(hideOrig) });
+    if (await isStaff(req)) return res.json(e);
+    if (!isPublic(e) || e.type === "media") return res.status(404).json({ error: "not found" }); // черновики и медиафайлы по id посетителю не отдаём
+    const closed = String((e as any).access || "open") !== "open";
+    const links = e.links.filter(isPublic).filter((l) => !(closed && l.type === "media")).map(hideOrig);
+    res.json({ ...(closed ? scrub(e) : e), links });
   }));
 
   const entityBody = z.object({
@@ -260,7 +298,13 @@ export function createApp() {
 
   app.get("/api/search", ah(async (req, res) => {
     const { q } = z.object({ q: z.string().min(1) }).parse(req.query);
-    res.json(await repo.search(q));
+    const r: any = await repo.search(q);
+    if (await isStaff(req)) return res.json(r);
+    // посетителю — только опубликованное: группы с полными записями не отдаём, items — короткие записи
+    const all = Object.values(r.groups || {}).flat() as any[];
+    const okIds = new Set(all.filter((e) => isPublic(e) && e.type !== "media").map((e) => e.id));
+    const items = (r.items as any[]).filter((it) => okIds.has(it.id));
+    res.json({ query: r.query, directCount: items.filter((i) => i.direct).length, totalCount: items.length, items });
   }));
 
   // ---- Медиа: загрузка с генерацией сжатых производных, оригинал — только по подписанной ссылке ----
@@ -279,7 +323,7 @@ export function createApp() {
     if (!req.file) return res.status(400).json({ error: "no file" });
     res.json(await imp.preview(req.file.buffer, parseResolve(req.body?.resolve)));
   }));
-  app.post("/api/import/run", auth, upload.single("file"), ah(async (req, res) => {
+  app.post("/api/import/run", auth, limit(10), upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
     res.json(await imp.run(req.file.buffer, actor(req), parseResolve(req.body?.resolve)));
   }));
@@ -313,7 +357,7 @@ export function createApp() {
 
   // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour
   const uploadZip = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
-  app.post("/api/tours", auth, uploadZip.single("file"), fixFile, async (req, res) => {
+  app.post("/api/tours", auth, limit(5), uploadZip.single("file"), fixFile, async (req, res) => {
     const tmp = req.file?.path;
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
@@ -328,7 +372,7 @@ export function createApp() {
     } finally { if (tmp) unlink(tmp).catch(() => {}); }
   });
 
-  app.post("/api/media", auth, upload.single("file"), fixFile, async (req, res) => {
+  app.post("/api/media", auth, limit(120), upload.single("file"), fixFile, async (req, res) => {
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
       if (!req.file) return res.status(400).json({ error: "no file" });
@@ -357,9 +401,11 @@ export function createApp() {
     // доступ «по запросу» / ограниченный — только владельцам токена (личный кабинет появится позже)
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
     const access = String((parent?.access ?? m.access) || "open");
-    if (access !== "open" && !whoIs(req)) return res.status(403).json({ error: "access restricted" });
+    const staff = await isStaff(req);
+    if (access !== "open" && !staff) return res.status(403).json({ error: "access restricted" });
+    if (parent && !isPublic(parent) && !staff) return res.status(404).json({ error: "not found" });
     // оригиналы изображений наружу не отдаём вообще: сайту хватает копий ≤1600 (видео/аудио/PDF стримятся для плеера)
-    if (String(m.kind) === "image" && !whoIs(req)) return res.status(403).json({ error: "originals are not public" });
+    if (String(m.kind) === "image" && !staff) return res.status(403).json({ error: "originals are not public" });
     const s = await media.streamOriginal(m.id, req.headers.range as string | undefined);
     if (!s) return res.status(404).json({ error: "not found" });
     res.status(s.status).set(s.headers);

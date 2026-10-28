@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS users (
   role       TEXT NOT NULL DEFAULT 'editor',
   pass_hash  TEXT NOT NULL,
   active     INTEGER NOT NULL DEFAULT 1,
+  sess_ver   INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (${SQL.NOW}),
   last_login TEXT
 );
@@ -113,6 +114,7 @@ if (isPg) {
   await pool.query(`ALTER TABLE entities ADD COLUMN IF NOT EXISTS tsv tsvector
     GENERATED ALWAYS AS (to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(payload,''))) STORED`);
   await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_tsv ON entities USING GIN (tsv)");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS sess_ver INTEGER NOT NULL DEFAULT 1"); // версия сессии: смена роли/пароля/статуса гасит старые токены
   if (trgmAvailable)
     await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_title_trgm ON entities USING GIN (lower(title) gin_trgm_ops)");
   console.log("БД: PostgreSQL (managed), FTS готов" + (trgmAvailable ? " + trgm" : ""));
@@ -123,6 +125,7 @@ if (isPg) {
   const db = new DatabaseSync(DB_PATH);
   try { db.exec("PRAGMA journal_mode=WAL"); } catch { /* WAL недоступен на некоторых FS — ок */ }
   db.exec(SCHEMA);
+  try { db.exec("ALTER TABLE users ADD COLUMN sess_ver INTEGER NOT NULL DEFAULT 1"); } catch { /* колонка уже есть */ }
   db.function("lc", { deterministic: true }, (v: unknown) => String(v ?? "").toLowerCase());
   q = {
     all: async (sql, args = []) => db.prepare(sql).all(...(args as any[])),
