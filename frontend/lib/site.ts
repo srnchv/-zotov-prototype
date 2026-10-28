@@ -34,6 +34,7 @@ export async function getSite(): Promise<Site> {
     for (const k of Object.keys(SITE_DEFAULTS) as (keyof Site)[]) if (typeof e[k] === "string" && e[k].trim()) (out as Record<string, unknown>)[k] = e[k].trim();
     if (e.mapBuildings && typeof e.mapBuildings === "object") out.mapBuildings = e.mapBuildings;
     if (e.mapImgs && typeof e.mapImgs === "object") out.mapImgs = e.mapImgs;
+    if (e.aboutBgFrame && typeof e.aboutBgFrame === "object") out.aboutBgFrame = e.aboutBgFrame;
     // старые построчные поля (hero1–4, about1–3), пока новые не сохранены
     if (!String(e.heroText || "").trim() && e.hero1) out.heroText = [e.hero1, e.hero2, e.hero3, e.hero4].filter(Boolean).join("\n");
     if (!String(e.aboutText || "").trim() && e.about1) out.aboutText = [e.about1, e.about2, e.about3].filter(Boolean).join("\n");
