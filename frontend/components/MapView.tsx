@@ -94,7 +94,7 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
             <div className="mlist-sort">
               <span className="g">Сортировать:</span>
               <button type="button" className="v" onClick={() => setSortOpen((v) => !v)}><span>{SORTS.find(([k]) => k === sort)?.[1]}</span>{Chev}</button>
-              {sortOpen ? <div className="dd-list">{SORTS.map(([k, l]) => <button type="button" key={k} className={"dd-row" + (k === sort ? " on" : "")} onClick={() => { setSort(k); setSortOpen(false); }}>{l}</button>)}</div> : null}
+              {sortOpen ? <div className="msort-list">{SORTS.map(([k, l]) => <button type="button" key={k} className={"msort-row" + (k === sort ? " on" : "")} onClick={() => { setSort(k); setSortOpen(false); }}><span>{l}</span></button>)}</div> : null}
             </div>
             <div className="mlist-items">
               {sorted.map((p) => <button type="button" key={p.id} className={"mlist-it" + (p.id === open ? " on" : "")} onClick={() => { setPlace(p.id); flyTo(p); }}><b>{p.title}</b><span>{p.city}</span></button>)}
