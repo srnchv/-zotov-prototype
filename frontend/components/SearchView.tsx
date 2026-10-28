@@ -8,7 +8,7 @@ import SearchPh from "@/components/SearchPh";
 import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
 import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
-import { buildCats, runSearch, toCard, fmt, resultsWord, CAT_KEYS, KINDS, SORTS, type CatKey } from "@/lib/search";
+import { buildCats, runSearch, toCard, fmt, resultsWord, unitsWord, authorOrYear, CAT_KEYS, KINDS, SORTS, type CatKey } from "@/lib/search";
 
 // Поиск по ТЗ DEV (Figma «Поиск», 50:3709): запрос + 8 категорий фильтров + типология + сортировка + пагинация.
 // Всё состояние — в адресе: ?q=…&mat=…&mat=…&type=…&sort=…&page=… (ссылкой можно поделиться, «Назад» работает).
@@ -39,22 +39,27 @@ function pageList(cur: number, total: number, win: number): (number | "…")[] {
   return out;
 }
 
-// Одна страница на поиск и разделы-категории: у раздела типология зафиксирована (fixed), адрес свой (path)
-export default async function SearchView({ raw, path = "/search", fixed = "", lettering = "поиск" }: { raw: SP; path?: string; fixed?: string; lettering?: string }) {
+// Одна страница на поиск и разделы: у раздела типология зафиксирована (fixed), адрес свой (path).
+// section — режим раздела по макетам DEV «Личности»/«Тексты» (550:75129): свой набор фильтров (catKeys), поиск только по названию,
+// 36 карточек на страницу, счётчик «единиц», интро и плейсхолдер из админки, без типологии.
+export type Section = { catKeys: CatKey[]; intro: string; ph: string; cls: string; cardsOf: "person" | "text" };
+export default async function SearchView({ raw, path = "/search", fixed = "", lettering = "поиск", section }: { raw: SP; path?: string; fixed?: string; lettering?: string; section?: Section }) {
   const href = (base: Record<string, string[]>, patch: Record<string, string[] | undefined>, keepPage = false) => hrefAt(path, base, patch, keepPage);
   const [db, site] = await Promise.all([loadArchive(), getSite()]);
-  const cats = buildCats(db);
-  const sel = Object.fromEntries(CAT_KEYS.map((k) => [k, arr(raw[k])])) as Record<CatKey, string[]>;
-  sel.per.sort(); // годы в чипсах по порядку
+  const keys: CatKey[] = section ? section.catKeys : CAT_KEYS;
+  const cats = buildCats(db).filter((c) => keys.includes(c.key)).sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key));
+  const sel = Object.fromEntries(keys.map((k) => [k, arr(raw[k])])) as Record<CatKey, string[]>;
+  sel.per?.sort(); // годы в чипсах по порядку
   const q = one(raw.q).trim();
   const type = fixed || (KINDS.some(([k]) => k === one(raw.type)) ? one(raw.type) : "");
   const sortIn = SORTS.some(([k]) => k === one(raw.sort)) ? one(raw.sort) : "";
-  const r = runSearch(db, { q, sel, type, sort: sortIn, page: Number(one(raw.page)) || 1 }, cats);
+  const r = runSearch(db, { q, sel, type, sort: sortIn, page: Number(one(raw.page)) || 1, titleOnly: !!section, perPage: section ? 36 : undefined }, cats);
+  const word = section ? unitsWord : resultsWord;
 
   // текущее состояние для ссылок
   const typeQ: Record<string, string[]> = type && !fixed ? { type: [type] } : {};
   const base: Record<string, string[]> = { ...sel, ...(q ? { q: [q] } : {}), ...typeQ, ...(sortIn ? { sort: [sortIn] } : {}) };
-  const anyFilter = CAT_KEYS.some((k) => sel[k].length);
+  const anyFilter = keys.some((k) => sel[k].length);
 
   // чипсы выбранных значений: по категориям, каждый элемент группы — отдельно
   const chips: Chip[] = [];
@@ -65,7 +70,8 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
   }
   const clearAll = href({ ...(q ? { q: [q] } : {}), ...typeQ, ...(sortIn ? { sort: [sortIn] } : {}) }, {});
 
-  const cards = r.items.map((e) => toCard(db, e, (x: Entity) => imgOf(db, x), (x: Entity) => imgPos(db, x)));
+  // карточка текста в разделе «Тексты»: под названием автор, если его нет — год (макет)
+  const cards = r.items.map((e) => { const c = toCard(db, e, (x: Entity) => imgOf(db, x), (x: Entity) => imgPos(db, x)); return section?.cardsOf === "text" ? { ...c, date: authorOrYear(e) } : c; });
   const typeItems = [{ label: "все результаты", href: href(base, { type: undefined }), active: !type },
     ...KINDS.map(([k, l]) => ({ label: l, count: `(${fmt(r.counts[k] || 0)})`, href: r.counts[k] ? href(base, { type: [k] }) : undefined, active: type === k }))];
   const sortItems = SORTS.map(([k, l]) => ({ label: l, href: href(base, { sort: [k] }), active: r.sort === k }));
@@ -80,22 +86,22 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
 
   return (
     <>
-      <div id="rest" className="srch">
+      <div id="rest" className={"srch" + (section ? " sec " + section.cls : "")}>
         <div id="srch">
           <SoftNav prefix={path} />
           <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
           <Lettering text={lettering} h1 />
-          <div id="intro">{site.searchIntro}</div>
+          <div id="intro">{section ? section.intro : site.searchIntro}</div>
 
           <div id="spanel">
             <div id="sform">
               <div className="div8" />
               <form action={path} method="get">
-                {CAT_KEYS.flatMap((k) => sel[k].map((v) => <input type="hidden" name={k} value={v} key={k + v} />))}
+                {keys.flatMap((k) => sel[k].map((v) => <input type="hidden" name={k} value={v} key={k + v} />))}
                 {type && !fixed ? <input type="hidden" name="type" value={type} /> : null}
                 <label htmlFor="home-q">Поиск в архиве</label>
                 <div className="in">
-                  <input id="home-q" name="q" defaultValue={q} placeholder={site.searchPh} data-ph-m={site.searchPhM} autoComplete="off" /><SearchPh />
+                  <input id="home-q" name="q" defaultValue={q} placeholder={section ? section.ph : site.searchPh} data-ph-m={section ? section.ph : site.searchPhM} autoComplete="off" /><SearchPh />
                   <button type="submit" aria-label="Найти"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#262626" strokeWidth="2" /><path d="M15.5 15.5 21 21" stroke="#262626" strokeWidth="2" /></svg></button>
                 </div>
               </form>
@@ -108,7 +114,7 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
             {r.total ? (
               <>
                 <div id="rhead">
-                  <h2>{fmt(r.total)} {resultsWord(r.total)}</h2>
+                  <h2>{fmt(r.total)} {word(r.total)}</h2>
                   <div id="rtools">
                     {fixed ? null : <Dropdown caption="Типология:" value={type ? KINDS.find(([k]) => k === type)![1] : "все результаты"} items={typeItems} />}
                     <Dropdown caption="Сортировка:" value={SORTS.find(([k]) => k === r.sort)![1]} items={sortItems} />
@@ -121,7 +127,7 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
                         <h3>{c.title}</h3>
                         {c.date ? <div className="y">{c.date}</div> : null}
                         <div className="vb" />
-                        <div className="k"><b>{c.type}</b>{c.sub ? <span>{c.sub}</span> : null}</div>
+                        {section?.cardsOf === "person" ? null : section?.cardsOf === "text" ? (c.sub ? <div className="k"><b>{c.sub}</b></div> : null) : <div className="k"><b>{c.type}</b>{c.sub ? <span>{c.sub}</span> : null}</div>}
                       </div>
                       {c.img ? <div className="im"><img src={c.img} alt="" loading="lazy" style={c.pos} /></div> : null}
                     </a>

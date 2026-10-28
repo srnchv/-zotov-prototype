@@ -100,3 +100,9 @@ a.pg-n:hover,a.pg-arr:hover{color:var(--red)}
 /* окно выбора фильтра: планшет — 384 справа, мобайл — на весь экран */
 @media (max-width:1023px){ .srch .fpanel{width:384px} }
 @media (max-width:599px){ .srch .fpanel{width:100%;border-left:0;padding:12px} }
+
+/* разделы «Личности» и «Тексты» (макеты DEV 550:75129): карточка личности без типа; у текста — тип текста подписью и обложка 3:4 целиком */
+.srch.sec.texts .rc .im{width:138px;flex-basis:138px;background:none}
+.srch.sec.texts .rc .im img{object-fit:contain;object-position:left bottom}
+#sfbar .fcell .tm{display:none}
+@media (max-width:401px){#sfbar .fcell .td{display:none}#sfbar .fcell .tm{display:inline}}

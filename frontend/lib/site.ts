@@ -23,6 +23,11 @@ export const SITE_DEFAULTS = {
   aboutEmail: "archive@centrezotov.ru",
   centerUrl: "https://zotov.center", privacyUrl: "", personalUrl: "", offerUrl: "", copyright: "© Центр Зотов, 2022–2026",
   vk: "", tg: "", yt: "", dzen: "",
+  // разделы «Личности» и «Тексты» (макеты DEV 550:75129)
+  personIntro: "Через людей архив читается как история. Выберите персону, чтобы увидеть её роль в материалах (автор, герой, участник, куратор), и переходите к связанным событиям, темам и проектам.",
+  personPh: "Родченко",
+  textsIntro: "Каталоги выставок, исследовательские статьи, периодика и печатная продукция. Многие из этих текстов служат источниками для описаний других материалов архива.",
+  textsPh: "Название текста",
   // SEO (раздел «Тексты сайта» → SEO и «Описания разделов»)
   seoTitle: "", seoDesc: "", ogImage: "", gscCode: "", ywCode: "", metrikaId: "",
   catDesc_theme: "", catDesc_project: "", catDesc_person: "", catDesc_collection: "", catDesc_text: "", catDesc_search: "", catDesc_chrono: "", catDesc_map: "",

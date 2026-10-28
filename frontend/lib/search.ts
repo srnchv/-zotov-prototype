@@ -6,10 +6,16 @@ import { published, linked, type Entity } from "./api";
 export type Leaf = { id: string; title: string };
 // группа фильтра: title "" — плоский список; leaf — тип без подтипов (одна строка с чекбоксом на уровне групп)
 export type Group = { id: string; title: string; items: Leaf[]; leaf?: boolean };
-export type CatKey = "per" | "person" | "city" | "theme" | "event" | "coll" | "mat";
-export type Cat = { key: CatKey; label: string; chip: string; ph: string; groups: Group[] }; // = FCat из SearchFilters с типизированным ключом
-export type Params = { q: string; sel: Record<CatKey, string[]>; type: string; sort: string; page: number };
+export type CatKey = "per" | "person" | "city" | "theme" | "event" | "coll" | "mat" | "org" | "sphere" | "stype";
+export type Cat = { key: CatKey; label: string; labelM?: string; chip: string; ph: string; groups: Group[] }; // = FCat из SearchFilters с типизированным ключом
+// titleOnly — искать только по названию (страницы «Личности» и «Тексты»: имена и названия, без связей и типов); perPage — размер страницы (36 там, 48 в поиске)
+export type Params = { q: string; sel: Partial<Record<CatKey, string[]>>; type: string; sort: string; page: number; titleOnly?: boolean; perPage?: number };
 export const CAT_KEYS: CatKey[] = ["per", "person", "city", "theme", "event", "coll", "mat"]; // порядок по апдейту ТЗ
+// наборы фильтров страниц-разделов по макетам DEV (550:75129): личности и тексты
+export const PAGE_CATS: Record<string, CatKey[]> = { person: ["per", "theme", "city", "org", "sphere", "event"], text: ["per", "stype", "person", "theme", "coll"] };
+export const ALL_CAT_KEYS: CatKey[] = ["per", "person", "city", "theme", "event", "coll", "mat", "org", "sphere", "stype"];
+// сферы деятельности личности — из поля «Роль» («художник, архитектор» → две сферы) и справочника sphere
+export const spheresOf = (e: Entity) => s(e, "role").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
 export const PER_PAGE = 48;
 
 // типология: ключ в URL → подпись в списке (порядок как в макете)
@@ -81,6 +87,7 @@ export function buildCats(db: Record<string, Entity>): Cat[] {
     });
   };
   const flat = (vals: string[]): Group[] => [{ id: "", title: "", items: vals.map((v) => ({ id: v, title: v })) }];
+  const flatIds = (ents: Entity[]): Group[] => [{ id: "", title: "", items: ents.map((x) => ({ id: x.id, title: x.title })) }];
   // личности: тип личности → личности
   const persons = of("person").sort(byTitle);
   const pGroups = dict(db, "group", uniq(persons.map((p) => s(p, "group"))));
@@ -97,8 +104,14 @@ export function buildCats(db: Record<string, Entity>): Cat[] {
   }
   // города: общий справочник (места и события)
   const cities = dict(db, "city", uniq([...of("place").map((p) => s(p, "city")), ...of("event").map((e) => s(e, "city"))]));
+  const orgs = of("org").sort(byTitle);
+  const spheres = dict(db, "sphere", uniq(persons.flatMap(spheresOf)));
+  const stypes = dict(db, "srcType", uniq(of("source").filter((x) => kindOf(x) === "text").map((x) => s(x, "srcType"))));
   return [
     { key: "per", label: "Период", chip: "Период", ph: "Год", groups: decades },
+    { key: "org", label: "Организация", chip: "Организации", ph: "Название", groups: flatIds(orgs) },
+    { key: "sphere", label: "Сфера деятельности", labelM: "Деятельность", chip: "Сфера деятельности", ph: "Сфера", groups: flat(spheres) },
+    { key: "stype", label: "Тип текста", chip: "Тип текста", ph: "Тип", groups: flat(stypes) },
     { key: "person", label: "Личность", chip: "Личность", ph: "Имя, фамилия", groups: personGroups },
     { key: "city", label: "Город", chip: "Город", ph: "Город", groups: [{ id: "", title: "", items: cities.map((c) => ({ id: c, title: c })) }] },
     { key: "theme", label: "Тема", chip: "Тема", ph: "Тема", groups: [{ id: "", title: "", items: of("theme").sort(byTitle).map((t) => ({ id: t.id, title: t.title })) }] },
@@ -125,9 +138,9 @@ function typeTest(groups: Group[], sel: Set<string>, ofType: string) {
 }
 
 type Built = { cats: Cat[]; cat: Record<CatKey, Cat> };
-export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Record<CatKey, string[]>) {
+export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Partial<Record<CatKey, string[]>>) {
   const tests: ((e: Entity) => boolean)[] = [];
-  for (const k of CAT_KEYS) {
+  for (const k of ALL_CAT_KEYS) {
     const chosen = new Set(sel[k] || []);
     if (!chosen.size) continue;
     const c = b.cat[k];
@@ -139,6 +152,10 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Record<C
     // темы и личности — «ИЛИ» внутри категории (решение от 23.10: в ТЗ было «И», но снятие одного чипса из группы давало пустую выдачу)
     if (k === "theme" || k === "person") tests.push((e) => chosen.has(e.id) || (e.links || []).some((id) => chosen.has(id)));
     if (k === "per") { const ys = new Set([...chosen].map(Number)); tests.push((e) => periodYears(e).some((y) => ys.has(y))); } // по своей дате
+    // организации — как личности и темы: сама организация или всё, что с ней связано
+    if (k === "org") tests.push((e) => chosen.has(e.id) || (e.links || []).some((id) => chosen.has(id)));
+    if (k === "sphere") tests.push((e) => selfOrLinked(db, e, (x) => x.type === "person" && spheresOf(x).some((v) => chosen.has(v))));
+    if (k === "stype") tests.push((e) => selfOrLinked(db, e, (x) => x.type === "source" && chosen.has(s(x, "srcType"))));
   }
   return (e: Entity) => tests.every((t) => t(e));
 }
@@ -147,8 +164,12 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Record<C
 const norm = (v: string) => v.toLowerCase().replace(/ё/g, "е").replace(/[«»"“”„'()[\],.:;!?—–-]+/g, " ").replace(/\s+/g, " ").trim();
 const stem = (w: string) => (w.length > 5 ? w.slice(0, w.length - 2) : w); // грубая основа: «выставки» ≈ «выставка»
 const hits = (words: string[], tok: string) => { const st = stem(tok); return words.some((w) => w.startsWith(st)); };
-function relevance(db: Record<string, Entity>, e: Entity, q: string, toks: string[]): number {
+function relevance(db: Record<string, Entity>, e: Entity, q: string, toks: string[], titleOnly = false): number {
   const title = norm(e.title), tw = title.split(" ");
+  if (titleOnly) { // только имя / название
+    if (!toks.every((t) => hits(tw, t))) return 0;
+    return title === q ? 1000 : title.startsWith(q) ? 900 : title.includes(q) ? 800 : 600;
+  }
   const own = [title, ...typeSub(e), s(e, "group"), s(e, "colType"), s(e, "srcType"), s(e, "prType")].map(norm).join(" ").split(" ");
   const rel = (e.links || []).map((id) => db[id]).filter((x) => x && published(x) && x.type !== "media").map((x) => norm(x!.title)).join(" ").split(" ");
   if (!toks.every((t) => hits(own, t) || hits(rel, t))) return 0;
@@ -164,6 +185,8 @@ export type Card = { id: string; title: string; date: string; type: string; sub:
 const plural = (n: number, f: [string, string, string]) => { const a = n % 10, b = n % 100; return f[b >= 11 && b <= 14 ? 2 : a === 1 ? 0 : a >= 2 && a <= 4 ? 1 : 2]; };
 export const fmt = (n: number) => n.toLocaleString("ru-RU");
 export const resultsWord = (n: number) => plural(n, ["результат", "результата", "результатов"]);
+export const unitsWord = (n: number) => plural(n, ["единица", "единицы", "единиц"]);
+export const authorOrYear = (e: Entity) => s(e, "author") || dateLabel(e);
 const nMat = (db: Record<string, Entity>, e: Entity) => { const n = linked(db, e, "material").length; return `${fmt(n)} ${plural(n, ["материал", "материала", "материалов"])}`; };
 function dateLabel(e: Entity) {
   const k = kindOf(e);
@@ -180,6 +203,7 @@ function subLabel(db: Record<string, Entity>, e: Entity) {
   if (k === "theme" || k === "collection") return nMat(db, e);
   if (k === "place") { const [t, sub] = placeTS(e); return sub || t; }
   if (k === "person") return s(e, "group");
+  if (k === "text") return s(e, "srcType");
   return "";
 }
 export function toCard(db: Record<string, Entity>, e: Entity, img: (e: Entity) => string, pos: (e: Entity) => React.CSSProperties | undefined): Card {
@@ -194,7 +218,7 @@ export function runSearch(db: Record<string, Entity>, p: Params, cats: Cat[]) {
   const scored: { e: Entity; r: number }[] = [];
   for (const e of Object.values(db)) {
     if (!inUniverse(e) || !match(e)) continue;
-    const r = toks.length ? relevance(db, e, q, toks) : 1;
+    const r = toks.length ? relevance(db, e, q, toks, p.titleOnly) : 1;
     if (r) scored.push({ e, r });
   }
   // количество по типам — с учётом запроса и фильтров, до типологии
@@ -206,7 +230,8 @@ export function runSearch(db: Record<string, Entity>, p: Params, cats: Cat[]) {
   const az = (a: Entity, b: Entity) => key(a).localeCompare(key(b), "ru");
   const sort = p.sort || "rel"; // по умолчанию релевантность; без запроса она равна у всех — порядок по алфавиту
   list = [...list].sort((a, b) => (sort === "za" ? az(b.e, a.e) : sort === "rel" ? b.r - a.r || az(a.e, b.e) : az(a.e, b.e)));
-  const total = list.length, pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const per = p.perPage || PER_PAGE;
+  const total = list.length, pages = Math.max(1, Math.ceil(total / per));
   const page = Math.min(Math.max(1, p.page), pages);
-  return { total, counts, all: scored.length, page, pages, sort, items: list.slice((page - 1) * PER_PAGE, page * PER_PAGE).map((x) => x.e), cat };
+  return { total, counts, all: scored.length, page, pages, sort, items: list.slice((page - 1) * per, page * per).map((x) => x.e), cat };
 }

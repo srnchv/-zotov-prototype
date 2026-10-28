@@ -39,7 +39,7 @@ export default function SearchFilters({ cats, sel, prefix = "/search", groupToke
       <div id="sfbar">
         {cats.map((c) => (
           <button type="button" className="fcell" key={c.key} onClick={() => setOpen(c.key)}>
-            {Plus}<span className="t"><b>{c.label}</b>{sel[c.key]?.length ? <i>({sel[c.key].length})</i> : null}</span>
+            {Plus}<span className="t">{c.labelM ? <><b className="td">{c.label}</b><b className="tm">{c.labelM}</b></> : <b>{c.label}</b>}{sel[c.key]?.length ? <i>({sel[c.key].length})</i> : null}</span>
           </button>
         ))}
       </div>
