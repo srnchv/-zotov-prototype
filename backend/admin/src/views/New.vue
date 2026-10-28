@@ -16,7 +16,8 @@ const rec = computed(() => t.value === "source" && f.srcKind === "record");
 const typeVals = computed(() => (t.value === "person" && !dictValues("group").length ? ["Деятели эпохи", "Исследователи конструктивизма"] : dictValues(tk.value)));
 const subVals = computed(() => subOptions(tk.value, f[tk.value]));
 const pool = computed(() => S.raw.filter((x) => (picker.value === "tag" ? x.type === "tag" : !["media", "dict", "tag"].includes(x.type)) && !links.value.some((l) => l.id === x.id)));
-async function create() {
+async function create(status?: "published" | "draft") {
+  if (status) f.status = status;
   if (!String(f.title || "").trim()) return toast("Укажите название");
   busy.value = true;
   try {
@@ -63,9 +64,9 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
           </template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
-      <div class="field"><label>Публикация</label><div class="chips"><span class="fchip" :class="{ on: f.status === 'published' }" @click="f.status = 'published'">Опубликовать сразу</span><span class="fchip" :class="{ on: f.status === 'draft' }" @click="f.status = 'draft'">Создать черновиком</span></div>
-        <div class="muted" style="font-size:12px;margin-top:4px">Черновик не виден на публичном сайте — можно доработать и опубликовать позже.</div></div>
-      <div style="display:flex;gap:10px;margin-top:20px"><button class="btn dark" :disabled="busy" @click="create">Создать</button><router-link class="btn" to="/entities">Отмена</router-link></div>
+      <div class="muted" style="font-size:12px;margin-top:16px">«Создать и опубликовать» — карточка сразу появится на сайте. «Сохранить черновиком» — не видна на сайте, можно доработать и опубликовать позже.</div>
+      <!-- две кнопки действия вместо переключателя: сразу понятно, что произойдёт -->
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><button class="btn dark" :disabled="busy" @click="create('published')">Создать и опубликовать</button><button class="btn" :disabled="busy" @click="create('draft')">Сохранить черновиком</button><router-link class="btn" to="/entities" style="margin-left:auto">Отмена</router-link></div>
     </div>
     <div>
       <h3 style="margin-top:0">Связи</h3>
