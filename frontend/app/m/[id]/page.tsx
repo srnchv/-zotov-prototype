@@ -12,7 +12,7 @@ import { getSite } from "@/lib/site";
 import ViewPing from "@/components/ViewPing";
 import ScrollTo from "@/components/ScrollTo";
 import NavRel from "@/components/NavRel";
-import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
+import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, mediaPos, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
 import YMap from "@/components/YMap";
 import { abs, descOf } from "@/lib/seo";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
@@ -98,7 +98,7 @@ export default async function EntityPage({ params }: Props) {
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
   // подпись к фото: своё название файла (caption), иначе название материала; ниже — автор и год файла (необязательные поля)
   const metaOf = (m: Entity) => [s(m, "author"), s(m, "year")].filter(Boolean).join(", ");
-  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: m.focus ? String(m.focus) : undefined, sub: metaOf(m) })) : [];
+  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: mediaPos(m), sub: metaOf(m) })) : [];
   if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
   // 3D-туры — в ту же галерею после фото (эмбед из админки)
   const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
@@ -161,7 +161,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="embed">
               {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
                 : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
-                : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" && slides[0].pos ? { objectPosition: slides[0].pos } : undefined} /></div>
+                : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" ? slides[0].pos : undefined} /></div>
                 : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
                 : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
                 : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}

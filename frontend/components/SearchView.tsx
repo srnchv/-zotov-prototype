@@ -65,7 +65,7 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
   }
   const clearAll = href({ ...(q ? { q: [q] } : {}), ...typeQ, ...(sortIn ? { sort: [sortIn] } : {}) }, {});
 
-  const cards = r.items.map((e) => toCard(db, e, (x: Entity) => imgOf(db, x), (x: Entity) => imgPos(db, x)?.objectPosition as string | undefined));
+  const cards = r.items.map((e) => toCard(db, e, (x: Entity) => imgOf(db, x), (x: Entity) => imgPos(db, x)));
   const typeItems = [{ label: "все результаты", href: href(base, { type: undefined }), active: !type },
     ...KINDS.map(([k, l]) => ({ label: l, count: `(${fmt(r.counts[k] || 0)})`, href: r.counts[k] ? href(base, { type: [k] }) : undefined, active: type === k }))];
   const sortItems = SORTS.map(([k, l]) => ({ label: l, href: href(base, { sort: [k] }), active: r.sort === k }));
@@ -123,7 +123,7 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
                         <div className="vb" />
                         <div className="k"><b>{c.type}</b>{c.sub ? <span>{c.sub}</span> : null}</div>
                       </div>
-                      {c.img ? <div className="im"><img src={c.img} alt="" loading="lazy" style={c.pos ? { objectPosition: c.pos } : undefined} /></div> : null}
+                      {c.img ? <div className="im"><img src={c.img} alt="" loading="lazy" style={c.pos} /></div> : null}
                     </a>
                   ))}
                 </div>

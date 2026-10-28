@@ -9,7 +9,7 @@ import { TYPES, TYPEKEY, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIF
 import Picker from "../components/Picker.vue";
 import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
-import CropModal from "../components/CropModal.vue";
+import CropModal, { type Frames } from "../components/CropModal.vue";
 import TourModal from "../components/TourModal.vue";
 import GeoPick from "../components/GeoPick.vue";
 import { JOB, jobText } from "../lib/tourJob";
@@ -93,7 +93,16 @@ async function onFile() {
   try { await uploadFile(file, props.id); await load(); toast("Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); }
   uplStatus.value = ""; if (fileInput.value) fileInput.value.value = "";
 }
-const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%" } });
+const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%", imgFrame: m.frame || null } });
+// кадр медиафайла (десктоп + мобайл); если это обложка карточки — копируем в саму карточку, карточки на сайте читают оттуда
+async function saveFrame(m: Entity, frames: Frames) {
+  const focus = `${frames.d!.x}% ${frames.d!.y}%`;
+  try {
+    await api("/entities/" + m.id, { method: "PATCH", body: JSON.stringify({ payload: { focus, frame: frames } }) });
+    if (isCover(m)) await api("/entities/" + o.value.id, { method: "PATCH", body: JSON.stringify({ payload: { imgPos: focus, imgFrame: frames } }) });
+    await load(); toast("Кадр сохранён — обновится на сайте"); crop.value = null;
+  } catch (e: any) { toast("Ошибка: " + e.message); }
+}
 // поля подписи файла сохраняются сразу при уходе из поля
 async function patchMedia(mid: string, payload: Record<string, string>) { try { await api("/entities/" + mid, { method: "PATCH", body: JSON.stringify({ payload }) }); await load(); toast("Сохранено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 // многозначные поля (функции, авторы, заказчики): массив строк из справочника
@@ -251,7 +260,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
       </div>
       <div class="right"><button v-if="newTag.trim()" class="btn" @click="createTag">＋ Создать тег «{{ newTag.trim() }}»</button><button class="btn dark" @click="picker = null">Готово</button></div>
     </Modal>
-    <CropModal v-if="crop" :media="crop" :parentId="o.id" @close="crop = null" />
+    <CropModal v-if="crop" :src="crop.med || crop.big || crop.thumb" :frames="crop.frame || null" title="Кадр для карточек" @save="saveFrame(crop, $event)" @close="crop = null" />
     <TourModal v-if="tour" :parentId="o.id" @close="tour = false" />
   </template>
 </template>

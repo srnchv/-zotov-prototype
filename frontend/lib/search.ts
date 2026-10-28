@@ -1,5 +1,6 @@
 // Логика поиска по ТЗ DEV «Поиск»: строка запроса, 8 категорий фильтров, типология, сортировка, пагинация.
 // Работает над снимком архива (loadArchive). Значения фильтров — из справочников админки (dict-*), не хардкод.
+import type React from "react";
 import { published, linked, type Entity } from "./api";
 
 export type Leaf = { id: string; title: string };
@@ -159,7 +160,7 @@ function relevance(db: Record<string, Entity>, e: Entity, q: string, toks: strin
 }
 
 // ---- карточка выдачи (поля по ТЗ) ----
-export type Card = { id: string; title: string; date: string; type: string; sub: string; img: string; pos?: string };
+export type Card = { id: string; title: string; date: string; type: string; sub: string; img: string; pos?: React.CSSProperties };
 const plural = (n: number, f: [string, string, string]) => { const a = n % 10, b = n % 100; return f[b >= 11 && b <= 14 ? 2 : a === 1 ? 0 : a >= 2 && a <= 4 ? 1 : 2]; };
 export const fmt = (n: number) => n.toLocaleString("ru-RU");
 export const resultsWord = (n: number) => plural(n, ["результат", "результата", "результатов"]);
@@ -181,7 +182,7 @@ function subLabel(db: Record<string, Entity>, e: Entity) {
   if (k === "person") return s(e, "group");
   return "";
 }
-export function toCard(db: Record<string, Entity>, e: Entity, img: (e: Entity) => string, pos: (e: Entity) => string | undefined): Card {
+export function toCard(db: Record<string, Entity>, e: Entity, img: (e: Entity) => string, pos: (e: Entity) => React.CSSProperties | undefined): Card {
   return { id: e.id, title: e.title, date: dateLabel(e), type: CARD_TYPE[kindOf(e)] || "", sub: subLabel(db, e), img: img(e), pos: pos(e) };
 }
 

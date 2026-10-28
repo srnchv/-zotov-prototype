@@ -106,3 +106,7 @@ textarea.inp{min-height:110px;resize:vertical}
 .bar>div{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:26px}
 .bar i{display:block;width:100%;max-width:32px;background:var(--ink)}
 @media (max-width:900px){.cab{grid-template-columns:1fr;gap:16px}.side{position:static;display:flex;flex-wrap:wrap;gap:4px}.two{grid-template-columns:1fr}.g4,.g3{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+/* вкладки в модалке кадра */
+.tabs{display:flex;gap:4px;align-items:center;border-bottom:1px solid var(--grey5,#e5e5e5)}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer;color:var(--muted);margin-bottom:-1px}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink)}

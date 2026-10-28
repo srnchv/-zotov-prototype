@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import STYLE from "@/lib/map-style.json";
 
-export type MPlace = { id: string; title: string; city: string; address: string; type: string; status: "exists" | "lost"; lat: number; lon: number; img?: string; pos?: string };
+export type MPlace = { id: string; title: string; city: string; address: string; type: string; status: "exists" | "lost"; lat: number; lon: number; img?: string; pos?: React.CSSProperties };
 const RED = "#f43c3a", INK = "#262626";
 const SORTS: [string, string][] = [["rel", "по релевантности"], ["az", "по алфавиту (А–Я)"], ["za", "по алфавиту (Я–А)"]];
 
@@ -107,7 +107,7 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
           <a className="mcard-in" href={`/m/${cur.id}`}>
             <div className="dv" />
             <div className="tx"><h3>{cur.title}</h3>{cur.address ? <div className="sub">{cur.address}</div> : null}<div className="vb" /><div className="inf"><b>{cur.type || "Место"}</b><span>{cur.status === "lost" ? "Утрачено" : "Существует"}</span></div></div>
-            {cur.img ? <div className="im"><img src={cur.img} alt="" style={cur.pos ? { objectPosition: cur.pos } : undefined} /><i className="go">{Arrow}</i></div> : null}
+            {cur.img ? <div className="im"><img src={cur.img} alt="" style={cur.pos} /><i className="go">{Arrow}</i></div> : null}
             <span className="mcard-open">Открыть страницу места{Arrow}</span>
           </a>
           <button type="button" className="mcard-x" aria-label="Закрыть" onClick={() => setPlace(null)}>{X}</button>

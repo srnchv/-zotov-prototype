@@ -48,7 +48,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
     for (const id of sl.ids) chips.push({ cat: c.key, catLabel: c.chip, id, title: title.get(id) || id, href: href(base, { [c.key]: removeOne(c, sl.tokens, id) }) });
   }
   const selCount = Object.fromEntries(cats.map((c) => [c.key, sel[c.key].ids]));
-  const mplaces: MPlace[] = found.map((p) => { const c = coordsOf(p)!; return { id: p.id, title: p.title, city: s(p, "city"), address: s(p, "address"), type: placeType(p), status: placeStatus(p), lat: c[0], lon: c[1], img: imgOf(db, p, true) || undefined, pos: imgPos(db, p)?.objectPosition as string | undefined }; });
+  const mplaces: MPlace[] = found.map((p) => { const c = coordsOf(p)!; return { id: p.id, title: p.title, city: s(p, "city"), address: s(p, "address"), type: placeType(p), status: placeStatus(p), lat: c[0], lon: c[1], img: imgOf(db, p, true) || undefined, pos: imgPos(db, p) }; });
   const place = one(raw.place);
 
   return (

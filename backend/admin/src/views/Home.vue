@@ -39,6 +39,11 @@ async function img(key: string, ev: Event) {
   try { if (!S.db["site"]) await patchSite({}); const m = await uploadFile(file, "site"); await patchSite({ [key]: m.big || m.med || m.thumb || "" }); toast("Сохранено — обновлено на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); }
   (ev.target as HTMLInputElement).value = "";
 }
+import CropModal from "../components/CropModal.vue";
+const cropKey = ref<string | null>(null);
+const siteObj = (k: string) => { const v = S.db.site?.[k]; return v && typeof v === "object" ? v : null; };
+// превью кадра фона «Об архиве»: блок на высоту экрана — десктоп 16:9, мобайл 360×640
+const ABOUT_PREV = { d: [["Экран «Об архиве», десктоп", 300, 169] as [string, number, number], ["Планшет 768×1024", 192, 256] as [string, number, number]], m: [["Мобайл 360×640", 180, 320] as [string, number, number]] };
 const IMGS: [string, string, string, string][] = [["aboutBg", "Фон «Об архиве»", "3/1", "Фотография на весь блок, под затемнением; блок — на высоту экрана"]];
 const MAPM: [string, string, string, string] = ["mapM", "Планшет и мобайл — одна иллюстрация", "360/462", "вертикальный коллаж без надписи (в 2x)"];
 // вырезки зданий для десктопного коллажа (PNG с прозрачностью, 2x); пусто — стандартная вырезка из макета
@@ -147,8 +152,9 @@ const placeLabel = (id: string) => { const p = S.db[id]; return p ? p.title + (p
       <button v-if="canEdit" class="btn dark" @click="saveTexts">Сохранить тексты</button>
       <div v-for="[k, l, ar, hint] in IMGS" :key="k" class="field" style="margin-top:16px"><label>{{ l }} <span class="muted">— {{ hint }}</span></label>
         <div class="media" :style="{ aspectRatio: ar, maxHeight: '220px', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundImage: siteVal(k) ? `url('${siteVal(k)}')` : '' }"></div>
-        <div v-if="canEdit" style="display:flex;gap:8px;margin-top:8px"><input type="file" accept="image/*" style="display:none" :ref="(el) => (inputs[k] = el as HTMLInputElement)" @change="img(k, $event)"><button class="btn sm" @click="inputs[k]?.click()">＋ Загрузить</button><button v-if="siteVal(k)" class="btn sm" @click="patchSite({ [k]: '' })">Убрать</button></div></div>
+        <div v-if="canEdit" style="display:flex;gap:8px;margin-top:8px"><input type="file" accept="image/*" style="display:none" :ref="(el) => (inputs[k] = el as HTMLInputElement)" @change="img(k, $event)"><button class="btn sm" @click="inputs[k]?.click()">＋ Загрузить</button><button v-if="siteVal(k)" class="btn sm" @click="cropKey = k">Кадр</button><button v-if="siteVal(k)" class="btn sm" @click="patchSite({ [k]: '', [k + 'Frame']: null })">Убрать</button></div></div>
     </div>
   </div>
+  <CropModal v-if="cropKey" :src="siteVal(cropKey)" :frames="siteObj(cropKey + 'Frame')" title="Кадр фона «Об архиве»" :previews="ABOUT_PREV" @save="patchSite({ [cropKey + 'Frame']: $event }); cropKey = null" @close="cropKey = null" />
   <Picker v-if="pickType" :title="TYPES[pickType].pl + ': добавить на главную'" :items="pool" :sub="pickSub" @pick="toggle($event, true); pickType = null" @close="pickType = null" />
 </template>

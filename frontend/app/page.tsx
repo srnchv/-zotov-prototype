@@ -5,7 +5,7 @@ import Gallery from "@/components/Gallery";
 import MapCollage, { BUILDINGS } from "@/components/MapCollage";
 import SearchPh from "@/components/SearchPh";
 import { Lettering, SectionLink } from "@/components/Lettering";
-import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaKind, type Entity } from "@/lib/api";
+import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaPos, frameStyle, framesOf, mediaKind, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -196,15 +196,15 @@ export default async function Home() {
             {colls.map((c, i) => {
               const items = (c.items || {}) as Record<string, { img?: string; caption?: string; hl?: boolean }>;
               const hl = linked(db, c, "material").filter((m) => items[m.id]?.hl).slice(0, 5);
-              const slides: { src: string; title: string; pos?: string }[] = hl.map((m) => {
+              const slides: { src: string; title: string; pos?: React.CSSProperties }[] = hl.map((m) => {
                 const it = items[m.id] || {}; const med = it.img ? db[it.img] : undefined;
                 const src = med && med.type === "media" ? String(med.big || med.med || "") : imgOf(db, m, true);
                 const fileCap = med ? [s(med, "caption"), [s(med, "author"), s(med, "year")].filter(Boolean).join(", ")].filter(Boolean).join(" — ") : "";
-                return { src: src || ph(PH_C, i), title: it.caption || fileCap || m.title, pos: med?.focus ? String(med.focus) : imgPos(db, m)?.objectPosition as string | undefined };
+                return { src: src || ph(PH_C, i), title: it.caption || fileCap || m.title, pos: med ? mediaPos(med) : imgPos(db, m) };
               });
               if (slides.length < 2) { // хайлайты не настроены — обложки материалов коллекции (до 5), иначе обложка
-                const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true)).slice(0, 5).map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m)?.objectPosition as string | undefined }));
-                slides.splice(0, slides.length, ...(fromMats.length >= 2 ? fromMats : [{ src: img(c, ph(PH_C, i), true), title: c.title, pos: imgPos(db, c)?.objectPosition as string | undefined }]));
+                const fromMats = linked(db, c, "material").filter((m) => imgOf(db, m, true)).slice(0, 5).map((m) => ({ src: imgOf(db, m, true), title: m.title, pos: imgPos(db, m) }));
+                slides.splice(0, slides.length, ...(fromMats.length >= 2 ? fromMats : [{ src: img(c, ph(PH_C, i), true), title: c.title, pos: imgPos(db, c) }]));
               }
               return (
                 <a className="vcard big coll" key={c.id} href={`/m/${c.id}`}>
@@ -225,7 +225,7 @@ export default async function Home() {
 
         {/* ---- об архиве: фон из админки на высоту экрана, тексты прибиты к низу ---- */}
         <section id="about">
-          <img className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" />
+          <img className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" style={frameStyle(framesOf(site.aboutBgFrame))} />
           <div className="shade" />
           <Lettering text="об архиве" cream />
           <div className="lead">{aboutL.map((t, i) => <span className={ABOUT_AL[i]} key={i}>{t}</span>)}</div>

@@ -78,13 +78,33 @@ export const mediaKind = (m: Entity) => {
   return "file";
 };
 
-// точка кадра для карточек (задаётся в админке, «Кадр»): своя у сущности или у обложки-медиафайла
-export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperties | undefined => {
-  const own = e.imgPos as string | undefined;
-  if (own) return { objectPosition: own };
-  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image" && x.focus);
-  return m ? { objectPosition: String(m.focus) } : undefined;
+// Кадр фото: точка (x, y в %) и масштаб — отдельно для десктопа (d) и мобайла (m, ≤599px).
+// Задаётся в админке («Кадр»): у медиафайла — frame, у сущности-владельца обложки — imgFrame; старый формат focus/imgPos «x% y%» читается как кадр без масштаба.
+export type Frame = { x: number; y: number; s: number };
+export type Frames = { d?: Frame; m?: Frame };
+const parsePos = (v: unknown): Frame | undefined => { const m = String(v || "").match(/([\d.]+)%\s+([\d.]+)%/); return m ? { x: +m[1], y: +m[2], s: 1 } : undefined; };
+export const framesOf = (frames: unknown, pos?: unknown): Frames | undefined => {
+  const f = (frames && typeof frames === "object" ? (frames as Frames) : undefined) || {};
+  const d = f.d || parsePos(pos);
+  if (!d && !f.m) return undefined;
+  return { d, m: f.m };
 };
+// стиль для <img>: CSS-переменные, которые globals.css превращает в object-position + scale (на мобайле — свои)
+export const frameStyle = (fr?: Frames): React.CSSProperties | undefined => {
+  if (!fr || (!fr.d && !fr.m)) return undefined;
+  const d = fr.d || { x: 50, y: 50, s: 1 };
+  const st: Record<string, string> = { "--fx": `${d.x}%`, "--fy": `${d.y}%`, "--fs": String(d.s || 1) };
+  if (fr.m) { st["--mfx"] = `${fr.m.x}%`; st["--mfy"] = `${fr.m.y}%`; st["--mfs"] = String(fr.m.s || 1); }
+  return st as React.CSSProperties;
+};
+// кадр карточки сущности: свой (обложка) или у привязанного медиафайла-изображения
+export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperties | undefined => {
+  const own = framesOf(e.imgFrame, e.imgPos);
+  if (own) return frameStyle(own);
+  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image" && (x.focus || x.frame));
+  return m ? frameStyle(framesOf(m.frame, m.focus)) : undefined;
+};
+export const mediaPos = (m?: Entity) => (m ? frameStyle(framesOf(m.frame, m.focus)) : undefined);
 
 // публичная конфигурация стенда (ключ Яндекс Карт JavaScript API — доменный, не секрет)
 export async function getConfig(): Promise<{ ymapsKey: string; ymapsV3?: boolean }> {
