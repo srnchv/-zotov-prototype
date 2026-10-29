@@ -213,7 +213,9 @@ export function inspect(buf: Buffer): Inspect {
     const sdef = SHEETS.find((x) => x.sheet === name);
     const template = !!sdef && headers.some((h) => key(h) === "название");
     const type = sdef ? sdef.type : guessType(name, headers);
-    const sample = body.slice(1, 6).map((r) => headers.map((_, i) => norm(r[i]).slice(0, 80)));
+    // примеры значений — без строки пояснений под шапкой (в ней длинные тексты вместо данных)
+    const isHint = (r: unknown[]) => r.filter((c) => norm(c).length > 60).length >= 3;
+    const sample = body.slice(1).filter((r) => !isHint(r)).slice(0, 5).map((r) => headers.map((_, i) => norm(r[i]).slice(0, 80)));
     sheets.push({ name, headers, sample, rows: body.length - 1, template, guess: { type, cols: template ? {} : guessCols(type, headers) } });
   }
   const targets: Record<string, { key: string; label: string }[]> = {};
