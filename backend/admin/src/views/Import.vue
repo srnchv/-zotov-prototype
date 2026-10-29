@@ -66,6 +66,9 @@ const mappingJson = () => { const out: Record<string, { type: string; cols: Reco
 const needMapping = computed(() => !!insp.value && insp.value.sheets.some((sh) => !sh.template));
 const mappingOk = computed(() => Object.values(mapping.value).some((m) => m.on && Object.values(m.cols).includes("title")));
 const mapStage = ref(false); // показываем экран сопоставления (до предпросмотра или по кнопке «изменить»)
+// колонка с именами файлов — одна на лист (выбирается отдельно, чтобы не искать «Файлы» в длинном списке полей)
+const filesCol = (sh: InspSheet) => sh.headers.find((h) => mapping.value[sh.name]?.cols[h] === "files") || "";
+function setFilesCol(sh: InspSheet, h: string) { const m = mapping.value[sh.name]; if (!m) return; for (const x of sh.headers) if (m.cols[x] === "files") m.cols[x] = ""; if (h) m.cols[h] = "files"; }
 function sampleOf(sh: InspSheet, h: string) { const i = sh.headers.indexOf(h); return sh.sample.map((r) => r[i]).filter(Boolean).slice(0, 2).join(" · "); }
 async function start(f: File) {
   xlsx.value = f; done.value = null; plan.value = null; insp.value = null; busy.value = "Читаем таблицу…";
@@ -206,11 +209,16 @@ async function downloadTpl() {
         <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" v-model="mapping[sh.name].on"> <b>{{ sh.name }}</b> <span class="muted">· {{ sh.rows }} строк</span></label>
         <select class="sel inline" :disabled="!mapping[sh.name].on" :value="mapping[sh.name].type" @change="setType(sh, ($event.target as HTMLSelectElement).value)"><option v-for="t in MAP_TYPES" :key="t" :value="t">{{ TYPES[t].pl }}</option></select>
       </div>
+      <div v-if="mapping[sh.name].on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px">
+        <span>Имена файлов (фото, видео, PDF) брать из колонки:</span>
+        <select class="sel inline" :value="filesCol(sh)" @change="setFilesCol(sh, ($event.target as HTMLSelectElement).value)"><option value="">— файлов нет —</option><option v-for="h in sh.headers.filter(Boolean)" :key="h" :value="h">{{ h }}</option></select>
+        <span class="muted" style="font-size:12px">имя файла или его начало: «m0004» подхватит m0004-h.jpg, m0004-n1.jpg…</span>
+      </div>
       <table v-if="mapping[sh.name].on" class="atable" style="margin-top:8px;font-size:13px">
         <thead><tr><th style="width:26%">Колонка в файле</th><th>Примеры значений</th><th style="width:30%">Поле архива</th></tr></thead>
         <tbody><tr v-for="h in sh.headers.filter(Boolean)" :key="h">
           <td><b>{{ h }}</b></td><td class="muted" style="font-size:12px">{{ sampleOf(sh, h) }}</td>
-          <td><select class="sel inline" style="width:100%" v-model="mapping[sh.name].cols[h]"><option value="">— не загружать —</option><option v-for="t in insp.targets[mapping[sh.name].type]" :key="t.key" :value="t.key">{{ t.label }}</option></select></td>
+          <td><select class="sel inline" style="width:100%" v-model="mapping[sh.name].cols[h]"><option value="">— не загружать —</option><option v-for="t in insp.targets[mapping[sh.name].type].filter(t => t.key !== 'files')" :key="t.key" :value="t.key">{{ t.label }}</option><option v-if="mapping[sh.name].cols[h] === 'files'" value="files">Файлы</option></select></td>
         </tr></tbody>
       </table>
       <div v-if="mapping[sh.name].on && !Object.values(mapping[sh.name].cols).includes('title')" class="admbar err" style="margin-top:6px">Нужно указать, какая колонка — «Название»</div>
@@ -249,7 +257,7 @@ async function downloadTpl() {
   </div>
 
   <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с файлами</b> <span class="muted" style="font-size:12px">— необязательно</span>
-    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы» (или по коду объекта: m0004 подхватит m0004-h.jpg, m0004-n1.jpg…). Берутся только файлы из таблицы; первое фото строки станет обложкой. Подпись файла на сайте (название, автор, год) задаётся в таблице через «|» после имени. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
+    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы». Берутся только файлы из таблицы; первое фото строки станет обложкой. Подпись файла на сайте (название, автор, год) задаётся в таблице через «|» после имени. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
       <button class="btn sm" :disabled="!!busy" @click="inpDir?.click()">Выбрать папку</button>
