@@ -18,11 +18,18 @@ const keyOf = (n: string) => n.trim().toLowerCase().normalize("NFC");
 // мягкое сопоставление имени из таблицы с файлом в папке: регистр, расширение (в таблице можно без него),
 // пробелы/подчёркивания/дефисы не важны: «Rodchenko Gallery Picture (1)» найдёт «rodchenko_gallery_picture (1).jpg»
 const loose = (n: string) => keyOf(n).replace(/\.(jpe?g|png|webp|tiff?|gif|mp4|mov|webm|avi|m4v|mp3|wav|m4a|ogg|flac|aac|pdf|docx?|txt)$/i, "").replace(/[\s_\-]+/g, "");
-function findFile(n: string): File | undefined {
-  const exact = folder.value.get(keyOf(n)); if (exact) return exact;
-  const want = loose(n); const hits = [...folder.value.values()].filter((f) => loose(f.name) === want);
-  return hits.length === 1 ? hits[0] : undefined;
+// все файлы по имени из таблицы: точное имя; имя без расширения; код объекта — все файлы, начинающиеся с него
+// («m0004» → m0004-h.jpg, m0004-n1.jpg, m0004-n2.jpg; исторические «-h» идут первыми и становятся обложкой)
+const natural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+function findFiles(n: string): File[] {
+  const exact = folder.value.get(keyOf(n)); if (exact) return [exact];
+  const want = loose(n); if (!want) return [];
+  const same = [...folder.value.values()].filter((f) => loose(f.name) === want);
+  if (same.length) return same.slice(0, 1);
+  const pref = [...folder.value.values()].filter((f) => { const k = loose(f.name); return k.startsWith(want) && !/^\d/.test(k.slice(want.length)) && kindOf(f.name) !== "subs"; });
+  return pref.sort((a, b) => natural(a.name, b.name));
 }
+function findFile(n: string): File | undefined { return findFiles(n)[0]; }
 const ACT: Record<string, string> = { create: "создать", update: "обновить", error: "ошибка" };
 
 // решения по ненайденным связям: key → id карточки | "new" | "" (пропустить); после каждого решения предпросмотр пересчитывается
@@ -113,8 +120,8 @@ async function onDrop(ev: DragEvent) {
 // сверка файлов таблицы с папкой
 const files = computed(() => {
   const need = plan.value?.files || [];
-  const have = need.filter((n) => !!findFile(n)), miss = need.filter((n) => !findFile(n));
-  const used = new Set(have.map((n) => findFile(n)!));
+  const have = need.filter((n) => findFiles(n).length), miss = need.filter((n) => !findFiles(n).length);
+  const used = new Set(have.flatMap((n) => findFiles(n)));
   const extra = [...folder.value.values()].filter((f) => !used.has(f) && kindOf(f.name) !== "subs").length;
   return { need, have, miss, extra };
 });
@@ -124,7 +131,7 @@ const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) =>
 const specOf = (n: string) => plan.value?.rows.flatMap((r) => r.files).find((x) => keyOf(x.name) === keyOf(n));
 const canRun = computed(() => !!plan.value && plan.value.rows.some((r) => r.action !== "error") && !busy.value);
 // очередь загрузки фото: превью из папки, статус по каждому файлу
-type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean; kind: string; subs: { file: File; lang: string }[]; spec: FileSpec };
+type Up = { name: string; card: string; cardId: string; url: string; status: "wait" | "up" | "ok" | "fail" | "miss"; err?: string; cover: boolean; kind: string; subs: { file: File; lang: string }[]; spec: FileSpec; file?: File };
 // вид файла по расширению: фото, видео, аудио, документ
 const extOf = (n: string) => (n.split(".").pop() || "").toLowerCase();
 const kindOf = (n: string) => { const e = extOf(n); return ["jpg", "jpeg", "png", "webp", "tif", "tiff", "gif"].includes(e) ? "image" : ["mp4", "mov", "webm", "avi", "m4v"].includes(e) ? "video" : ["mp3", "wav", "m4a", "ogg", "flac", "aac"].includes(e) ? "audio" : ["pdf", "doc", "docx", "txt"].includes(e) ? "doc" : ["srt", "vtt"].includes(e) ? "subs" : "other"; };
@@ -146,13 +153,17 @@ async function run() {
     const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value)); if (needMapping.value) fd.append("mapping", JSON.stringify(mappingJson()));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
     // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
-    for (const row of r.rows) { let coverSet = false; for (const sp of row.files as FileSpec[]) { const n = sp.name; const f = findFile(n); const k = kindOf(f ? f.name : n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [], spec: sp }); } }
+    for (const row of r.rows) { let coverSet = false; for (const sp of row.files as FileSpec[]) {
+      const found = findFiles(sp.name);
+      if (!found.length) { ups.value.push({ name: sp.name, card: row.title, cardId: row.id, url: "", status: "miss", cover: false, kind: kindOf(sp.name), subs: [], spec: sp, file: undefined }); continue; }
+      for (const f of found) { const k = kindOf(f.name); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: f.name, card: row.title, cardId: row.id, url: k === "image" ? URL.createObjectURL(f) : "", status: "wait", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(f.name) : [], spec: sp, file: f }); }
+    } }
     stage.value = "files";
     for (const u of ups.value) {
       if (u.status !== "wait") continue;
       u.status = "up"; busy.value = `Загружаем фото: ${upStat.value.ok + upStat.value.fail + 1} из ${ups.value.filter((x) => x.status !== "miss").length}`;
       try {
-        const m = await uploadFile(findFile(u.name)!, u.cardId);
+        const m = await uploadFile(u.file!, u.cardId);
         // подпись файла из таблицы: название, автор, год
         const meta: Record<string, string> = {}; if (u.spec.caption) meta.caption = u.spec.caption; if (u.spec.author) meta.author = u.spec.author; if (u.spec.year) meta.year = u.spec.year;
         if (Object.keys(meta).length) await api("/entities/" + m.id, { method: "PATCH", body: JSON.stringify({ payload: meta }) });
@@ -238,11 +249,11 @@ async function downloadTpl() {
   </div>
 
   <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с файлами</b> <span class="muted" style="font-size:12px">— необязательно</span>
-    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы». Берутся только файлы из таблицы; первое фото строки станет обложкой. Подпись файла на сайте (название, автор, год) задаётся в таблице через «|» после имени. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
+    <div class="muted" style="font-size:12px;margin:4px 0 10px">Фото, видео, аудио, PDF — одной папкой; имена латиницей, без пробелов, как в колонке «Файлы» (или по коду объекта: m0004 подхватит m0004-h.jpg, m0004-n1.jpg…). Берутся только файлы из таблицы; первое фото строки станет обложкой. Подпись файла на сайте (название, автор, год) задаётся в таблице через «|» после имени. Субтитры к видео и аудио кладите рядом с тем же именем: <code>film.mp4</code> → <code>film.ru.srt</code>, <code>film.en.vtt</code> (в таблицу их писать не нужно).</div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
       <button class="btn sm" :disabled="!!busy" @click="inpDir?.click()">Выбрать папку</button>
-      <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
+      <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.have.flatMap(findFiles).length > files.have.length"> ({{ files.have.flatMap(findFiles).length }} файлов — по кодам)</template><template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
       <span v-else class="muted" style="font-size:13px">В колонке «Файлы» нет имён — папка не нужна.</span>
     </div>
     <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>

@@ -13,7 +13,7 @@ const COMMON_TAIL: Col[] = [
   { key: "desc", label: "Описание", hint: "текст карточки; абзацы — с новой строки (Alt+Enter)" },
   { key: "access", label: "Доступ", hint: "открытый / по запросу / ограниченный (пусто = открытый)" },
   { key: "status", label: "Публикация", hint: "опубликовано / черновик (пусто = опубликовано)" },
-  { key: "files", label: "Файлы", hint: "имена файлов через «;», у файла можно задать подпись через «|»: имя | название | автор | год. Пример: cover.jpg | Обложка книги | Александр Родченко | 1918; film.mp4" },
+  { key: "files", label: "Файлы", hint: "имена файлов через «;», у файла можно задать подпись через «|»: имя | название | автор | год. Пример: cover.jpg | Обложка книги | Александр Родченко | 1918; film.mp4. Можно указать код: m0004 подхватит из папки m0004-h.jpg, m0004-n1.jpg…" },
   { key: "tags", label: "Теги", hint: "служебные теги через «;»" },
 ];
 const LINK_COLS: [string, string][] = [["person", "Личности"], ["place", "Места"], ["event", "События"], ["theme", "Темы"], ["project", "Проекты Центра"], ["collection", "Коллекции"], ["org", "Организации"], ["material", "Материалы"], ["source", "Тексты"]];
@@ -102,7 +102,8 @@ export async function template(): Promise<Buffer> {
 export type FileSpec = { name: string; caption?: string; author?: string; year?: string };
 type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
 // «имя | название | автор | год» → спецификация файла
-const parseFile = (v: string): FileSpec => { const [name, caption, author, year] = v.split("|").map((x) => norm(x)); return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
+// «нет фото», «—» и прочие пометки кириллицей — не имена файлов
+const parseFile = (v: string): FileSpec => { const [name0, caption, author, year] = v.split("|").map((x) => norm(x)); const name = /[а-яё]/i.test(name0) || name0 === "-" || name0 === "—" ? "" : name0; return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
 // место: «да/yes/существует» → Существует, «снесён/нет/утрачен» → Утрачено; город из адреса «Москва, …» / «г. Москва, …»;
 // авторы/функции/заказчики — списки (через «;», у авторов допускается «,»)
 const CITY_RE = /^(?:г\.\s*)?([А-ЯЁ][а-яё\-]+(?:[ -][А-ЯЁ][а-яё\-]+)?)\s*[,.]\s*(.+)$/;
@@ -135,7 +136,7 @@ const SYN: Record<string, string[]> = {
   subtype: ["подтип", "subtype"], group: ["тип личности", "группа"], role: ["роль", "сфера", "профессия", "деятельность"],
   author: ["автор текста"], publisher: ["издательство", "издатель"], pubplace: ["место издания"], curators: ["кураторы", "куратор"], def: ["определение", "краткое определение"],
   lat: ["широта", "lat", "latitude"], lon: ["долгота", "lon", "lng", "longitude"],
-  files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "photo now", "photo hist"],
+  files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "photo now", "photo hist", "id", "код", "индекс", "code"],
   tags: ["теги", "tags"], access: ["доступ"], status: ["публикация", "статус публикации"],
   "link:person": ["личности", "персоны", "люди", "persons", "people", "участники", "связанные личности"], "link:place": ["места", "связанные места", "связанные объекты", "id connections", "connections", "объекты"],
   "link:event": ["события", "events"], "link:theme": ["темы", "themes", "topics"], "link:project": ["проекты", "проекты центра"], "link:collection": ["коллекции", "коллекция", "collections"],
