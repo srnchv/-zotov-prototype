@@ -30,9 +30,52 @@ const resolve = ref<Record<string, string>>({});
 const resolvedTitle = (u: Unresolved) => { const v = resolve.value[u.key]; if (v === undefined) return ""; if (v === "new") return "создать новую карточку"; if (v === "") return "пропустить связь"; return "→ " + (S.db[v]?.title || v); };
 const picking = ref<Unresolved | null>(null);
 const pickItems = computed(() => (picking.value ? all(picking.value.type) : []) as Entity[]);
+// --- сопоставление колонок: таблица не по шаблону → сервер показывает листы и заголовки с догадкой, редактор правит, выбор запоминается
+type Target = { key: string; label: string };
+type InspSheet = { name: string; headers: string[]; sample: string[][]; rows: number; template: boolean; guess: { type: string; cols: Record<string, string> } };
+type Inspect = { sheets: InspSheet[]; targets: Record<string, Target[]> };
+const insp = ref<Inspect | null>(null);
+const mapping = ref<Record<string, { on: boolean; type: string; cols: Record<string, string> }>>({});
+const MAP_TYPES = ["material", "person", "place", "event", "theme", "project", "collection", "org", "source"];
+const memKey = (sh: InspSheet) => "zotov-import-map:" + sh.headers.map((h) => h.trim().toLowerCase()).join("|");
+function setupMapping(i: Inspect) {
+  const m: typeof mapping.value = {};
+  for (const sh of i.sheets) {
+    if (sh.template) continue;
+    let saved: { type: string; cols: Record<string, string> } | null = null;
+    try { saved = JSON.parse(localStorage.getItem(memKey(sh)) || "null"); } catch {}
+    m[sh.name] = { on: true, type: saved?.type || sh.guess.type, cols: { ...(saved?.cols || sh.guess.cols) } };
+  }
+  mapping.value = m;
+}
+function setType(sh: InspSheet, type: string) { mapping.value[sh.name] = { on: true, type, cols: {} }; /* заново угадать под новый тип — сервер */ reguess(sh, type); }
+async function reguess(sh: InspSheet, type: string) {
+  // догадка для другого типа: те же синонимы, но доступные поля другие — просим сервер (повторный inspect дёшев)
+  const cur = mapping.value[sh.name]; if (!cur) return;
+  const allowed = new Set((insp.value?.targets[type] || []).map((t) => t.key));
+  cur.cols = Object.fromEntries(sh.headers.map((h) => [h, allowed.has(sh.guess.cols[h] || "") ? sh.guess.cols[h] : ""]));
+}
+const mappingJson = () => { const out: Record<string, { type: string; cols: Record<string, string> }> = {}; for (const [n, m] of Object.entries(mapping.value)) if (m.on) out[n] = { type: m.type, cols: m.cols }; return out; };
+const needMapping = computed(() => !!insp.value && insp.value.sheets.some((sh) => !sh.template));
+const mappingOk = computed(() => Object.values(mapping.value).some((m) => m.on && Object.values(m.cols).includes("title")));
+const mapStage = ref(false); // показываем экран сопоставления (до предпросмотра или по кнопке «изменить»)
+function sampleOf(sh: InspSheet, h: string) { const i = sh.headers.indexOf(h); return sh.sample.map((r) => r[i]).filter(Boolean).slice(0, 2).join(" · "); }
+async function start(f: File) {
+  xlsx.value = f; done.value = null; plan.value = null; insp.value = null; busy.value = "Читаем таблицу…";
+  try { const fd = new FormData(); fd.append("file", f); insp.value = await api<Inspect>("/import/inspect", { method: "POST", body: fd }); }
+  catch (e: any) { toast("Ошибка: " + e.message); busy.value = ""; return; }
+  busy.value = "";
+  if (!insp.value.sheets.length) { toast("В таблице нет заполненных листов"); return; }
+  if (needMapping.value) { setupMapping(insp.value); mapStage.value = true; } else { mapStage.value = false; await preview(f); }
+}
+async function applyMappingAndPreview() {
+  if (!xlsx.value || !insp.value) return;
+  for (const sh of insp.value.sheets) { const m = mapping.value[sh.name]; if (m?.on) try { localStorage.setItem(memKey(sh), JSON.stringify({ type: m.type, cols: m.cols })); } catch {} }
+  mapStage.value = false; await preview(xlsx.value);
+}
 async function preview(f: File) {
   xlsx.value = f; done.value = null; busy.value = "Разбираем таблицу…";
-  try { const fd = new FormData(); fd.append("file", f); fd.append("resolve", JSON.stringify(resolve.value)); plan.value = await api<Plan>("/import/preview", { method: "POST", body: fd }); }
+  try { const fd = new FormData(); fd.append("file", f); fd.append("resolve", JSON.stringify(resolve.value)); if (needMapping.value) fd.append("mapping", JSON.stringify(mappingJson())); plan.value = await api<Plan>("/import/preview", { method: "POST", body: fd }); }
   catch (e: any) { toast("Ошибка: " + e.message); plan.value = null; }
   busy.value = "";
 }
@@ -41,7 +84,7 @@ async function unsetResolve(key: string) { const r = { ...resolve.value }; delet
 const decided = computed(() => Object.entries(resolve.value).filter(([k]) => !plan.value?.unresolved.some((u) => u.key === k)));
 async function pickXlsx(ev: Event) {
   const f = (ev.target as HTMLInputElement).files?.[0]; (ev.target as HTMLInputElement).value = ""; if (!f) return;
-  resolve.value = {}; await preview(f);
+  resolve.value = {}; await start(f);
 }
 function addFiles(list: Iterable<File>) {
   const m = new Map(folder.value);
@@ -63,7 +106,7 @@ async function onDrop(ev: DragEvent) {
   const files: File[] = entries.length ? (await Promise.all(entries.map(readEntry))).flat() : [...(ev.dataTransfer?.files || [])];
   const table = files.find((f) => /\.xlsx$/i.test(f.name));
   const imgs = files.filter((f) => kindOf(f.name) !== "other");
-  if (table) { resolve.value = {}; await preview(table); }
+  if (table) { resolve.value = {}; await start(table); }
   if (imgs.length) { addFiles(imgs); if (!plan.value) toast(`Папка принята: ${imgs.length} файлов. Теперь добавьте таблицу.`); }
   if (!table && !imgs.length) toast("Перетащите таблицу .xlsx или папку с файлами");
 }
@@ -100,7 +143,7 @@ async function run() {
   if (!xlsx.value || !plan.value) return;
   stage.value = "cards"; busy.value = "Создаём карточки и связи…"; ups.value = [];
   try {
-    const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value));
+    const fd = new FormData(); fd.append("file", xlsx.value); fd.append("resolve", JSON.stringify(resolve.value)); if (needMapping.value) fd.append("mapping", JSON.stringify(mappingJson()));
     const r = await api<any>("/import/run", { method: "POST", body: fd });
     // очередь файлов по строкам результата: первый файл карточки — обложка; превью — из папки
     for (const row of r.rows) { let coverSet = false; for (const sp of row.files as FileSpec[]) { const n = sp.name; const f = findFile(n); const k = kindOf(f ? f.name : n); const cover = !coverSet && k === "image"; if (cover) coverSet = true; ups.value.push({ name: n, card: row.title, cardId: row.id, url: f && k === "image" ? URL.createObjectURL(f) : "", status: f ? "wait" : "miss", cover, kind: k, subs: k === "video" || k === "audio" ? subsFor(n) : [], spec: sp }); } }
@@ -120,7 +163,7 @@ async function run() {
     }
     await load();
     done.value = r; stage.value = "done";
-    plan.value = null; xlsx.value = null; folder.value = new Map(); resolve.value = {};
+    plan.value = null; xlsx.value = null; folder.value = new Map(); resolve.value = {}; insp.value = null; mapStage.value = false;
   } catch (e: any) { toast("Ошибка импорта: " + e.message); stage.value = ""; }
   busy.value = "";
 }
@@ -145,7 +188,28 @@ async function downloadTpl() {
     </div>
   </div>
 
+  <div v-if="insp && needMapping && mapStage" class="card" style="margin-top:16px"><b>Сопоставление колонок</b>
+    <div class="muted" style="font-size:12px;margin:4px 0 12px;max-width:760px">Таблица не по шаблону — укажите, какой тип карточек на каждом листе и куда идёт каждая колонка. Что удалось угадать — уже проставлено. Две колонки в одно поле допустимы: годы «с» и «по» склеятся в «1926–1927», остальное — через «;». Выбор запомнится для таблиц с такой же шапкой.</div>
+    <div v-for="sh in insp.sheets.filter(x => !x.template)" :key="sh.name" style="margin-bottom:18px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" v-model="mapping[sh.name].on"> <b>{{ sh.name }}</b> <span class="muted">· {{ sh.rows }} строк</span></label>
+        <select class="sel inline" :disabled="!mapping[sh.name].on" :value="mapping[sh.name].type" @change="setType(sh, ($event.target as HTMLSelectElement).value)"><option v-for="t in MAP_TYPES" :key="t" :value="t">{{ TYPES[t].pl }}</option></select>
+      </div>
+      <table v-if="mapping[sh.name].on" class="atable" style="margin-top:8px;font-size:13px">
+        <thead><tr><th style="width:26%">Колонка в файле</th><th>Примеры значений</th><th style="width:30%">Поле архива</th></tr></thead>
+        <tbody><tr v-for="h in sh.headers.filter(Boolean)" :key="h">
+          <td><b>{{ h }}</b></td><td class="muted" style="font-size:12px">{{ sampleOf(sh, h) }}</td>
+          <td><select class="sel inline" style="width:100%" v-model="mapping[sh.name].cols[h]"><option value="">— не загружать —</option><option v-for="t in insp.targets[mapping[sh.name].type]" :key="t.key" :value="t.key">{{ t.label }}</option></select></td>
+        </tr></tbody>
+      </table>
+      <div v-if="mapping[sh.name].on && !Object.values(mapping[sh.name].cols).includes('title')" class="admbar err" style="margin-top:6px">Нужно указать, какая колонка — «Название»</div>
+    </div>
+    <div v-if="insp.sheets.some(x => x.template)" class="muted" style="font-size:12px;margin-bottom:10px">Листы по шаблону ({{ insp.sheets.filter(x => x.template).map(x => x.name).join(", ") }}) загрузятся как обычно.</div>
+    <button class="btn dark" :disabled="!mappingOk || !!busy" @click="applyMappingAndPreview">Продолжить к предпросмотру</button>
+  </div>
+
   <div v-if="plan" class="card" style="margin-top:16px"><b>Предпросмотр</b>
+    <div v-if="needMapping" style="margin:6px 0"><span class="lnk" style="font-size:13px" @click="mapStage = true; plan = null">← изменить сопоставление колонок</span></div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;margin:8px 0;font-size:14px">
       <span>Создать: <b>{{ plan.creates }}</b></span><span>Обновить: <b>{{ plan.updates }}</b></span><span>Связей: <b>{{ plan.links }}</b></span>
       <span :style="plan.errors ? 'color:#9a2e2e' : ''">С ошибками (пропустим): <b>{{ plan.errors }}</b></span>
@@ -207,7 +271,7 @@ async function downloadTpl() {
     </div>
   </div>
   <div v-if="done" class="card" style="margin-top:16px"><b>Готово</b>
-    <div style="font-size:14px;margin-top:8px">Создано: <b>{{ done.created }}</b> · обновлено: <b>{{ done.updated }}</b> · связей: <b>{{ done.linked }}</b> · фото загружено: <b>{{ upStat.ok }}</b><template v-if="upStat.fail"> · <span style="color:#9a2e2e">не загрузилось: {{ upStat.fail }}</span></template><template v-if="done.skipped"> · пропущено строк с ошибками: <b>{{ done.skipped }}</b></template></div>
+    <div style="font-size:14px;margin-top:8px">Создано: <b>{{ done.created }}</b> · обновлено: <b>{{ done.updated }}</b> · связей: <b>{{ done.linked }}</b><template v-if="done.geocoded"> · координаты по адресу: <b>{{ done.geocoded }}</b></template> · фото загружено: <b>{{ upStat.ok }}</b><template v-if="upStat.fail"> · <span style="color:#9a2e2e">не загрузилось: {{ upStat.fail }}</span></template><template v-if="done.skipped"> · пропущено строк с ошибками: <b>{{ done.skipped }}</b></template></div>
     <div class="muted" style="font-size:12px;margin-top:8px">Карточки: <template v-for="(r, i) in done.rows" :key="r.id"><router-link :to="'/edit/' + r.id">{{ r.title }}</router-link><span v-if="i < done.rows.length - 1">, </span></template></div>
     <div class="muted" style="font-size:12px;margin-top:6px">Все изменения записаны в журнал с пометкой «импорт». Карточки — в разделе «Сущности».</div>
   </div>

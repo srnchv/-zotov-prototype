@@ -20,7 +20,7 @@ const LINK_COLS: [string, string][] = [["person", "Личности"], ["place",
 const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string }[] = [
   { type: "material", sheet: "Материалы", dateKey: "date", cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Дата", hint: "год или диапазон: 1927 или 1920–1929" }] },
   { type: "person", sheet: "Личности", dateKey: "life", cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "role", label: "Роль", hint: "художник, архитектор…" }, { key: "life", label: "Годы жизни", hint: "1891–1956" }] },
-  { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "lat", label: "Широта", hint: "55.7563" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
+  { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "okn", label: "Статус ОКН", hint: "федерального значения / регионального значения / выявленный / не является ОКН…" }, { key: "functions", label: "Функции", hint: "через «;»: жильё; клуб" }, { key: "authors", label: "Авторы", hint: "архитекторы через «;» или «,»: Мельников К.С.; Шухов В.Г." }, { key: "customers", label: "Заказчики", hint: "через «;»" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
   { type: "event", sheet: "События", dateKey: "date", cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "date", label: "Дата", hint: "1927 или 12 марта 1927" }] },
   { type: "theme", sheet: "Темы", dateKey: "", cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
   { type: "project", sheet: "Проекты Центра", dateKey: "dates", cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Даты проведения", hint: "12.03–30.06.1927" }, { key: "curators", label: "Кураторы", hint: "" }] },
@@ -28,7 +28,9 @@ const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string }[] = 
   { type: "org", sheet: "Организации", dateKey: "period", cols: [{ key: "orgType", label: "Тип", hint: "", dict: "orgType" }, { key: "period", label: "Период деятельности", hint: "1920 — 1930" }] },
   { type: "source", sheet: "Тексты", dateKey: "year", cols: [{ key: "srcType", label: "Тип текста", hint: "статья, рецензия, каталог…", dict: "srcType" }, { key: "year", label: "Год", hint: "год публикации" }, { key: "author", label: "Автор", hint: "" }, { key: "publisher", label: "Издательство", hint: "" }, { key: "pubplace", label: "Место издания", hint: "" }] },
 ];
-const colsOf = (s: (typeof SHEETS)[number]): Col[] => [...COMMON_HEAD, ...s.cols, ...LINK_COLS.filter(([t]) => t !== s.type).map(([t, l]) => ({ key: "link:" + t, label: l, hint: "названия через «;» — карточки из архива или строки этого файла" })), ...COMMON_TAIL];
+// связи со своим же типом — колонка «Связанные места» / «Связанные личности» и т. д.
+const linkLabel = (t: string, l: string, own: string) => (t === own ? "Связанные " + l.toLowerCase() : l);
+const colsOf = (s: (typeof SHEETS)[number]): Col[] => [...COMMON_HEAD, ...s.cols, ...LINK_COLS.map(([t, l]) => ({ key: "link:" + t, label: linkLabel(t, l, s.type), hint: "названия через «;» — карточки из архива или строки этого файла" })), ...COMMON_TAIL];
 const ACCESS: Record<string, string> = { "открытый": "open", "по запросу": "request", "ограниченный": "restricted" };
 const STATUS: Record<string, string> = { "опубликовано": "published", "черновик": "draft", "на модерации": "moderation" };
 // значения справочников как в админке: из карточек + добавленные − убранные (сущности dict-<ключ>)
@@ -101,6 +103,130 @@ export type FileSpec = { name: string; caption?: string; author?: string; year?:
 type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
 // «имя | название | автор | год» → спецификация файла
 const parseFile = (v: string): FileSpec => { const [name, caption, author, year] = v.split("|").map((x) => norm(x)); return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
+// место: «да/yes/существует» → Существует, «снесён/нет/утрачен» → Утрачено; город из адреса «Москва, …» / «г. Москва, …»;
+// авторы/функции/заказчики — списки (через «;», у авторов допускается «,»)
+const CITY_RE = /^(?:г\.\s*)?([А-ЯЁ][а-яё\-]+(?:[ -][А-ЯЁ][а-яё\-]+)?)\s*[,.]\s*(.+)$/;
+export function normalizePlace(p: { fields: Record<string, string>; title: string }) {
+  const f = p.fields;
+  if (f.placeStatus) { const k2 = key(f.placeStatus); f.placeStatus = /^(да|yes|существует|сохранил|есть)/.test(k2) ? "Существует" : /^(нет|no|снес|утрач|разруш|не сущ|уничтож)/.test(k2) ? "Утрачено" : f.placeStatus; }
+  if (!f.city && f.address) { const m = f.address.match(CITY_RE); if (m) { f.city = m[1]; f.address = m[2].trim(); } }
+  if (f.city && f.address) { const pre = new RegExp("^(?:г\\.\\s*)?" + f.city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*,\\s*", "i"); f.address = f.address.replace(pre, ""); }
+  for (const k of ["functions", "authors", "customers"] as const) if (f[k]) (f as any)[k] = (k === "authors" ? f[k].split(/\s*[;,]\s*(?![^()]*\))/) : split(f[k])).map((x) => x.trim()).filter(Boolean);
+  if (f.date) f.date = f.date.replace(/\.0$/, "").replace(/^(\d{4})\s*[-–—;,]\s*(\d{4})$/, "$1–$2");
+  if (f.okn) { const k2 = key(f.okn); f.okn = k2.includes("федерал") ? "федерального значения" : k2.includes("регион") ? "регионального значения" : k2.includes("местн") ? "местного значения" : k2.includes("выявлен") ? "выявленный" : /лиш|исключ/.test(k2) ? "лишён статуса" : /без статуса|не является|нет/.test(k2) ? "не является ОКН" : f.okn; }
+}
+
+// ---- сопоставление колонок произвольной таблицы с полями шаблона ----
+export type Mapping = Record<string, { type: string; cols: Record<string, string> }>; // лист → тип карточек и «заголовок в файле → ключ поля» ("" — пропустить)
+export type Inspect = { sheets: { name: string; headers: string[]; sample: string[][]; rows: number; template: boolean; guess: { type: string; cols: Record<string, string> } }[]; targets: Record<string, { key: string; label: string }[]> };
+// синонимы заголовков (ключ поля → слова; сравнение по нормализованному заголовку, без регистра)
+const SYN: Record<string, string[]> = {
+  title: ["название", "наименование", "имя", "name", "title", "объект", "фио", "заголовок"],
+  desc: ["описание", "description", "текст", "аннотация", "биография", "об объекте", "описание объекта"],
+  address: ["адрес", "adress", "address", "местоположение"], city: ["город", "city", "населенный пункт"],
+  date: ["дата", "год", "годы", "year", "date", "период", "годы постройки", "год постройки", "year 1", "year 2", "даты"],
+  life: ["годы жизни", "life", "жизнь"], dates: ["даты проведения"], year: ["год публикации", "год издания"], period: ["период деятельности"],
+  placeStatus: ["состояние", "существует", "existance", "existence", "сохранность", "статус здания", "состояние здания"],
+  okn: ["окн", "okn", "статус окн", "охранный статус", "памятник"],
+  authors: ["автор", "авторы", "архитектор", "архитекторы", "architects", "architect", "author", "authors"],
+  customers: ["заказчик", "заказчики", "organisation", "организация-заказчик", "customer"],
+  functions: ["функция", "функции", "назначение", "function"],
+  placeType: ["тип", "type", "типология", "тип объекта", "тип места"], mtype: ["тип материала"], evType: ["тип события"], srcType: ["тип текста"], orgType: ["тип организации"], prType: ["тип проекта"], colType: ["тип коллекции"],
+  subtype: ["подтип", "subtype"], group: ["тип личности", "группа"], role: ["роль", "сфера", "профессия", "деятельность"],
+  author: ["автор текста"], publisher: ["издательство", "издатель"], pubplace: ["место издания"], curators: ["кураторы", "куратор"], def: ["определение", "краткое определение"],
+  lat: ["широта", "lat", "latitude"], lon: ["долгота", "lon", "lng", "longitude"],
+  files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "photo now", "photo hist"],
+  tags: ["теги", "tags"], access: ["доступ"], status: ["публикация", "статус публикации"],
+  "link:person": ["личности", "персоны", "люди", "persons", "people", "участники", "связанные личности"], "link:place": ["места", "связанные места", "связанные объекты", "id connections", "connections", "объекты"],
+  "link:event": ["события", "events"], "link:theme": ["темы", "themes", "topics"], "link:project": ["проекты", "проекты центра"], "link:collection": ["коллекции", "коллекция", "collections"],
+  "link:org": ["организации", "организация", "organisations", "organizations", "org"], "link:material": ["материалы", "materials"], "link:source": ["тексты", "источники", "sources", "texts"],
+};
+const TYPE_SYN: Record<string, string[]> = {
+  place: ["место", "места", "объект", "объекты", "здания", "карта", "адрес", "place", "places", "map", "building"], person: ["личност", "персон", "люди", "герои", "person", "people", "авторы"],
+  event: ["событ", "хронограф", "event"], material: ["материал", "material", "фото", "работы", "произведения"], source: ["текст", "источник", "библиограф", "книги", "статьи", "text", "source"],
+  org: ["организац", "org", "институц", "объединен"], theme: ["тем", "theme", "topic"], project: ["проект", "выставк", "project"], collection: ["коллекц", "collection", "фонд"],
+};
+const hkey = (h: string) => key(h).replace(/[«»"()]/g, "").replace(/\s+/g, " ").trim();
+function guessType(name: string, headers: string[]): string {
+  const n = key(name) + " " + headers.map(hkey).join(" ");
+  const score: Record<string, number> = {};
+  for (const [t, words] of Object.entries(TYPE_SYN)) for (const w of words) if (n.includes(w)) score[t] = (score[t] || 0) + (key(name).includes(w) ? 3 : 1);
+  if (headers.some((h) => /adress|address|адрес|окн|архитект|existance/.test(hkey(h)))) score.place = (score.place || 0) + 4;
+  if (headers.some((h) => /годы жизни|роль|life/.test(hkey(h)))) score.person = (score.person || 0) + 3;
+  const best = Object.entries(score).sort((a, b) => b[1] - a[1])[0];
+  return best ? best[0] : "material";
+}
+export function targetsOf(type: string): { key: string; label: string }[] {
+  const sdef = SHEETS.find((x) => x.type === type); if (!sdef) return [];
+  return colsOf(sdef).map((c) => ({ key: c.key, label: c.label }));
+}
+function guessCols(type: string, headers: string[]): Record<string, string> {
+  const allowed = new Set(targetsOf(type).map((t) => t.key));
+  const out: Record<string, string> = {};
+  const used = new Set<string>();
+  for (const h of headers) {
+    const hk = hkey(h); if (!hk) continue;
+    let best = "";
+    for (const [k, words] of Object.entries(SYN)) { if (!allowed.has(k)) continue; if (words.some((w) => hk === w)) { best = k; break; } }
+    if (!best) for (const [k, words] of Object.entries(SYN)) { if (!allowed.has(k) || k === "files" || k === "tags") continue; if (words.some((w) => w.length > 3 && hk.includes(w))) { best = k; break; } }
+    if (best && best !== "date" && best !== "files" && used.has(best)) best = ""; // одинаковые цели — только для даты (год 1 + год 2) и файлов
+    out[h] = best; if (best) used.add(best);
+  }
+  return out;
+}
+export function inspect(buf: Buffer): Inspect {
+  const wb = XLSX.read(buf, { type: "buffer" });
+  const sheets: Inspect["sheets"] = [];
+  for (const name of wb.SheetNames) {
+    const rows: unknown[][] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "" });
+    const body = rows.filter((r) => r.some((c) => norm(c)));
+    if (body.length < 2) continue;
+    const headers = body[0].map((h) => norm(h));
+    const sdef = SHEETS.find((x) => x.sheet === name);
+    const template = !!sdef && headers.some((h) => key(h) === "название");
+    const type = sdef ? sdef.type : guessType(name, headers);
+    const sample = body.slice(1, 6).map((r) => headers.map((_, i) => norm(r[i]).slice(0, 80)));
+    sheets.push({ name, headers, sample, rows: body.length - 1, template, guess: { type, cols: template ? {} : guessCols(type, headers) } });
+  }
+  const targets: Record<string, { key: string; label: string }[]> = {};
+  for (const sdef of SHEETS) targets[sdef.type] = targetsOf(sdef.type);
+  return { sheets, targets };
+}
+// перекладываем листы произвольной книги в книгу формата шаблона: несколько колонок в одно поле — дата склеивается «1926–1927», остальное через «; »
+export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
+  const wb = XLSX.read(buf, { type: "buffer" });
+  const out = XLSX.utils.book_new();
+  const byType: Record<string, string[][]> = {};
+  for (const [name, m] of Object.entries(mapping)) {
+    const ws = wb.Sheets[name]; const sdef = SHEETS.find((x) => x.type === m.type); if (!ws || !sdef) continue;
+    const cols = colsOf(sdef);
+    const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    const body = rows.filter((r) => r.some((c) => norm(c)));
+    if (body.length < 2) continue;
+    const headers = body[0].map((h) => norm(h));
+    const tgt = byType[m.type] ||= [cols.map((c) => c.label)];
+    // строки-подсказки под шапкой: пропускаем те, где нет ни одного «данного» значения (все ячейки — длинные пояснения) — проще: пропускаем строки, где название пустое
+    for (const r of body.slice(1)) {
+      const vals: Record<string, string[]> = {};
+      headers.forEach((h, i) => { const k = m.cols[h]; const v = norm(r[i]); if (k && v) (vals[k] ||= []).push(v); });
+      if (!vals.title?.length) continue;
+      // строка-подсказка под шапкой (пояснения вместо значений): дата без года и длиннее 30 знаков — пропускаем
+      if (Object.values(vals).flat().filter((x) => x.length > 60).length >= 3 && !/^\d{4}/.test(vals.date?.[0] || "")) continue;
+      const line = cols.map((c) => {
+        const v = vals[c.key] || [];
+        if (!v.length) return "";
+        if (c.key === "date") { const ys = v.map((x) => x.replace(/\.0$/, "")); return ys.length === 2 && /^\d{4}$/.test(ys[0]) && /^\d{4}$/.test(ys[1]) ? (ys[0] === ys[1] ? ys[0] : `${ys[0]}–${ys[1]}`) : ys.join(", "); }
+        if (c.key === "title") return v[0];
+        if (c.key === "desc") return v.join("\n\n");
+        return v.join("; ");
+      });
+      tgt.push(line);
+    }
+  }
+  for (const [t, aoa] of Object.entries(byType)) { const sdef = SHEETS.find((x) => x.type === t)!; XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(aoa), sdef.sheet); }
+  return XLSX.write(out, { type: "buffer", bookType: "xlsx" }) as Buffer;
+}
+
 function parse(buf: Buffer) {
   const wb = XLSX.read(buf, { type: "buffer" });
   const out: Parsed[] = []; const problems: string[] = [];
@@ -125,12 +251,11 @@ function parse(buf: Buffer) {
       if (r === 2 && title.toUpperCase().startsWith(EXAMPLE)) continue; // строка-пример шаблона
       const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: split(get("Файлы")).map(parseFile).filter((f) => f.name), tags: split(get("Теги")) };
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
-      // состояние здания — одно из двух значений; приводим к виду «Существует» / «Утрачено»
-      if (p.fields.placeStatus) { const k2 = key(p.fields.placeStatus); const map: Record<string, string> = { "существует": "Существует", "утрачено": "Утрачено", "утрачен": "Утрачено", "не существует": "Утрачено", "снесено": "Утрачено", "снесен": "Утрачено" }; if (map[k2]) p.fields.placeStatus = map[k2]; else { problems.push(`${s.sheet}, строка ${r + 1}: состояние здания «${p.fields.placeStatus}» — допустимы только «существует» или «утрачено», значение пропущено`); delete p.fields.placeStatus; } }
+      if (p.type === "place") normalizePlace(p);
       const d = get("Описание"); if (d) p.fields.desc = d;
       const acc = key(get("Доступ")); if (acc) { if (ACCESS[acc]) p.access = ACCESS[acc]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестный доступ «${get("Доступ")}»`); }
       const st = key(get("Публикация")); if (st) { if (STATUS[st]) p.status = STATUS[st]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестная публикация «${get("Публикация")}»`); }
-      for (const [t, l] of LINK_COLS) if (t !== s.type) { const v = split(get(l)); if (v.length) p.links[t] = v; }
+      for (const [t, l] of LINK_COLS) { const v = split(get(linkLabel(t, l, s.type))); if (v.length) p.links[t] = v; }
       out.push(p);
     }
   }
@@ -180,11 +305,13 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
   return { plan, items, byKey, dicts };
 }
-export const preview = async (buf: Buffer, resolve: Resolve = {}) => (await buildPlan(buf, resolve)).plan;
+const withMap = (buf: Buffer, mapping?: Mapping | null) => (mapping && Object.keys(mapping).length ? applyMapping(buf, mapping) : buf);
+export const preview = async (buf: Buffer, resolve: Resolve = {}, mapping?: Mapping | null) => (await buildPlan(withMap(buf, mapping), resolve)).plan;
 
 // ---- запуск: сущности → справочники → связи; возвращает id по строкам (для заливки файлов из админки) ----
-export async function run(buf: Buffer, actor: string, resolve: Resolve = {}) {
-  const { plan, items, byKey, dicts } = await buildPlan(buf, resolve);
+export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, mapping?: Mapping | null, geocode?: (q: string) => Promise<{ lat: number; lon: number } | null>) {
+  const { plan, items, byKey, dicts } = await buildPlan(withMap(buf, mapping), resolve);
+  let geocoded = 0;
   const okRows = plan.rows.filter((r) => r.action !== "error");
   const ids = new Map<string, string>(byKey);
   const result: { sheet: string; row: number; title: string; id: string; action: string; files: FileSpec[] }[] = [];
@@ -194,6 +321,11 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}) {
     const k = p.type + "|" + key(p.title);
     const payload: Record<string, unknown> = { ...p.fields };
     if (p.access) payload.access = p.access;
+    // место без координат — по адресу через геокодер (если настроен); ошибка геокодера карточку не останавливает
+    if (p.type === "place" && geocode && !p.fields.lat && p.fields.address) {
+      const cur = ids.get(k) ? await repo.getEntity(ids.get(k)!) : null;
+      if (!(cur as any)?.lat) { try { const g = await geocode([p.fields.city, p.fields.address].filter(Boolean).join(", ")); if (g) { payload.lat = g.lat; payload.lon = g.lon; geocoded++; } } catch {} }
+    }
     if (p.type === "place" && p.fields.placeType && p.fields.subtype && !String(p.fields.placeType).includes(" · ")) payload.placeType = p.fields.placeType + " · " + p.fields.subtype;
     let id = ids.get(k);
     if (id) { await repo.updateEntity(id, { payload, ...(p.status ? { status: p.status } : {}) }); await repo.logAct("update", id, p.title, actor + " · импорт"); }
@@ -235,5 +367,5 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}) {
     }
   }
   void dicts;
-  return { created: okRows.filter((r) => r.action === "create").length, updated: okRows.filter((r) => r.action === "update").length, skipped: plan.errors, linked, rows: result };
+  return { created: okRows.filter((r) => r.action === "create").length, updated: okRows.filter((r) => r.action === "update").length, skipped: plan.errors, linked, geocoded, rows: result };
 }

@@ -133,27 +133,30 @@ export function createApp() {
     res.json((j?.results || []).map((x: any) => ({ title: x.title?.text || "", subtitle: x.subtitle?.text || "", address: x.address?.formatted_address || [x.title?.text, x.subtitle?.text].filter(Boolean).join(", ") })));
   }));
   // геокодер Яндекса — через бэкенд, ключ наружу не уходит: ?q=адрес (прямой) или ?ll=долгота,широта (обратный)
-  app.get("/api/geo", auth, ah(async (req, res) => {
-    const key = process.env.YANDEX_GEOCODER_KEY;
-    if (!key) return res.status(503).json({ error: "geocoder not configured" });
-    const { q, ll } = z.object({ q: z.string().max(300).optional(), ll: z.string().max(60).optional() }).parse(req.query);
-    if (!q && !ll) return res.status(400).json({ error: "q or ll required" });
+  // геокодер Яндекса: адрес → варианты с координатами (используется в админке у места и при импорте)
+  async function geocode(q: string, host: string, results = 6) {
+    const key = process.env.YANDEX_GEOCODER_KEY!;
     const u = new URL("https://geocode-maps.yandex.ru/1.x/");
-    u.searchParams.set("apikey", key); u.searchParams.set("format", "json"); u.searchParams.set("results", "6"); u.searchParams.set("lang", "ru_RU");
-    u.searchParams.set("geocode", q || String(ll));
+    u.searchParams.set("apikey", key); u.searchParams.set("format", "json"); u.searchParams.set("results", String(results)); u.searchParams.set("lang", "ru_RU");
+    u.searchParams.set("geocode", q);
     // Referer — на случай, если у ключа включено ограничение по доменам (серверный запрос его не несёт)
-    const r = await fetch(u, { signal: AbortSignal.timeout(8000), headers: { referer: "https://" + (req.get("host") || "") + "/" } });
+    const r = await fetch(u, { signal: AbortSignal.timeout(8000), headers: { referer: "https://" + host + "/" } });
     if (!r.ok) {
       // текст ошибки Яндекса, чтобы было понятно: ключ не тот, продукт не подключён или лимит
       let msg = ""; try { const e: any = await r.json(); msg = e?.message || e?.error?.message || e?.statusCode || ""; } catch {}
-      return res.status(502).json({ error: `geocoder: HTTP ${r.status}${msg ? " — " + msg : ""} (ключ …${key.slice(-4)})` });
+      throw Object.assign(new Error(`geocoder: HTTP ${r.status}${msg ? " — " + msg : ""} (ключ …${key.slice(-4)})`), { status: 502 });
     }
     const j: any = await r.json();
-    const items = (j?.response?.GeoObjectCollection?.featureMember || []).map((f: any) => {
+    return (j?.response?.GeoObjectCollection?.featureMember || []).map((f: any) => {
       const g = f.GeoObject, [lon, lat] = String(g.Point?.pos || "").split(" ").map(Number);
       return { name: g.name, text: g.metaDataProperty?.GeocoderMetaData?.text || g.description || g.name, kind: g.metaDataProperty?.GeocoderMetaData?.kind, precision: g.metaDataProperty?.GeocoderMetaData?.precision, lat, lon };
-    }).filter((x: any) => Number.isFinite(x.lat) && Number.isFinite(x.lon));
-    res.json(items);
+    }).filter((x: any) => Number.isFinite(x.lat) && Number.isFinite(x.lon)) as { name: string; text: string; kind: string; precision: string; lat: number; lon: number }[];
+  }
+  app.get("/api/geo", auth, ah(async (req, res) => {
+    if (!process.env.YANDEX_GEOCODER_KEY) return res.status(503).json({ error: "geocoder not configured" });
+    const { q, ll } = z.object({ q: z.string().max(300).optional(), ll: z.string().max(60).optional() }).parse(req.query);
+    if (!q && !ll) return res.status(400).json({ error: "q or ll required" });
+    try { res.json(await geocode(q || String(ll), req.get("host") || "")); } catch (e: any) { res.status(e.status || 502).json({ error: e.message }); }
   }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
@@ -320,13 +323,21 @@ export function createApp() {
   app.get("/api/import/template", auth, ah(async (_req, res) => {
     res.set({ "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": "attachment; filename=\"zotov-import.xlsx\"" }).send(await imp.template());
   }));
+  // произвольная таблица: листы, заголовки, примеры и догадка о сопоставлении колонок с полями шаблона
+  app.post("/api/import/inspect", auth, upload.single("file"), ah(async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    res.json(imp.inspect(req.file.buffer));
+  }));
+  const parseMapping = (v: unknown): imp.Mapping | null => { try { const m = typeof v === "string" ? JSON.parse(v) : v; return m && typeof m === "object" ? (m as imp.Mapping) : null; } catch { return null; } };
   app.post("/api/import/preview", auth, upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
-    res.json(await imp.preview(req.file.buffer, parseResolve(req.body?.resolve)));
+    res.json(await imp.preview(req.file.buffer, parseResolve(req.body?.resolve), parseMapping(req.body?.mapping)));
   }));
   app.post("/api/import/run", auth, limit(10), upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
-    res.json(await imp.run(req.file.buffer, actor(req), parseResolve(req.body?.resolve)));
+    const host = req.get("host") || "";
+    const geo = process.env.YANDEX_GEOCODER_KEY ? async (q: string) => { const r = await geocode(q, host, 1); return r[0] ? { lat: r[0].lat, lon: r[0].lon } : null; } : undefined;
+    res.json(await imp.run(req.file.buffer, actor(req), parseResolve(req.body?.resolve), parseMapping(req.body?.mapping), geo));
   }));
 
   app.post("/api/assets", adminOnly, upload.single("file"), fixFile, ah(async (req, res) => {
