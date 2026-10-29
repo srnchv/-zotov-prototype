@@ -119,6 +119,31 @@ export function normalizePlace(p: { fields: Record<string, string>; title: strin
   if (f.okn) { const k2 = key(f.okn); f.okn = k2.includes("федерал") ? "федерального значения" : k2.includes("регион") ? "регионального значения" : k2.includes("местн") ? "местного значения" : k2.includes("выявлен") ? "выявленный" : /лиш|исключ/.test(k2) ? "лишён статуса" : /без статуса|не является|нет/.test(k2) ? "не является ОКН" : f.okn; }
 }
 
+// ---- автор места ↔ карточка личности ----
+// «Мельников К.С.», «К.С. Мельников», «инж.-арх. В.Г. Шухов», «Константин Мельников» ↔ «Константин Мельников»:
+// совпадает фамилия и, если есть, первый инициал с именем; при нескольких кандидатах без инициала — не связываем
+const ROLE_PREFIX = /^(?:при\s+уч(?:астии)?\.?|совм(?:естно)?\.?\s+с|инж\.?-?арх\.?|инж\.?-?стр\.?|инж\.?|арх\.?|конст(?:р)?\.?|худ\.?|скульпт\.?|архитектор[ы]?|инженер[ы]?)\s+/i;
+export function matchPerson(author: string, persons: string[]): string {
+  let a = norm(author).replace(/\(.*?\)/g, " ").replace(/\s+/g, " ").trim();
+  for (let i = 0; i < 3; i++) a = a.replace(ROLE_PREFIX, "").trim();
+  if (!a) return "";
+  const toks = a.split(" ").filter(Boolean);
+  const isInit = (t: string) => /^(?:[А-ЯЁ]\.){1,2}$|^[А-ЯЁ]\.[А-ЯЁ]\.?$|^[А-ЯЁ]$/.test(t);
+  const initials = toks.filter(isInit).join("").replace(/\./g, "");
+  const words = toks.filter((t) => !isInit(t));
+  if (!words.length) return "";
+  const kw = (x: string) => key(x).replace(/-/g, "");
+  // фамилия: при инициалах — единственное «слово»; при полном имени «Константин Мельников» — последнее слово
+  const surname = kw(initials ? words[words.length - 1] : words[words.length - 1]);
+  const firstName = !initials && words.length > 1 ? kw(words[0]) : "";
+  const cands = persons.filter((t) => { const w = key(t).split(" ").map(kw); return w.length > 0 && (w[w.length - 1] === surname || w.includes(surname)); });
+  if (!cands.length) return "";
+  const byInit = cands.filter((t) => { const w = key(t).split(" ").map(kw).filter((x) => x !== surname); if (!w.length) return !initials && !firstName; if (firstName) return w[0] === firstName; if (initials) return w[0][0] === initials[0].toLowerCase(); return true; });
+  if (byInit.length === 1) return byInit[0];
+  if (byInit.length > 1 && (initials || firstName)) return byInit[0];
+  return "";
+}
+
 // ---- сопоставление колонок произвольной таблицы с полями шаблона ----
 export type Mapping = Record<string, { type: string; cols: Record<string, string> }>; // лист → тип карточек и «заголовок в файле → ключ поля» ("" — пропустить)
 export type Inspect = { sheets: { name: string; headers: string[]; sample: string[][]; rows: number; template: boolean; guess: { type: string; cols: Record<string, string> } }[]; targets: Record<string, { key: string; label: string }[]> };
@@ -284,9 +309,17 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
   const seen = new Set<string>();
   const unres = new Map<string, Unresolved>();
   const titles = entities.filter((e) => e.type !== "media" && e.type !== "dict" && e.type !== "tag");
+  // личности для сопоставления авторов мест: из архива и из этого же файла
+  const persons: string[] = [...entities.filter((e) => e.type === "person").map((e) => e.title), ...items.filter((p) => p.type === "person").map((p) => p.title)];
   for (const p of items) {
     const k = p.type + "|" + key(p.title);
     const notes: string[] = [];
+    // авторы места («Мельников К.С.») → связь с карточкой личности, если такая есть; без карточки остаются просто текстом в «Авторах»
+    if (p.type === "place" && Array.isArray((p.fields as any).authors)) {
+      const found: string[] = [];
+      for (const a of (p.fields as any).authors as string[]) { const t = matchPerson(a, persons); if (t && !found.includes(t)) found.push(t); }
+      if (found.length) { const cur = p.links.person || []; for (const t of found) if (!cur.some((x) => key(x) === key(t))) cur.push(t); p.links.person = cur; notes.push(`авторы → личности: ${found.join(", ")}`); }
+    }
     let action: PlanRow["action"] = byKey.has(k) ? "update" : "create";
     if (seen.has(k)) { action = "error"; notes.push("дубль: такое название уже есть выше в файле"); }
     seen.add(k);
