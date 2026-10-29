@@ -51,7 +51,7 @@ function setupMapping(i: Inspect) {
     if (sh.template) continue;
     let saved: { type: string; cols: Record<string, string> } | null = null;
     try { saved = JSON.parse(localStorage.getItem(memKey(sh)) || "null"); } catch {}
-    m[sh.name] = { on: true, type: saved?.type || sh.guess.type, cols: { ...(saved?.cols || sh.guess.cols) } };
+    m[sh.name] = { on: Object.keys(m).length === 0, type: saved?.type || sh.guess.type, cols: { ...(saved?.cols || sh.guess.cols) } }; // по умолчанию — только первый лист
   }
   mapping.value = m;
 }
@@ -129,6 +129,8 @@ const files = computed(() => {
   return { need, have, miss, extra };
 });
 const thumbs = new Map<string, string>();
+const fileUrls = new Map<File, string>();
+const urlOf = (f: File) => { if (!fileUrls.has(f)) fileUrls.set(f, URL.createObjectURL(f)); return fileUrls.get(f)!; };
 const thumbOf = (n: string) => { const k = keyOf(n); if (!thumbs.has(k)) { const f = findFile(n); if (f) thumbs.set(k, URL.createObjectURL(f)); } return thumbs.get(k) || ""; };
 const cardOf = (n: string) => plan.value?.rows.filter((r) => r.files.some((x) => keyOf(x.name) === keyOf(n))).map((r) => r.title).join(", ") || "";
 const specOf = (n: string) => plan.value?.rows.flatMap((r) => r.files).find((x) => keyOf(x.name) === keyOf(n));
@@ -204,9 +206,11 @@ async function downloadTpl() {
 
   <div v-if="insp && needMapping && mapStage" class="card" style="margin-top:16px"><b>Сопоставление колонок</b>
     <div class="muted" style="font-size:12px;margin:4px 0 12px;max-width:760px">Таблица не по шаблону — укажите, какой тип карточек на каждом листе и куда идёт каждая колонка. Что удалось угадать — уже проставлено. Две колонки в одно поле допустимы: годы «с» и «по» склеятся в «1926–1927», остальное — через «;». Выбор запомнится для таблиц с такой же шапкой.</div>
-    <div v-for="sh in insp.sheets.filter(x => !x.template)" :key="sh.name" style="margin-bottom:18px">
+    <div v-if="insp.sheets.filter(x => !x.template).length > 1" style="margin-bottom:14px;font-size:14px"><b>Какие листы загружать:</b>
+      <label v-for="sh in insp.sheets.filter(x => !x.template)" :key="sh.name" style="display:inline-flex;gap:6px;align-items:center;margin-left:16px"><input type="checkbox" v-model="mapping[sh.name].on"> {{ sh.name }} <span class="muted">({{ sh.rows }})</span></label></div>
+    <div v-for="sh in insp.sheets.filter(x => !x.template && mapping[x.name].on)" :key="sh.name" style="margin-bottom:18px">
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" v-model="mapping[sh.name].on"> <b>{{ sh.name }}</b> <span class="muted">· {{ sh.rows }} строк</span></label>
+        <span style="font-size:14px"><b>{{ sh.name }}</b> <span class="muted">· {{ sh.rows }} строк · тип карточек:</span></span>
         <select class="sel inline" :disabled="!mapping[sh.name].on" :value="mapping[sh.name].type" @change="setType(sh, ($event.target as HTMLSelectElement).value)"><option v-for="t in MAP_TYPES" :key="t" :value="t">{{ TYPES[t].pl }}</option></select>
       </div>
       <div v-if="mapping[sh.name].on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px">
@@ -264,9 +268,9 @@ async function downloadTpl() {
       <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.have.flatMap(findFiles).length > files.have.length"> ({{ files.have.flatMap(findFiles).length }} файлов — по кодам)</template><template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
       <span v-else class="muted" style="font-size:13px">В колонке «Файлы» нет имён — папка не нужна.</span>
     </div>
-    <div v-if="files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
+    <div v-if="folder.size && files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
     <div v-if="files.have.length" class="upgrid" style="margin-top:12px">
-      <div v-for="n in files.have" :key="n" class="upitem"><div class="upthumb"><img v-if="kindOf(findFile(n)?.name || n) === 'image'" :src="thumbOf(n)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(findFile(n)?.name || n)] }}<template v-if="subsFor(n).length"><br>+ субтитры ({{ subsFor(n).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="n">{{ n }}</div><div class="upcard">{{ cardOf(n) }}</div><div v-if="specOf(n) && capOf(specOf(n)!)" class="upcap">{{ capOf(specOf(n)!) }}</div></div>
+      <template v-for="n in files.have" :key="n"><div v-for="f in findFiles(n)" :key="f.name" class="upitem"><div class="upthumb"><img v-if="kindOf(f.name) === 'image'" :src="urlOf(f)" alt=""><span v-else class="muted">{{ KIND_L[kindOf(f.name)] }}<template v-if="subsFor(f.name).length"><br>+ субтитры ({{ subsFor(f.name).map(x => x.lang).join(', ') }})</template></span></div><div class="upname" :title="f.name">{{ f.name }}</div><div class="upcard">{{ cardOf(n) }}</div><div v-if="specOf(n) && capOf(specOf(n)!)" class="upcap">{{ capOf(specOf(n)!) }}</div></div></template>
     </div>
   </div>
 
