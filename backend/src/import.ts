@@ -103,6 +103,8 @@ export type FileSpec = { name: string; caption?: string; author?: string; year?:
 type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
 // «имя | название | автор | год» → спецификация файла
 // «нет фото», «—» и прочие пометки кириллицей — не имена файлов
+// имена файлов — через «;»; если подписей «|» нет, то и через запятую (m0002, m0003)
+const splitFiles = (v: string) => (v.includes("|") ? split(v) : norm(v).split(/\s*[;,]\s*/).filter(Boolean));
 const parseFile = (v: string): FileSpec => { const [name0, caption, author, year] = v.split("|").map((x) => norm(x)); const name = /[а-яё]/i.test(name0) || name0 === "-" || name0 === "—" ? "" : name0; return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
 // место: «да/yes/существует» → Существует, «снесён/нет/утрачен» → Утрачено; город из адреса «Москва, …» / «г. Москва, …»;
 // авторы/функции/заказчики — списки (через «;», у авторов допускается «,»)
@@ -206,11 +208,6 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
     const tgt = byType[m.type] ||= [cols.map((c) => c.label)];
-    // код строки (колонка, отданная в «Файлы», например id → m0004) → название: ссылки на другие строки можно писать кодами
-    const codeCols = headers.filter((h) => m.cols[h] === "files"), titleCol = headers.find((h) => m.cols[h] === "title");
-    const byCode = new Map<string, string>();
-    if (titleCol) for (const r of body.slice(1)) { const t = norm(r[headers.indexOf(titleCol)]); for (const c of codeCols) { const v = norm(r[headers.indexOf(c)]); if (v && t && /^[a-z0-9_-]+$/i.test(v)) byCode.set(key(v), t); } }
-    const linkVal = (v: string) => v.split(/\s*[;,]\s*/).filter(Boolean).map((x) => byCode.get(key(x)) || x).join("; ");
     // строки-подсказки под шапкой: пропускаем те, где нет ни одного «данного» значения (все ячейки — длинные пояснения) — проще: пропускаем строки, где название пустое
     for (const r of body.slice(1)) {
       const vals: Record<string, string[]> = {};
@@ -224,7 +221,6 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
         if (c.key === "date") { const ys = v.map((x) => x.replace(/\.0$/, "")); return ys.length === 2 && /^\d{4}$/.test(ys[0]) && /^\d{4}$/.test(ys[1]) ? (ys[0] === ys[1] ? ys[0] : `${ys[0]}–${ys[1]}`) : ys.join(", "); }
         if (c.key === "title") return v[0];
         if (c.key === "desc") return v.join("\n\n");
-        if (c.key.startsWith("link:") && byCode.size) return v.map(linkVal).join("; ");
         return v.join("; ");
       });
       tgt.push(line);
@@ -256,7 +252,7 @@ function parse(buf: Buffer) {
       if (!title) continue;
       if (r === 1 && title === cols[0].hint) continue; // строка подсказок
       if (r === 2 && title.toUpperCase().startsWith(EXAMPLE)) continue; // строка-пример шаблона
-      const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: split(get("Файлы")).map(parseFile).filter((f) => f.name), tags: split(get("Теги")) };
+      const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: splitFiles(get("Файлы")).map(parseFile).filter((f) => f.name), tags: split(get("Теги")) };
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       if (p.type === "place") normalizePlace(p);
       const d = get("Описание"); if (d) p.fields.desc = d;
