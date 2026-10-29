@@ -20,7 +20,7 @@ const LINK_COLS: [string, string][] = [["person", "Личности"], ["place",
 const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string }[] = [
   { type: "material", sheet: "Материалы", dateKey: "date", cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Дата", hint: "год или диапазон: 1927 или 1920–1929" }] },
   { type: "person", sheet: "Личности", dateKey: "life", cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "role", label: "Роль", hint: "художник, архитектор…" }, { key: "life", label: "Годы жизни", hint: "1891–1956" }] },
-  { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "okn", label: "Статус ОКН", hint: "федерального значения / регионального значения / выявленный / не является ОКН…" }, { key: "functions", label: "Функции", hint: "через «;»: жильё; клуб" }, { key: "authors", label: "Авторы", hint: "архитекторы через «;» или «,»: Мельников К.С.; Шухов В.Г." }, { key: "customers", label: "Заказчики", hint: "через «;»" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
+  { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "okn", label: "Статус ОКН", hint: "одно из: федерального значения / регионального значения / местного значения / выявленный / не является ОКН" }, { key: "functions", label: "Функции", hint: "группа › функция, через «;»: Жильё › Дом-коммуна; Культура › Рабочий клуб" }, { key: "archs", label: "Архитекторы", hint: "через «;» или «,»: Мельников К.С.; Шухов В.Г. Если неизвестен — Неизвестный архитектор (пустая ячейка = неизвестный)" }, { key: "engs", label: "Инженеры", hint: "через «;» или «,»" }, { key: "dorgs", label: "Проектные организации", hint: "через «;»" }, { key: "customers", label: "Заказчики", hint: "один или несколько из: правительство; ведомство; управление; муниципалитет; кооператив; профсоюз; общественная организация; неустановленный застройщик" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
   { type: "event", sheet: "События", dateKey: "date", cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "date", label: "Дата", hint: "1927 или 12 марта 1927" }] },
   { type: "theme", sheet: "Темы", dateKey: "", cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
   { type: "project", sheet: "Проекты Центра", dateKey: "dates", cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Даты проведения", hint: "12.03–30.06.1927" }, { key: "curators", label: "Кураторы", hint: "" }] },
@@ -79,7 +79,7 @@ export async function template(): Promise<Buffer> {
   const EX: Record<string, Row> = {
     material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg | Афиша выставки | Александр Родченко | 1927; afisha-1927-back.jpg | Оборот афиши", desc: "Афиша к открытию выставки." },
     person: { title: "ПРИМЕР Александр Родченко", group: "Деятели эпохи", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
-    place: { title: "ПРИМЕР Дом Моссельпрома", placeType: "Здание", subtype: "административное", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "Существует", date: "1923–1925", lat: "55.7563", lon: "37.6010" },
+    place: { title: "ПРИМЕР Дом Моссельпрома", placeType: "Здание", subtype: "административное", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "Существует", date: "1923–1925", okn: "регионального значения", functions: "Торговля › Универмаг; Жильё › Жилой дом", archs: "Струков Д.М.; Коган А.С.", engs: "Лолейт А.Ф.", customers: "кооператив", lat: "55.7563", lon: "37.6010" },
     event: { title: "ПРИМЕР Открытие выставки «1927»", evType: "Открытие выставки", date: "12 марта 1927", "link:place": "Дом Моссельпрома" },
     theme: { title: "ПРИМЕР Фотомонтаж", def: "Техника соединения фотографий в одно изображение." },
     project: { title: "ПРИМЕР Выставка «1927»", prType: "Выставочный проект", dates: "12.03–30.06.1927", curators: "Иван Иванов" },
@@ -114,11 +114,23 @@ export function normalizePlace(p: { fields: Record<string, string>; title: strin
   if (f.placeStatus) { const k2 = key(f.placeStatus); f.placeStatus = /^(да|yes|существует|сохранил|есть)/.test(k2) ? "Существует" : /^(нет|no|снес|утрач|разруш|не сущ|уничтож)/.test(k2) ? "Утрачено" : f.placeStatus; }
   if (!f.city && f.address) { const m = f.address.match(CITY_RE); if (m) { f.city = m[1]; f.address = m[2].trim(); } }
   if (f.city && f.address) { const pre = new RegExp("^(?:г\\.\\s*)?" + f.city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*,\\s*", "i"); f.address = f.address.replace(pre, ""); }
-  for (const k of ["functions", "authors", "customers"] as const) if (f[k]) (f as any)[k] = (k === "authors" ? f[k].split(/\s*[;,]\s*(?![^()]*\))/) : split(f[k])).map((x) => x.trim()).filter(Boolean);
+  const names = (v: string) => v.split(/\s*[;,]\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
+  // авторы — три группы из трёх колонок → один список «Группа › имя» (так хранит админка и фильтр карты)
+  const authors: string[] = [];
+  for (const [k, g] of [["archs", "Архитекторы"], ["engs", "Инженеры"], ["dorgs", "Проектные организации"]] as const) {
+    for (const n of names(f[k] || "")) authors.push(n.includes(" › ") ? n : g + " › " + n.replace(/^неизвестный архитектор$/i, "Неизвестный архитектор"));
+    delete (f as any)[k];
+  }
+  if (f.authors) { for (const n of names(f.authors)) authors.push(n.includes(" › ") ? n : "Архитекторы › " + n); } // старая общая колонка «Авторы» — как архитекторы
+  if (authors.length) (f as any).authors = [...new Set(authors)]; else delete (f as any).authors;
+  if (f.functions) (f as any).functions = split(f.functions).map((x) => x.replace(/\s*(?:›|\/|>|→|—|-)\s*/, " › ").trim()).filter(Boolean);
+  if (f.customers) (f as any).customers = split(f.customers).map((x) => x.trim().toLowerCase()).filter(Boolean);
   if (f.date) f.date = f.date.replace(/\.0$/, "").replace(/^(\d{4})\s*[-–—;,]\s*(\d{4})$/, "$1–$2");
   if (f.okn) { const k2 = key(f.okn); f.okn = k2.includes("федерал") ? "федерального значения" : k2.includes("регион") ? "регионального значения" : k2.includes("местн") ? "местного значения" : k2.includes("выявлен") ? "выявленный" : /лиш|исключ/.test(k2) ? "лишён статуса" : /без статуса|не является|нет/.test(k2) ? "не является ОКН" : f.okn; }
 }
 
+export const OKN_LIST = ["федерального значения", "регионального значения", "местного значения", "выявленный", "не является ОКН"];
+export const CUSTOMER_LIST = ["правительство", "ведомство", "управление", "муниципалитет", "кооператив", "профсоюз", "общественная организация", "неустановленный застройщик"];
 // ---- автор места ↔ карточка личности ----
 // «Мельников К.С.», «К.С. Мельников», «инж.-арх. В.Г. Шухов», «Константин Мельников» ↔ «Константин Мельников»:
 // совпадает фамилия и, если есть, первый инициал с именем; при нескольких кандидатах без инициала — не связываем
@@ -156,7 +168,7 @@ const SYN: Record<string, string[]> = {
   life: ["годы жизни", "life", "жизнь"], dates: ["даты проведения"], year: ["год публикации", "год издания"], period: ["период деятельности"],
   placeStatus: ["состояние", "существует", "existance", "existence", "сохранность", "статус здания", "состояние здания"],
   okn: ["окн", "okn", "статус окн", "охранный статус", "памятник"],
-  authors: ["автор", "авторы", "архитектор", "архитекторы", "architects", "architect", "author", "authors"],
+  archs: ["автор", "авторы", "архитектор", "архитекторы", "architects", "architect", "author", "authors"], engs: ["инженер", "инженеры", "engineers", "engineer", "конструктор"], dorgs: ["проектная организация", "проектные организации", "мастерская", "бюро"],
   customers: ["заказчик", "заказчики", "organisation", "организация-заказчик", "customer"],
   functions: ["функция", "функции", "назначение", "function"],
   placeType: ["тип", "type", "типология", "тип объекта", "тип места"], mtype: ["тип материала"], evType: ["тип события"], srcType: ["тип текста"], orgType: ["тип организации"], prType: ["тип проекта"], colType: ["тип коллекции"],
@@ -317,9 +329,15 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
     const k = p.type + "|" + key(p.title);
     const notes: string[] = [];
     // авторы места («Мельников К.С.») → связь с карточкой личности, если такая есть; без карточки остаются просто текстом в «Авторах»
+    if (p.type === "place") {
+      const f: any = p.fields;
+      if (f.okn && !OKN_LIST.includes(f.okn)) notes.push(`статус ОКН «${f.okn}» не из списка (${OKN_LIST.join(", ")})`);
+      for (const c of (f.customers || []) as string[]) if (!CUSTOMER_LIST.includes(c)) notes.push(`заказчик «${c}» не из списка (${CUSTOMER_LIST.join(", ")})`);
+      for (const fn of (f.functions || []) as string[]) if (!fn.includes(" › ")) notes.push(`функция «${fn}» без группы — нужно «Группа › функция», например «Жильё › Дом-коммуна»`);
+    }
     if (p.type === "place" && Array.isArray((p.fields as any).authors)) {
       const found: string[] = [];
-      for (const a of (p.fields as any).authors as string[]) { const t = matchPerson(a, persons); if (t && !found.includes(t)) found.push(t); }
+      for (const a of (p.fields as any).authors as string[]) { if (a.startsWith("Проектные организации › ")) continue; const t = matchPerson(a.replace(/^[^›]+›\s*/, ""), persons); if (t && !found.includes(t)) found.push(t); }
       if (found.length) { const cur = p.links.person || []; for (const t of found) if (!cur.some((x) => key(x) === key(t))) cur.push(t); p.links.person = cur; notes.push(`авторы → личности: ${found.join(", ")}`); }
     }
     let action: PlanRow["action"] = byKey.has(k) ? "update" : "create";
@@ -341,6 +359,7 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
     // что заполнено в строке — подписи полей (списки со счётчиком), чтобы в предпросмотре было видно, что подхватилось
     const sdef = SHEETS.find((x) => x.type === p.type)!;
     const fields = [...sdef.cols, ...COMMON_TAIL.filter((c) => c.key === "desc")].filter((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? v.length : !!v; }).map((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? `${c.label.toLowerCase()} (${v.length})` : c.label.toLowerCase(); });
+    if (Array.isArray((p.fields as any).authors)) fields.push(`авторы (${(p.fields as any).authors.length})`);
     rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes, fields });
   }
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
@@ -368,6 +387,7 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
       if (!(cur as any)?.lat) { try { const g = await geocode([p.fields.city, p.fields.address].filter(Boolean).join(", ")); if (g) { payload.lat = g.lat; payload.lon = g.lon; geocoded++; } } catch {} }
     }
     if (p.type === "place" && p.fields.placeType && p.fields.subtype && !String(p.fields.placeType).includes(" · ")) payload.placeType = p.fields.placeType + " · " + p.fields.subtype;
+    if (p.type === "place" && !ids.get(k) && !(payload.authors as string[] | undefined)?.length) payload.authors = ["Архитекторы › Неизвестный архитектор"]; // правило: архитектор неизвестен — так и пишем
     let id = ids.get(k);
     if (id) { await repo.updateEntity(id, { payload, ...(p.status ? { status: p.status } : {}) }); await repo.logAct("update", id, p.title, actor + " · импорт"); }
     else { const e = await repo.createEntity({ type: p.type, title: p.title, status: p.status || "published", payload }); id = e.id; ids.set(k, id); await repo.logAct("create", id, p.title, actor + " · импорт"); }
