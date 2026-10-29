@@ -206,6 +206,11 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
     const tgt = byType[m.type] ||= [cols.map((c) => c.label)];
+    // код строки (колонка, отданная в «Файлы», например id → m0004) → название: ссылки на другие строки можно писать кодами
+    const codeCols = headers.filter((h) => m.cols[h] === "files"), titleCol = headers.find((h) => m.cols[h] === "title");
+    const byCode = new Map<string, string>();
+    if (titleCol) for (const r of body.slice(1)) { const t = norm(r[headers.indexOf(titleCol)]); for (const c of codeCols) { const v = norm(r[headers.indexOf(c)]); if (v && t && /^[a-z0-9_-]+$/i.test(v)) byCode.set(key(v), t); } }
+    const linkVal = (v: string) => v.split(/\s*[;,]\s*/).filter(Boolean).map((x) => byCode.get(key(x)) || x).join("; ");
     // строки-подсказки под шапкой: пропускаем те, где нет ни одного «данного» значения (все ячейки — длинные пояснения) — проще: пропускаем строки, где название пустое
     for (const r of body.slice(1)) {
       const vals: Record<string, string[]> = {};
@@ -219,6 +224,7 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
         if (c.key === "date") { const ys = v.map((x) => x.replace(/\.0$/, "")); return ys.length === 2 && /^\d{4}$/.test(ys[0]) && /^\d{4}$/.test(ys[1]) ? (ys[0] === ys[1] ? ys[0] : `${ys[0]}–${ys[1]}`) : ys.join(", "); }
         if (c.key === "title") return v[0];
         if (c.key === "desc") return v.join("\n\n");
+        if (c.key.startsWith("link:") && byCode.size) return v.map(linkVal).join("; ");
         return v.join("; ");
       });
       tgt.push(line);
@@ -264,7 +270,7 @@ function parse(buf: Buffer) {
 }
 
 // ---- план: что создастся, что обновится, какие связи найдены ----
-export type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[] };
+export type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[]; fields: string[] };
 // ненайденная связь: тип + название из таблицы, где встречается; решается в админке (выбрать карточку / создать / пропустить)
 export type Unresolved = { key: string; type: string; name: string; rows: string[]; similar: { id: string; title: string }[] };
 export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
@@ -301,7 +307,10 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
     }
     if (p.dictKey && p.fields[p.dictKey]) { const v = p.fields[p.dictKey]; const have = (dicts[p.dictKey] || []).some((x) => key(x) === key(v)); if (!have) { newDict.add(`${p.dictKey}:${v}`); notes.push(`новое значение справочника «${v}» — добавится`); } }
     for (const f of p.files) files.add(f.name);
-    rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes });
+    // что заполнено в строке — подписи полей (списки со счётчиком), чтобы в предпросмотре было видно, что подхватилось
+    const sdef = SHEETS.find((x) => x.type === p.type)!;
+    const fields = [...sdef.cols, ...COMMON_TAIL.filter((c) => c.key === "desc")].filter((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? v.length : !!v; }).map((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? `${c.label.toLowerCase()} (${v.length})` : c.label.toLowerCase(); });
+    rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes, fields });
   }
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
   return { plan, items, byKey, dicts };

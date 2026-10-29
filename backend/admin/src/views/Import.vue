@@ -7,7 +7,7 @@ import { API, S, api, load, toast, canEdit, uploadFile, all } from "../lib/store
 import { TYPES, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 type FileSpec = { name: string; caption?: string; author?: string; year?: string };
-type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[] };
+type PlanRow = { sheet: string; row: number; type: string; title: string; action: "create" | "update" | "error"; id?: string; links: number; files: FileSpec[]; notes: string[]; fields: string[] };
 const capOf = (f: FileSpec) => [f.caption, [f.author, f.year].filter(Boolean).join(", ")].filter(Boolean).join(" — ");
 type Unresolved = { key: string; type: string; name: string; rows: string[]; similar: { id: string; title: string }[] };
 type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
@@ -239,11 +239,11 @@ async function downloadTpl() {
       <div v-for="[k, v] in decided" :key="k" class="r" style="padding:6px 0;font-size:13px"><span>{{ k.slice(k.indexOf('|') + 1) }} — {{ v === 'new' ? 'создать новую карточку' : v === '' ? 'пропустить связь' : '→ ' + (S.db[v]?.title || v) }}</span><span class="x muted" style="cursor:pointer" title="Отменить решение" @click="unsetResolve(k)">✕</span></div>
     </div>
     <table class="atable" style="margin-top:8px;font-size:13px">
-      <thead><tr><th>Лист</th><th>Стр.</th><th>Название</th><th>Действие</th><th>Связи</th><th>Файлы</th><th>Примечания</th></tr></thead>
+      <thead><tr><th>Лист</th><th>Стр.</th><th>Название</th><th>Действие</th><th>Поля</th><th>Связи</th><th>Файлы</th><th>Примечания</th></tr></thead>
       <tbody><tr v-for="r in plan.rows" :key="r.sheet + r.row" :style="r.action === 'error' ? 'color:#9a2e2e' : ''">
         <td>{{ r.sheet }}</td><td>{{ r.row }}</td><td>{{ r.title }}</td>
         <td>{{ ACT[r.action] }}<router-link v-if="r.id" :to="'/edit/' + r.id" class="muted" style="margin-left:6px;font-size:12px">открыть</router-link></td>
-        <td>{{ r.links || "" }}</td><td>{{ r.files.map(f => f.name).join(", ") }}</td><td>{{ r.notes.join("; ") }}</td>
+        <td class="muted" style="font-size:12px">{{ (r.fields || []).join(", ") }}</td><td>{{ r.links || "" }}</td><td>{{ r.files.map(f => f.name).join(", ") }}</td><td>{{ r.notes.join("; ") }}</td>
       </tr></tbody>
     </table>
   </div>
