@@ -163,9 +163,9 @@ const SYN: Record<string, string[]> = {
   subtype: ["подтип", "subtype"], group: ["тип личности", "группа"], role: ["роль", "сфера", "профессия", "деятельность"],
   author: ["автор текста"], publisher: ["издательство", "издатель"], pubplace: ["место издания"], curators: ["кураторы", "куратор"], def: ["определение", "краткое определение"],
   lat: ["широта", "lat", "latitude"], lon: ["долгота", "lon", "lng", "longitude"],
-  files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "photo now", "photo hist", "id", "код", "индекс", "code"],
+  files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "id", "код", "индекс", "code", "id connections", "connections"],
   tags: ["теги", "tags"], access: ["доступ"], status: ["публикация", "статус публикации"],
-  "link:person": ["личности", "персоны", "люди", "persons", "people", "участники", "связанные личности"], "link:place": ["места", "связанные места", "связанные объекты", "id connections", "connections", "объекты"],
+  "link:person": ["личности", "персоны", "люди", "persons", "people", "участники", "связанные личности"], "link:place": ["места", "связанные места", "связанные объекты", "объекты"],
   "link:event": ["события", "events"], "link:theme": ["темы", "themes", "topics"], "link:project": ["проекты", "проекты центра"], "link:collection": ["коллекции", "коллекция", "collections"],
   "link:org": ["организации", "организация", "organisations", "organizations", "org"], "link:material": ["материалы", "materials"], "link:source": ["тексты", "источники", "sources", "texts"],
 };
