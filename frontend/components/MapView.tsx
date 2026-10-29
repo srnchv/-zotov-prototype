@@ -42,7 +42,15 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
     const u = new URL(location.href); if (id) u.searchParams.set("place", id); else u.searchParams.delete("place");
     history.replaceState(null, "", u.toString());
   }, []);
-  const flyTo = useCallback((p: MPlace) => { mapRef.current?.update({ location: { center: [p.lon, p.lat], zoom: Math.max(mapRef.current.zoom || 0, 15), duration: 400 } }); }, []);
+  // центр карты при выборе места: точка ставится ниже середины (на 70% высоты), чтобы карточка над ней помещалась целиком;
+  // на мобайле карточка фиксирована сверху — точка в центре
+  const centerFor = useCallback((map: any, p: MPlace, zoom: number): [number, number] => {
+    const h = box.current?.clientHeight || 0;
+    if (!h || window.innerWidth < 600) return [p.lon, p.lat];
+    const degPerPx = (360 / (256 * Math.pow(2, zoom))) * Math.cos((p.lat * Math.PI) / 180);
+    return [p.lon, p.lat + h * 0.2 * degPerPx]; // центр севернее точки на 20% высоты карты
+  }, []);
+  const flyTo = useCallback((p: MPlace) => { const map = mapRef.current; if (!map) return; const zoom = Math.max(map.zoom || 0, 15); map.update({ location: { center: centerFor(map, p, zoom), zoom, duration: 400 } }); }, [centerFor]);
 
   useEffect(() => {
     if (!apiKey || !box.current || !places.length) return;
@@ -62,7 +70,7 @@ export default function MapView({ apiKey, places, initial, sort: sortIn, hasQuer
       const marker = (f: any) => {
         const p = f.properties as MPlace;
         const el = document.createElement("button"); el.type = "button"; el.className = "mflag " + p.status; el.innerHTML = flagSvg(p.status === "lost" ? INK : RED); el.title = p.title;
-        el.onclick = (e) => { e.stopPropagation(); setPlace(p.id); map.update({ location: { center: [p.lon, p.lat], zoom: Math.max(map.zoom, 15), duration: 400 } }); };
+        el.onclick = (e) => { e.stopPropagation(); setPlace(p.id); const zoom = Math.max(map.zoom, 15); map.update({ location: { center: centerFor(map, p, zoom), zoom, duration: 400 } }); };
         return new YMapMarker({ coordinates: f.geometry.coordinates }, el);
       };
       // кластер — круг с числом; клик приближает, кластер распадается
