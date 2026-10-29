@@ -251,7 +251,7 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
     for (const r of body.slice(1)) {
       const vals: Record<string, string[]> = {};
       headers.forEach((h, i) => { const k = m.cols[h]; const v = norm(r[i]); if (k && v) (vals[k] ||= []).push(v); });
-      if (!vals.title?.length) continue;
+      if (!vals.title?.length || vals.title[0].toUpperCase().startsWith(EXAMPLE)) continue; // пусто или строка-пример шаблона
       // строка-подсказка под шапкой (пояснения вместо значений): дата без года и длиннее 30 знаков — пропускаем
       if (Object.values(vals).flat().filter((x) => x.length > 60).length >= 3 && !/^\d{4}/.test(vals.date?.[0] || "")) continue;
       const line = cols.map((c) => {
