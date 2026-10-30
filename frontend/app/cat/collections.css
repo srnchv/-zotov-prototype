@@ -1,8 +1,8 @@
 /* Разделы-витрины: «Коллекции» (макет DEV 612:54229) и «Темы» (612:50434) */
 #clls{position:relative}
 .cgv #intro{padding:220px 12px 16px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;max-width:calc(49cqw + 24px);white-space:pre-line}
-.cgv .div8{height:8px;background:var(--ink)}
-.cgv .div8.end{margin:0 12px}
+.cgv .div8{height:8px;background:var(--grey4)} /* линия под интро — серая на всех витринах */
+.cgv .div8.end{margin:0 12px;background:var(--ink)}
 #cgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:64px 12px 0}
 .cc{display:flex;flex-direction:column;gap:8px;border-top:8px solid var(--ink);padding-top:8px;min-width:0;color:var(--ink)}
 .cc .tx{flex:1 1 auto;display:flex;flex-direction:column;gap:4px}
@@ -13,16 +13,15 @@
 .cc .k span{display:block;font-weight:500}
 .cc .im{aspect-ratio:3/2;width:100%;background:var(--grey5);overflow:hidden}
 /* проекты Центра: серая линия под интро, даты под названием, блок текста 132 */
-.projs .div8:not(.end){background:var(--grey4)}
 .cc .y{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
 .projs .cc .tx{min-height:132px}
 /* темы: серая линия под интро, 4 колонки, заголовок H3, квадратная картинка */
-.themes .div8:not(.end){background:var(--grey4)}
 .themes #cgrid{grid-template-columns:repeat(4,1fr)}
 .themes .cc h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
 .themes .cc .im{aspect-ratio:1/1}
 .cc .im img{width:100%;height:100%;object-fit:cover;display:block}
-.cc:hover h2{color:var(--red)}
+.cc:hover{color:var(--red);border-color:var(--red)} /* ховер — вся карточка, как в поиске */
+.cc:hover .vb{border-color:var(--red)}
 .cgv .div8.end{margin-top:12px;margin-bottom:144px}
 @media (max-width:1599px){
   .cgv #intro{padding-top:160px}
