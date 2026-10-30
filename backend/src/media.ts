@@ -184,6 +184,10 @@ const MIME: Record<string, string> = { html: "text/html; charset=utf-8", htm: "t
   glb: "model/gltf-binary", gltf: "model/gltf+json", bin: "application/octet-stream", wasm: "application/wasm", pdf: "application/pdf", vtt: "text/vtt", ktx2: "image/ktx2", basis: "application/octet-stream" };
 const mimeOf = (name: string) => MIME[(name.split(".").pop() || "").toLowerCase()] || "application/octet-stream";
 
+// пределы 3D-тура: число файлов, размер одного файла, общий распакованный объём (с запасом под реальные туры ~100 тыс. файлов / 3,5 ГБ)
+export const TOUR_LIMITS = { files: 150_000, file: 300 * 1024 * 1024, total: 6 * 1024 * 1024 * 1024 };
+const tooBig = (msg: string) => Object.assign(new Error(msg), { status: 413 });
+const fmtGb = (b: number) => (b / 1024 ** 3).toFixed(1) + " ГБ";
 export async function uploadTourZip(opts: { zipPath: string; entityId?: string; title: string }) {
   const { zipPath, entityId, title } = opts;
   const id = "md-" + createHash("sha1").update(zipPath + Date.now()).digest("hex").slice(0, 8);
@@ -199,6 +203,12 @@ export async function uploadTourZip(opts: { zipPath: string; entityId?: string; 
   const root = idx.slice(0, idx.lastIndexOf("/") + 1);
   const toUpload = files.filter((e) => e.fileName.startsWith(root));
   if (!toUpload.length) throw new Error("пустой архив");
+  // лимиты по заголовкам архива, до распаковки
+  if (toUpload.length > TOUR_LIMITS.files) throw tooBig(`в туре ${toUpload.length} файлов — больше предела ${TOUR_LIMITS.files}`);
+  const big = toUpload.find((e) => e.uncompressedSize > TOUR_LIMITS.file);
+  if (big) throw tooBig(`файл ${big.fileName} больше ${Math.round(TOUR_LIMITS.file / 1024 / 1024)} МБ`);
+  const sum = toUpload.reduce((a, e) => a + e.uncompressedSize, 0);
+  if (sum > TOUR_LIMITS.total) throw tooBig(`распакованный тур ${fmtGb(sum)} — больше предела ${fmtGb(TOUR_LIMITS.total)}`);
   // второй проход: распаковываем и льём в S3 файл за файлом (без распаковки на диск)
   const zip2 = await new Promise<yauzl.ZipFile>((res, rej) => yauzl.open(zipPath, { lazyEntries: true }, (e, z) => (e ? rej(e) : res(z!))));
   let total = 0, count = 0;
@@ -232,11 +242,19 @@ export async function tourStart(opts: { entityId?: string; title: string }) {
   const prefix = `tours/${id.slice(3)}/`;
   return repo.createEntity({ id, type: "media", title: opts.title, status: "draft", payload: { kind: "tour", tourPrefix: prefix, uploading: true, parent: opts.entityId || null, format: "ZIP", files: 0, size: 0 }, links: opts.entityId ? [opts.entityId] : [] });
 }
+// счётчики пофайловой загрузки (в памяти процесса; при рестарте пересчитываются по хранилищу)
+const tourProgress = new Map<string, { files: number; total: number }>();
 export async function tourPutFile(mediaId: string, relPath: string, body: Buffer) {
   const m = await repo.getEntity(mediaId);
   if (!m || !m.tourPrefix) throw new Error("tour not found");
+  if (body.length > TOUR_LIMITS.file) throw tooBig(`файл ${relPath} больше ${Math.round(TOUR_LIMITS.file / 1024 / 1024)} МБ`);
+  let pr = tourProgress.get(mediaId);
+  if (!pr) { const have = await tourFiles(mediaId); pr = { files: have.length, total: have.reduce((a, f) => a + (f.size || 0), 0) }; tourProgress.set(mediaId, pr); }
+  if (pr.files + 1 > TOUR_LIMITS.files) throw tooBig(`в туре больше ${TOUR_LIMITS.files} файлов`);
+  if (pr.total + body.length > TOUR_LIMITS.total) throw tooBig(`тур больше ${fmtGb(TOUR_LIMITS.total)}`);
   const clean = relPath.replace(/^\/+/, "").replace(/\.\.(\/|$)/g, "");
   await put(String(m.tourPrefix) + clean, body, mimeOf(clean));
+  pr.files++; pr.total += body.length;
   return { key: clean, size: body.length };
 }
 // что уже лежит в хранилище у тура — для докачки после обрыва

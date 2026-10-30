@@ -36,7 +36,7 @@ npm test
 🔒 — заголовок `Authorization: Bearer <токен сессии>` (логин в админке) или служебный `<ADMIN_TOKEN>`.
 
 ## Переменные окружения
-`PORT` (3000) · `DB_PATH` (./data/zotov.db) · `ADMIN_TOKEN` и `JWT_SECRET` (обязательны в production) · `ADMIN_LOGIN` / `ADMIN_PASSWORD` (первый администратор при пустой базе) · `CORS_ORIGINS` (домены сайта и админки через запятую)
+`PORT` (3000) · `DB_PATH` (./data/zotov.db) · `ADMIN_TOKEN` и `JWT_SECRET` (обязательны в production) · `ADMIN_LOGIN` / `ADMIN_PASSWORD` (первый администратор при пустой базе) · `CORS_ORIGINS (в production обязательна)` (домены сайта и админки через запятую)
 
 ## Деплой на тестовый хостинг
 Docker-образ самодостаточен (`Dockerfile`), БД — файл в volume `/data`, при первом

@@ -75,7 +75,7 @@ export default async function Home() {
     <a className={"vcard " + cls} key={e.id} href={`/m/${e.id}`}>
       <div className="dv" />
       <div className="tx"><h3>{e.title}</h3>{meta ? <div className="sub">{meta}</div> : null}<div className="vb" />{info ? <div className="inf"><b>{info}</b></div> : null}</div>
-      <div className="im"><img src={img(e, ph(fb, i), true)} alt="" style={imgPos(db, e)} /></div>
+      <div className="im"><img loading="lazy" src={img(e, ph(fb, i), true)} alt="" style={imgPos(db, e)} /></div>
     </a>
   );
 
@@ -87,7 +87,7 @@ export default async function Home() {
         <div className="mhead sticky"><MobileMenu centerUrl={site.centerUrl} /></div>
         <section id="hero">
           <h1 className="vh">Цифровой архив Центра «Зотов»</h1>
-          <div id="word">{LETTERS.map((l) => <img key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
+          <div id="word">{LETTERS.map((l) => <img loading="lazy" key={l} src={`/assets/letter-${l}.svg`} alt="" />)}</div>
           <div id="lede">{heroL.map((t, i) => <span className={HERO_AL[i]} key={i}>{t}</span>)}</div>
           <div id="lede-m">
             <p>{heroL.slice(0, 2).join(" ")}</p>
@@ -110,7 +110,7 @@ export default async function Home() {
                 <div className="dv" />
                 <div className="row">
                   <div className="tx"><h4>{t.title}</h4><div className="vb" /><div className="cnt">{nMats(t)}</div></div>
-                  <div className="im"><img src={img(t, ph(PH_TH, i))} alt="" style={imgPos(db, t)} /></div>
+                  <div className="im"><img loading="lazy" src={img(t, ph(PH_TH, i))} alt="" style={imgPos(db, t)} /></div>
                 </div>
               </a>
             ))}
@@ -137,7 +137,7 @@ export default async function Home() {
                 <div className="vcard small">
                   <div className="dv" />
                   <div className="tx"><h3>{e.title}</h3><div className="vb" /><div className="inf"><b>{s(e, "evType") || "Событие"}</b></div></div>
-                  <div className="im"><img src={img(e, ph(PH_CH, i), true)} alt="" style={imgPos(db, e)} /></div>
+                  <div className="im"><img loading="lazy" src={img(e, ph(PH_CH, i), true)} alt="" style={imgPos(db, e)} /></div>
                 </div>
               </a>
             ))}
@@ -157,8 +157,8 @@ export default async function Home() {
                 return (
                   <a className={"tile " + dir + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
-                    <img src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
-                    <span className="hc"><img src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
+                    <img loading="lazy" src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
+                    <span className="hc"><img loading="lazy" src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
                   </a>
                 );
               })}
@@ -167,13 +167,13 @@ export default async function Home() {
             <div className="pcards t">
               {personsT.map((p, i) => { const [c, r, sz] = CARDS_T[i]; return (
                 <a className={"pcard" + (sz === 2 ? " big" : "")} key={"t" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
-                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img loading="lazy" src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
                 </a>); })}
             </div>
             <div className="pcards m">
               {personsM.map((p, i) => { const [c, r, sz] = CARDS_M[i]; return (
                 <a className={"pcard" + (sz === 2 ? " big" : "")} key={"m" + i} href={`/m/${p.id}`} style={{ gridColumn: `${c} / span ${sz}`, gridRow: `${r} / span ${sz}` }}>
-                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
+                  <div className="nm"><div className="dv" /><span>{p.title}</span></div><div className="im"><img loading="lazy" src={img(p, ph(PH_P, i), sz === 2)} alt="" style={imgPos(db, p)} /></div>
                 </a>); })}
             </div>
           </div>
@@ -185,7 +185,7 @@ export default async function Home() {
           <a href="/map"><Lettering text="карта" /></a>
           <div className="lead">{mapL.map((t, i) => <span className={MAP_AL[i]} key={i}>{t}</span>)}</div>
           <MapCollage buildings={buildings} />
-          <a className="canvas m" href="/map" aria-label="Карта"><img src={site.mapM || "/assets/map-m.jpg"} alt="" /></a>
+          <a className="canvas m" href="/map" aria-label="Карта"><img loading="lazy" src={site.mapM || "/assets/map-m.jpg"} alt="" /></a>
           <SectionLink href="/map" text="Смотреть на карте" textM="Все места" />
         </section>
 
@@ -225,7 +225,7 @@ export default async function Home() {
 
         {/* ---- об архиве: фон из админки на высоту экрана, тексты прибиты к низу ---- */}
         <section id="about">
-          <img className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" style={frameStyle(framesOf(site.aboutBgFrame))} />
+          <img loading="lazy" className="bg" src={site.aboutBg || "/assets/about-bg.jpg"} alt="" style={frameStyle(framesOf(site.aboutBgFrame))} />
           <div className="shade" />
           <Lettering text="об архиве" cream />
           <div className="lead">{aboutL.map((t, i) => <span className={ABOUT_AL[i]} key={i}>{t}</span>)}</div>

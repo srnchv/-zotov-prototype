@@ -11,7 +11,7 @@ export const ROLES: Role[] = ["admin", "editor", "moderator"];
 const SECRET = process.env.JWT_SECRET || process.env.ADMIN_TOKEN || "";
 export function requireSecrets() {
   const prod = process.env.NODE_ENV === "production" || !!process.env.DATABASE_URL;
-  const missing = ["ADMIN_TOKEN", "JWT_SECRET"].filter((k) => !process.env[k]);
+  const missing = ["ADMIN_TOKEN", "JWT_SECRET", "CORS_ORIGINS"].filter((k) => !process.env[k]); // CORS_ORIGINS — иначе API открыт любому сайту
   if (missing.length && prod) throw new Error(`Не заданы переменные окружения: ${missing.join(", ")} — сервер не запускается`);
   if (missing.length) console.warn(`ВНИМАНИЕ: не заданы ${missing.join(", ")} — допустимо только для локальной разработки`);
 }

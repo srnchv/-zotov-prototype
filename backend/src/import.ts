@@ -2,7 +2,7 @@
 // (через «;»), в том числе на строки того же файла; фото — по именам файлов из колонки «Файлы», сами файлы
 // админка заливает папкой после создания сущностей. Шаблон генерируется здесь же (со списками справочников).
 // Принцип: сначала предпросмотр (ничего не пишем), потом запуск по подтверждению.
-import * as XLSX from "xlsx";
+import { readBook, writeBook } from "./xl.js";
 import * as repo from "./repo.js";
 
 type Row = Record<string, string>;
@@ -54,7 +54,7 @@ export const EXAMPLE = "ПРИМЕР";
 // ---- шаблон: лист «Инструкция» + лист на каждый тип с подсказками и строкой-примером ----
 export async function template(): Promise<Buffer> {
   const dicts = await dictValues();
-  const wb = XLSX.utils.book_new();
+  const out: { name: string; aoa: string[][]; widths?: number[] }[] = [];
   const instr = [
     ["Импорт в архив «Зотов» — как заполнять"],
     [""],
@@ -74,8 +74,7 @@ export async function template(): Promise<Buffer> {
   ];
   const DL: Record<string, string> = { mtype: "Типы материалов", group: "Типы личностей", placeType: "Типы мест", evType: "Типы событий", prType: "Типы проектов", colType: "Типы коллекций", orgType: "Типы организаций", srcType: "Типы текстов" };
   for (const [k, l] of Object.entries(DL)) instr.push([l + ": " + ((dicts[k] || []).join("; ") || "—")]);
-  const ws0 = XLSX.utils.aoa_to_sheet(instr); ws0["!cols"] = [{ wch: 160 }];
-  XLSX.utils.book_append_sheet(wb, ws0, "Инструкция");
+  out.push({ name: "Инструкция", aoa: instr, widths: [160] });
   const EX: Record<string, Row> = {
     material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg | Афиша выставки | Александр Родченко | 1927; afisha-1927-back.jpg | Оборот афиши", desc: "Афиша к открытию выставки." },
     person: { title: "ПРИМЕР Александр Родченко", group: "Деятели эпохи", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
@@ -90,12 +89,10 @@ export async function template(): Promise<Buffer> {
   for (const s of SHEETS) {
     const cols = colsOf(s);
     const aoa = [cols.map((c) => c.label), cols.map((c) => c.hint), cols.map((c) => EX[s.type]?.[c.key] || "")];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = cols.map((c) => ({ wch: c.key === "title" || c.key === "desc" ? 40 : c.key.startsWith("link:") ? 28 : 18 }));
-    ws["!freeze"] = { xSplit: 1, ySplit: 1 };
-    XLSX.utils.book_append_sheet(wb, ws, s.sheet);
+
+    out.push({ name: s.sheet, aoa, widths: cols.map((c) => (c.key === "title" || c.key === "desc" ? 40 : c.key.startsWith("link:") ? 28 : 18)) });
   }
-  return Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }));
+  return writeBook(out);
 }
 
 // ---- разбор файла ----
@@ -214,11 +211,11 @@ function guessCols(type: string, headers: string[]): Record<string, string> {
   }
   return out;
 }
-export function inspect(buf: Buffer): Inspect {
-  const wb = XLSX.read(buf, { type: "buffer" });
+export async function inspect(buf: Buffer): Promise<Inspect> {
+  const wb = await readBook(buf);
   const sheets: Inspect["sheets"] = [];
-  for (const name of wb.SheetNames) {
-    const rows: unknown[][] = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "" });
+  for (const name of wb.names) {
+    const rows: unknown[][] = wb.sheets[name];
     const body = rows.filter((r) => r.some((c) => norm(c)));
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
@@ -235,14 +232,13 @@ export function inspect(buf: Buffer): Inspect {
   return { sheets, targets };
 }
 // перекладываем листы произвольной книги в книгу формата шаблона: несколько колонок в одно поле — дата склеивается «1926–1927», остальное через «; »
-export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
-  const wb = XLSX.read(buf, { type: "buffer" });
-  const out = XLSX.utils.book_new();
+export async function applyMapping(buf: Buffer, mapping: Mapping): Promise<Buffer> {
+  const wb = await readBook(buf);
   const byType: Record<string, string[][]> = {};
   for (const [name, m] of Object.entries(mapping)) {
-    const ws = wb.Sheets[name]; const sdef = SHEETS.find((x) => x.type === m.type); if (!ws || !sdef) continue;
+    const ws = wb.sheets[name]; const sdef = SHEETS.find((x) => x.type === m.type); if (!ws || !sdef) continue;
     const cols = colsOf(sdef);
-    const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    const rows: unknown[][] = ws;
     const body = rows.filter((r) => r.some((c) => norm(c)));
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
@@ -265,16 +261,15 @@ export function applyMapping(buf: Buffer, mapping: Mapping): Buffer {
       tgt.push(line);
     }
   }
-  for (const [t, aoa] of Object.entries(byType)) { const sdef = SHEETS.find((x) => x.type === t)!; XLSX.utils.book_append_sheet(out, XLSX.utils.aoa_to_sheet(aoa), sdef.sheet); }
-  return XLSX.write(out, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  return writeBook(Object.entries(byType).map(([t, aoa]) => ({ name: SHEETS.find((x) => x.type === t)!.sheet, aoa })));
 }
 
-function parse(buf: Buffer) {
-  const wb = XLSX.read(buf, { type: "buffer" });
+async function parse(buf: Buffer) {
+  const wb = await readBook(buf);
   const out: Parsed[] = []; const problems: string[] = [];
   for (const s of SHEETS) {
-    const ws = wb.Sheets[s.sheet]; if (!ws) continue;
-    const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    const ws = wb.sheets[s.sheet]; if (!ws) continue;
+    const rows: unknown[][] = ws;
     if (!rows.length) continue;
     const head = rows[0].map((h) => key(String(h)));
     const cols = colsOf(s);
@@ -312,7 +307,7 @@ export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updat
 // решения по ненайденным: key → id карточки | "new" (создать карточку этого типа) | "" (пропустить связь)
 export type Resolve = Record<string, string>;
 async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]> }> {
-  const { items, problems } = parse(buf);
+  const { items, problems } = await parse(buf);
   const { entities } = await repo.exportAll();
   const byKey = new Map<string, string>(); // type|title → id существующей карточки
   for (const e of entities) if (e.type !== "media" && e.type !== "dict") byKey.set(e.type + "|" + key(e.title), e.id);
@@ -365,12 +360,12 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
   return { plan, items, byKey, dicts };
 }
-const withMap = (buf: Buffer, mapping?: Mapping | null) => (mapping && Object.keys(mapping).length ? applyMapping(buf, mapping) : buf);
-export const preview = async (buf: Buffer, resolve: Resolve = {}, mapping?: Mapping | null) => (await buildPlan(withMap(buf, mapping), resolve)).plan;
+const withMap = async (buf: Buffer, mapping?: Mapping | null) => (mapping && Object.keys(mapping).length ? applyMapping(buf, mapping) : buf);
+export const preview = async (buf: Buffer, resolve: Resolve = {}, mapping?: Mapping | null) => (await buildPlan(await withMap(buf, mapping), resolve)).plan;
 
 // ---- запуск: сущности → справочники → связи; возвращает id по строкам (для заливки файлов из админки) ----
 export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, mapping?: Mapping | null, geocode?: (q: string) => Promise<{ lat: number; lon: number } | null>) {
-  const { plan, items, byKey, dicts } = await buildPlan(withMap(buf, mapping), resolve);
+  const { plan, items, byKey, dicts } = await buildPlan(await withMap(buf, mapping), resolve);
   let geocoded = 0;
   const okRows = plan.rows.filter((r) => r.action !== "error");
   const ids = new Map<string, string>(byKey);

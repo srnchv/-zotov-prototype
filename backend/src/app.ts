@@ -17,6 +17,12 @@ const ah = (fn: (req: express.Request, res: express.Response) => Promise<unknown
 
 export function createApp() {
   const app = express();
+  // защитные заголовки: без угадывания типов, без фреймов (админка), минимальный referrer; HSTS — только по https
+  app.use((req, res, next) => {
+    res.set({ "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY", "Permissions-Policy": "camera=(), microphone=(), geolocation=()" });
+    if (req.secure || req.get("x-forwarded-proto") === "https") res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    next();
+  });
   // CORS: только домены сайта и админки (CORS_ORIGINS через запятую); без переменной — любой (локальная разработка)
   const origins = (process.env.CORS_ORIGINS || "").split(",").map((x) => x.trim()).filter(Boolean);
   app.use(cors(origins.length ? { origin: (o, cb) => cb(null, !o || origins.includes(o)) } : {}));
@@ -222,7 +228,7 @@ export function createApp() {
     type: z.enum(["material","person","place","event","theme","project","org","collection","source","media","tag","dict"]),
     title: z.string().min(1).max(500),
     status: z.enum(["draft","moderation","published"]).optional(),
-    payload: z.record(z.unknown()).optional(),
+    payload: z.record(z.string(), z.unknown()).optional(),
     links: z.array(z.string()).optional(),
   });
 
@@ -326,7 +332,7 @@ export function createApp() {
   // произвольная таблица: листы, заголовки, примеры и догадка о сопоставлении колонок с полями шаблона
   app.post("/api/import/inspect", auth, upload.single("file"), ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
-    res.json(imp.inspect(req.file.buffer));
+    res.json(await imp.inspect(req.file.buffer));
   }));
   const parseMapping = (v: unknown): imp.Mapping | null => { try { const m = typeof v === "string" ? JSON.parse(v) : v; return m && typeof m === "object" ? (m as imp.Mapping) : null; } catch { return null; } };
   app.post("/api/import/preview", auth, upload.single("file"), ah(async (req, res) => {
@@ -358,7 +364,8 @@ export function createApp() {
   app.post("/api/tours/:id/file", auth, upload.single("file"), fixFile, ah(async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "no file" });
     const { path: rel } = z.object({ path: z.string().min(1).max(500) }).parse(req.body);
-    res.json(await media.tourPutFile(String(req.params.id), rel, req.file.buffer));
+    try { res.json(await media.tourPutFile(String(req.params.id), rel, req.file.buffer)); }
+    catch (e: any) { if (e?.status === 413) return res.status(413).json({ error: e.message }); throw e; }
   }));
   app.post("/api/tours/:id/finish", auth, ah(async (req, res) => {
     const { index, files, size } = z.object({ index: z.string().min(1), files: z.number().int().optional(), size: z.number().optional() }).parse(req.body);
@@ -367,7 +374,8 @@ export function createApp() {
     res.json(m);
   }));
 
-  // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour
+  // 3D-тур пакетом: ZIP (до 2 ГБ) пишется во временный файл, распаковывается прямо в S3; на выходе — медиа kind=tour.
+  // Лимиты распакованного тура (число файлов, файл, общий объём) — в media.TOUR_LIMITS
   const uploadZip = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
   app.post("/api/tours", auth, limit(5), uploadZip.single("file"), fixFile, async (req, res) => {
     const tmp = req.file?.path;
@@ -448,7 +456,11 @@ export function createApp() {
     if (!m || m.type !== "media") return res.status(404).json({ error: "not found" });
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
     const access = String((parent?.access ?? m.access) || "open");
-    if (access !== "open" && req.headers.authorization !== `Bearer ${ADMIN_TOKEN}`) return res.status(403).json({ error: "access restricted" });
+    if (!(await isStaff(req))) {
+      // посетителю: только видео/аудио/PDF (для плееров), только у опубликованного открытого материала; оригиналы изображений закрыты — есть копии
+      if (m.kind === "image" || !m.kind) return res.status(404).json({ error: "not found" });
+      if (!isPublic(m) || (parent && !isPublic(parent)) || access !== "open") return res.status(403).json({ error: "access restricted" });
+    }
     const url = await media.originalUrl(m.id, ttl);
     if (!url) return res.status(404).json({ error: "not found" });
     res.json({ url, expiresIn: ttl });
