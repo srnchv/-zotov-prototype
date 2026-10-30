@@ -1,8 +1,8 @@
-/* Раздел «Коллекции» (макет DEV 612:54229) */
+/* Разделы-витрины: «Коллекции» (макет DEV 612:54229) и «Темы» (612:50434) */
 #clls{position:relative}
-.colls #intro{padding:220px 12px 16px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;max-width:calc(49cqw + 24px);white-space:pre-line}
-.colls .div8{height:8px;background:var(--ink)}
-.colls .div8.end{margin:0 12px}
+.cgv #intro{padding:220px 12px 16px;font-family:var(--hf);font-size:24.1px;line-height:24px;letter-spacing:-.241px;font-weight:500;max-width:calc(49cqw + 24px);white-space:pre-line}
+.cgv .div8{height:8px;background:var(--ink)}
+.cgv .div8.end{margin:0 12px}
 #cgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:64px 12px 0}
 .cc{display:flex;flex-direction:column;gap:8px;border-top:8px solid var(--ink);padding-top:8px;min-width:0;color:var(--ink)}
 .cc .tx{flex:1 1 auto;display:flex;flex-direction:column;gap:4px}
@@ -12,20 +12,30 @@
 .cc .k b{display:block;font-weight:700}
 .cc .k span{display:block;font-weight:500}
 .cc .im{aspect-ratio:3/2;width:100%;background:var(--grey5);overflow:hidden}
+/* темы: серая линия под интро, 4 колонки, заголовок H3, квадратная картинка */
+.themes .div8:not(.end){background:var(--grey4)}
+.themes #cgrid{grid-template-columns:repeat(4,1fr)}
+.themes .cc h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
+.themes .cc .im{aspect-ratio:1/1}
 .cc .im img{width:100%;height:100%;object-fit:cover;display:block}
 .cc:hover h2{color:var(--red)}
-.colls .div8.end{margin-top:12px;margin-bottom:144px}
+.cgv .div8.end{margin-top:12px;margin-bottom:144px}
 @media (max-width:1599px){
-  .colls #intro{padding-top:160px}
+  .cgv #intro{padding-top:160px}
   #cgrid{padding-top:48px}
-  .colls .div8.end{margin-bottom:184px}
+  .themes #cgrid{grid-template-columns:repeat(3,1fr)}
+  .cgv .div8.end{margin-bottom:184px}
 }
 @media (max-width:1023px){
   #clls{padding-top:110px}
-  .colls #intro{padding-top:120px;max-width:none;white-space:normal}
+  .cgv #intro{padding-top:120px;max-width:none;white-space:normal}
   #cgrid{grid-template-columns:1fr}
+  .themes #cgrid{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:599px){
-  .colls #intro{padding-top:64px;font-size:20px;line-height:20px;letter-spacing:0}
+  .cgv #intro{padding-top:64px;font-size:20px;line-height:20px;letter-spacing:0}
   .cc h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
+  .themes #cgrid{grid-template-columns:1fr;row-gap:24px}
+  .themes .cc h2{font-size:20px;line-height:20px;letter-spacing:0}
+  .themes .cc .tx{min-height:160px}
 }
