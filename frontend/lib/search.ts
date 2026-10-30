@@ -1,7 +1,7 @@
 // Логика поиска по ТЗ DEV «Поиск»: строка запроса, 8 категорий фильтров, типология, сортировка, пагинация.
 // Работает над снимком архива (loadArchive). Значения фильтров — из справочников админки (dict-*), не хардкод.
 import type React from "react";
-import { published, linked, type Entity } from "./api";
+import { published, linked, spheresOf, funcsOf, funcGroupOf, funcLabel, listOf, type Entity } from "./api";
 
 export type Leaf = { id: string; title: string };
 // группа фильтра: title "" — плоский список; leaf — тип без подтипов (одна строка с чекбоксом на уровне групп)
@@ -14,8 +14,7 @@ export const CAT_KEYS: CatKey[] = ["per", "person", "city", "theme", "event", "c
 // наборы фильтров страниц-разделов по макетам DEV (550:75129): личности и тексты
 export const PAGE_CATS: Record<string, CatKey[]> = { person: ["per", "theme", "city", "org", "sphere", "event"], text: ["per", "stype", "person", "theme", "coll"] };
 export const ALL_CAT_KEYS: CatKey[] = ["per", "person", "city", "theme", "event", "coll", "mat", "org", "sphere", "stype"];
-// сферы деятельности личности — из поля «Роль» («художник, архитектор» → две сферы) и справочника sphere
-export const spheresOf = (e: Entity) => s(e, "role").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+export { spheresOf };
 export const PER_PAGE = 48;
 
 // типология: ключ в URL → подпись в списке (порядок как в макете)
@@ -32,8 +31,8 @@ const MTYPES = ["Видео", "Аудио", "Изображение", "Текс�
 export const kindOf = (e: Entity) => (e.type === "source" ? (s(e, "srcKind") === "record" ? "" : "text") : e.type);
 const inUniverse = (e: Entity) => published(e) && KINDS.some(([k]) => k === kindOf(e));
 
-// ---- тип/подтип места: исторически хранятся одной строкой «Тип · подтип» ----
-const placeTS = (e: Entity): [string, string] => { const [t, ...r] = s(e, "placeType").split(" · "); return [t.trim(), s(e, "subtype") || r.join(" · ").trim()]; };
+// ---- типология места — функции «Группа › функция» (первая — для карточки; у старых карточек — placeType «Тип · подтип») ----
+const placeTS = (e: Entity): [string, string] => { const f = funcsOf(e)[0]; if (f) { const [g, ...r] = f.split(" › "); return [g.trim(), r.join(" › ").trim()]; } const [t, ...r] = s(e, "placeType").split(" · "); return [t.trim(), s(e, "subtype") || r.join(" · ").trim()]; };
 const typeSub = (e: Entity): [string, string] => {
   if (e.type === "place") return placeTS(e);
   if (e.type === "material") return [s(e, "mtype"), s(e, "subtype")];
@@ -103,7 +102,7 @@ export function buildCats(db: Record<string, Entity>): Cat[] {
     if (items.length) decades.push({ id: "d" + d, title: `${d}-е`, items });
   }
   // города: общий справочник (места и события)
-  const cities = dict(db, "city", uniq([...of("place").map((p) => s(p, "city")), ...of("event").map((e) => s(e, "city"))]));
+  const cities = dict(db, "city", uniq([...of("place").map((p) => s(p, "city")), ...of("event").map((e) => s(e, "city")), ...of("person").flatMap((p) => listOf(p, "cities"))]));
   const orgs = of("org").sort(byTitle);
   const spheres = dict(db, "sphere", uniq(persons.flatMap(spheresOf)));
   const stypes = dict(db, "srcType", uniq(of("source").filter((x) => kindOf(x) === "text").map((x) => s(x, "srcType"))));
@@ -146,7 +145,8 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Partial<
     const c = b.cat[k];
     if (k === "mat") { const t = typeTest(c.groups, chosen, "material"); tests.push((e) => selfOrLinked(db, e, t)); }
     // город: у самой сущности (место, событие) или у связанного места/события
-    if (k === "city") tests.push((e) => selfOrLinked(db, e, (x) => (x.type === "place" || x.type === "event") && chosen.has(s(x, "city"))));
+    // город: у места и события — своё поле (у события пустое — через привязанное место), у личности — список городов, где жила и работала
+    if (k === "city") tests.push((e) => selfOrLinked(db, e, (x) => ((x.type === "place" || x.type === "event") && chosen.has(s(x, "city"))) || (x.type === "person" && listOf(x, "cities").some((c) => chosen.has(c)))));
     if (k === "event") { const t = typeTest(c.groups, chosen, "event"); tests.push((e) => selfOrLinked(db, e, t)); }
     if (k === "coll") tests.push((e) => selfOrLinked(db, e, (x) => x.type === "collection" && chosen.has(s(x, "colType"))));
     // темы и личности — «ИЛИ» внутри категории (решение от 23.10: в ТЗ было «И», но снятие одного чипса из группы давало пустую выдачу)

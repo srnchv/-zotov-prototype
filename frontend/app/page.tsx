@@ -5,7 +5,7 @@ import Gallery from "@/components/Gallery";
 import MapCollage, { BUILDINGS } from "@/components/MapCollage";
 import SearchPh from "@/components/SearchPh";
 import { Lettering, SectionLink } from "@/components/Lettering";
-import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaPos, frameStyle, framesOf, mediaKind, type Entity } from "@/lib/api";
+import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaPos, frameStyle, framesOf, mediaKind, spheresOf, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -153,7 +153,7 @@ export default async function Home() {
               {persons.map((p, i) => {
                 const d = MOSAIC_D[i], t = MOSAIC_T[i], m = MOSAIC_M[i];
                 const dir = hoverDir(MOSAIC_D, i, 12, 4);
-                const sub = cap([s(p, "role"), s(p, "life")].filter(Boolean).join(", "));
+                const sub = cap([spheresOf(p).join(", ") || s(p, "role"), s(p, "life")].filter(Boolean).join(", "));
                 return (
                   <a className={"tile " + dir + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>

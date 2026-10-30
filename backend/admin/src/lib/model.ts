@@ -19,12 +19,15 @@ export const STATUS_LABEL: Record<string, string> = { draft: "Черновик",
 export const pubStat = (o: Entity) => STATUS_LABEL[o.status || ""] || "Опубликовано";
 
 // ключи «Тип» (из справочника), «Подтип» и «Дата» — у каждой сущности своё поле
-export const TYPEKEY: Record<string, string> = { material: "mtype", event: "evType", person: "group", collection: "colType", place: "placeType", org: "orgType", project: "prType", source: "srcType", theme: "themeType" };
-export const SUBKEY: Record<string, string> = { person: "role" };
+// у места типологии нет — её роль играют функции (группа › функция), см. SPECIFIC.place
+export const TYPEKEY: Record<string, string> = { material: "mtype", event: "evType", person: "group", collection: "colType", org: "orgType", project: "prType", source: "srcType", theme: "themeType" };
+export const NO_TYPE = new Set(["place"]); // типы без полей «Тип / Подтип» в карточке
+export const SUBKEY: Record<string, string> = {}; // у личности вместо подтипа — «Сфера деятельности» (несколько из справочника), см. SPECIFIC.person
 export const TYPELABEL: Record<string, string> = { person: "Группа", collection: "Тип коллекции" };
-export const SUBLABEL: Record<string, string> = { person: "Роль (художник, архитектор…)", collection: "Родительская коллекция" };
+export const SUBLABEL: Record<string, string> = { collection: "Родительская коллекция" };
 export const DATEKEY: Record<string, string> = { person: "life", project: "dates", org: "period", collection: "period", source: "year" };
-export const DATELABEL: Record<string, string> = { person: "Годы жизни", project: "Даты проведения", org: "Период деятельности", collection: "Период", source: "Год" };
+// подпись везде одна — «Период» (решение аналитика); смысл поля подсказывает плейсхолдер
+export const DATELABEL: Record<string, string> = { person: "Период (годы жизни)", project: "Период (даты проведения)", org: "Период деятельности", collection: "Период", source: "Период (год публикации)", material: "Период", event: "Период", place: "Период (годы постройки)" };
 // подсказки по ТЗ поиска: год или диапазон «с — по»; неточные даты — диапазоном («1920-е» → 1920–1929)
 export const DATEPH: Record<string, string> = { person: "1891–1956 (рождение — смерть)", project: "12.05–30.09.1927 (начало — окончание)", org: "1920 — 1930", material: "1927 или 1920–1929", event: "1927 или 1927–1928", place: "1929 или 1927–1931", source: "1927 (год публикации)" };
 export const typeKeyOf = (t: string) => TYPEKEY[t] || "subtype";
@@ -32,13 +35,14 @@ export const subKeyOf = (t: string) => SUBKEY[t] || "subtype";
 export const dateKeyOf = (t: string) => DATEKEY[t] || "date";
 // специфичные поля после общих
 export const SPECIFIC: Record<string, [string, string, string?][]> = {
-  place: [["city", "Город", "dict:city"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"], ["okn", "Статус ОКН", "dictsel:okn"], ["functions", "Функция", "multi:func"], ["authors", "Автор", "multi:author"], ["customers", "Заказчик", "multi:customer"]],
+  place: [["functions", "Тип и функции", "multi:func"], ["city", "Город", "dict:city"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"], ["okn", "Статус ОКН", "dictsel:okn"], ["authors", "Авторы", "multi:author"], ["customers", "Заказчики", "multi:customer"]],
+  person: [["spheres", "Сфера деятельности", "multi:sphere"], ["cities", "Города", "multi:city"]], // сферы — из справочника; города — где жил и работал (фильтр «Город»)
   event: [["city", "Город", "dict:city"]], // для фильтра «Город» в хронографе; подставляется из привязанного места
   project: [["curators", "Кураторы"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],
 };
-export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "okn", "functions", "authors", "customers", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
+export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "okn", "functions", "authors", "customers", "spheres", "cities", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
 // источник: текстовый материал (полная карточка) или библиографическая запись (короткая)
 export const SRCKIND: Record<string, string> = { text: "Текстовый материал", record: "Библиографическая запись" };
 export const isRecord = (o: { type: string; srcKind?: string }) => o.type === "source" && o.srcKind === "record";

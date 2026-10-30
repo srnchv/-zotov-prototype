@@ -5,7 +5,7 @@
 import { ref, reactive, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { S, SITE, api, load, loadAudit, toast, canEdit, dictValues, subOptions, uploadFile, homeCheck, collHighlights } from "../lib/store";
-import { TYPES, TYPEKEY, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIFIC, PAYLOAD_KEYS, SRCKIND, isRecord, ACCESS, ACTL, REL_ORDER, REL_HEAD, MEDIA_FLOORS, HOME_TYPES, HOME_KEY, kindOf, fmtAt, fmtSize, type Entity } from "../lib/model";
+import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIFIC, PAYLOAD_KEYS, SRCKIND, isRecord, ACCESS, ACTL, REL_ORDER, REL_HEAD, MEDIA_FLOORS, HOME_TYPES, HOME_KEY, kindOf, fmtAt, fmtSize, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
@@ -143,9 +143,9 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
           <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>
         <div class="field"><label>Название</label><input class="inp" v-model="f.title"></div>
         <div class="field" v-if="o.type === 'theme'"><label>Тип</label><input class="inp" v-model="f[tk]"></div>
-        <div class="field" v-else><label>{{ TYPELABEL[o.type] || "Тип" }}</label>
+        <div class="field" v-else-if="!NO_TYPE.has(o.type)"><label>{{ TYPELABEL[o.type] || "Тип" }}</label>
           <select class="sel" v-model="f[tk]" @change="f[sk] = ''"><option value="">— не задано —</option><option v-for="v in typeVals" :key="v" :value="v">{{ v }}</option></select></div>
-        <div class="field" v-if="!rec && o.type !== 'theme'"><label>{{ SUBLABEL[o.type] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label>
+        <div class="field" v-if="!rec && o.type !== 'theme' && !NO_TYPE.has(o.type) && o.type !== 'person'"><label>{{ SUBLABEL[o.type] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label>
           <select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
         <div class="field"><label>{{ DATELABEL[o.type] || "Дата / период" }}</label><input class="inp" v-model="f[dk]"></div>
         <div class="field" v-for="[k, l, ph] in SPECIFIC[o.type] || []" :key="k"><label>{{ l }}</label>
@@ -153,7 +153,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
           <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>
           <select v-else-if="ph && ph.startsWith('dictsel:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in dictValues(ph.slice(8))" :key="v" :value="v">{{ v }}</option></select>
           <template v-else-if="ph && ph.startsWith('multi:')">
-            <div class="muted" style="font-size:12px;margin-bottom:4px">Несколько значений — из справочника «{{ ph.slice(6) === 'func' ? 'Функции' : ph.slice(6) === 'author' ? 'Авторы' : 'Заказчики' }}» (клик отмечает)</div>
+            <div class="muted" style="font-size:12px;margin-bottom:4px">Несколько значений — из справочника «{{ ({ func: "Места — типы и функции", author: "Авторы", customer: "Заказчики", sphere: "Сферы деятельности", city: "Города" } as Record<string, string>)[ph.slice(6)] || ph.slice(6) }}» (клик отмечает)</div>
             <template v-if="dictValues('sub:' + ph.slice(6)).length"><div v-for="g in dictValues(ph.slice(6))" :key="g" style="margin-bottom:6px"><div class="kicker">{{ g }}</div>
               <div class="chips" style="margin-top:4px"><span v-for="v in dictValues('sub:' + ph.slice(6)).filter(x => x.startsWith(g + ' › '))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v.slice(g.length + 3) }}</span></div></div></template>
             <div v-else class="chips"><span v-for="v in dictValues(ph.slice(6))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v }}</span></div>

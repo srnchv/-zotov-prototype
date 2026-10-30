@@ -15,6 +15,7 @@ import NavRel from "@/components/NavRel";
 import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, mediaPos, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
 import YMap from "@/components/YMap";
 import { abs, descOf } from "@/lib/seo";
+import { spheresOf, funcLabel, funcGroupOf, listOf } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [e, db] = await Promise.all([getEntity(id), loadArchive()]);
   if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) return { title: "Не найдено", robots: { index: false } };
   const kind = TYPES[e.type]?.l || "";
-  const sub = [kind, s(e, "mtype") || s(e, "evType") || s(e, "placeType") || s(e, "group") || s(e, "role"), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
+  const sub = [kind, s(e, "mtype") || s(e, "evType") || funcLabel(e) || s(e, "group") || spheresOf(e).join(", "), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
   const description = s(e, "seoDesc") || descOf(s(e, "desc"), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
   const img = imgOf(db, { ...e, links: e.links.map((l) => l.id) } as unknown as Entity, true);
   const url = abs(`/m/${encodeURIComponent(e.id)}`);
@@ -45,7 +46,7 @@ const ACCESS: Record<string, string> = { open: "Открытый доступ", 
 
 // подпись под карточкой в связанных — по типу сущности
 const meta = (x: Entity, db: Record<string, Entity>) => {
-  if (x.type === "person") return s(x, "life") || s(x, "role");
+  if (x.type === "person") return s(x, "life") || spheresOf(x).join(", ");
   if (x.type === "event") return s(x, "date");
   if (x.type === "place") return [s(x, "city"), s(x, "date")].filter(Boolean).join(", ");
   if (x.type === "project") return s(x, "dates");
@@ -59,9 +60,9 @@ function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string
   const t = TYPES[e.type]?.l || e.type;
   switch (e.type) {
     case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""], ["Права и доступ", ACCESS[s(e, "access")] || "Открытый доступ"]];
-    case "person": return [["Тип, подтип", `${t}, ${s(e, "group") || "—"}`], ["Роль", s(e, "role") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", "Открытый доступ"]];
+    case "person": return [["Тип", `${t}, ${s(e, "group") || "—"}`], ["Сфера деятельности", spheresOf(e).join(", ") || "—"], ["Города", listOf(e, "cities").join(", ") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", "Открытый доступ"]];
     case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
-    case "place": return [["Тип, подтип", `${t}, ${s(e, "placeType") || "—"}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
+    case "place": return [["Тип, функции", `${funcGroupOf(e) || "—"}${funcLabel(e) ? ", " + funcLabel(e) : ""}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
     case "project": return [["Тип, подтип", s(e, "prType") || t], ["Кураторы", s(e, "curators") || "—"], ["Даты проведения", s(e, "dates") || "—"], ["Площадка", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
     case "collection": return [["Тип, подтип", `${t}, ${s(e, "colType") || "—"}`], ["Период", s(e, "period") || "—"], ["Состав", `${linked(db, e, "material").length} материалов`], ["Хранение", "Центр «Зотов», Москва"], ["Права и доступ", "Открытый доступ"]];
     case "org": return [["Тип, подтип", `${t}, ${s(e, "orgType") || "—"}`], ["Период", s(e, "period") || "—"], ["Адрес", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Связано в архиве", `${(e.links || []).length} объектов`], ["Права и доступ", "Открытый доступ"]];

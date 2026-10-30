@@ -43,6 +43,15 @@ export async function getEntity(id: string): Promise<EntityFull | null> {
   return r.json();
 }
 
+// списки в payload (функции, авторы, сферы, города личности): массив или строка через «;»
+type AnyEnt = { [k: string]: unknown } | undefined;
+export const listOf = (e: AnyEnt, k: string): string[] => { const v = e?.[k]; return Array.isArray(v) ? v.map(String).filter(Boolean) : v ? String(v).split(";").map((x) => x.trim()).filter(Boolean) : []; };
+// сферы деятельности личности: поле spheres, у старых карточек — роль через запятую
+export const spheresOf = (e: { [k: string]: unknown }) => { const sp = listOf(e, "spheres"); return sp.length ? sp : String(e.role || "").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean); };
+// типология места — функции «Группа › функция»; группа — первая часть
+export const funcsOf = (e: { [k: string]: unknown }) => listOf(e, "functions");
+export const funcGroupOf = (e: { [k: string]: unknown }) => (funcsOf(e)[0] || String(e.placeType || "").split(" · ")[0]).split(" › ")[0].trim();
+export const funcLabel = (e: { [k: string]: unknown }) => funcsOf(e).map((f) => f.split(" › ").pop()!.trim()).join(", ") || String(e.placeType || "").split(" · ").pop()?.trim() || "";
 export const yearOf = (s?: unknown) => { const m = String(s ?? "").match(/\d{4}/); return m ? +m[0] : 0; };
 
 // год сущности — по первому датированному полю, каким бы оно ни называлось у типа

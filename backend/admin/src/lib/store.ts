@@ -82,24 +82,28 @@ export const yearNum = (o: Entity) => { const m = String(o.date || o.dates || o.
 // ---- справочники: базовые значения из данных + добавленные/скрытые в сущностях dict-<ключ> ----
 const dvals = (t: string, k: string) => [...new Set(all(t).map((o) => o[k]).filter(Boolean))].sort() as string[];
 export type DictDef = { key: string; label: string; base: () => string[] };
+// группы функций (типология мест по ТЗ карты) и сферы деятельности — стартовые значения, дополняются в «Справочниках»
+const FUNC_GROUPS = ["Жильё", "Администрация", "Промышленность", "Культура", "Наука", "Здравоохранение", "Воспитание и образование", "Спорт", "Связь", "Коммунальное хозяйство", "Торговля", "Транспорт"];
+const SPHERES = ["архитектура", "живопись", "графика", "дизайн", "фотография", "кино", "театр", "литература", "теория искусства", "педагогика", "инженерия"];
 export const DICTDEF = (): DictDef[] => [
   { key: "mtype", label: "Типы материалов", base: () => TYPELIST },
   { key: "evType", label: "Типы событий", base: () => dvals("event", "evType") },
-  { key: "srcType", label: "Типы источников", base: () => dvals("source", "srcType") },
-  { key: "placeType", label: "Типы мест", base: () => [...new Set(all("place").map((p) => String(p.placeType || "").split("·")[0].trim()).filter(Boolean))] },
+  { key: "srcType", label: "Типы текстов", base: () => [...new Set(["Тексты конструктивистов", "Тексты о конструктивистах", "Каталоги", ...dvals("source", "srcType")])] },
   { key: "group", label: "Группы личностей", base: () => dvals("person", "group") },
-  { key: "colType", label: "Типы коллекций", base: () => dvals("collection", "colType") },
+  { key: "colType", label: "Типы коллекций", base: () => [...new Set(["Коллекция Центра «Зотов»", "Музеи", "Библиотеки", "Архивы", "Частные собрания", ...dvals("collection", "colType")])] },
   { key: "orgType", label: "Типы организаций", base: () => dvals("org", "orgType") },
   { key: "prType", label: "Типы проектов Центра", base: () => dvals("project", "prType") },
   // карта: функции (группа › функция), авторы (группа › автор), заказчики, статус ОКН
-  { key: "func", label: "Функции — группы", base: () => [...new Set(all("place").flatMap((o) => (o.functions || []) as string[]).map((v) => v.split(" › ")[0]))] },
+  { key: "func", label: "Функции — группы", base: () => [...new Set([...FUNC_GROUPS, ...all("place").flatMap((o) => (o.functions || []) as string[]).map((v) => v.split(" › ")[0])])] },
+  // сферы деятельности личностей: из поля spheres, а у старых карточек — из текстовой роли через запятую
+  { key: "sphere", label: "Сферы деятельности", base: () => [...new Set([...SPHERES, ...all("person").flatMap((o) => (o.spheres as string[]) || String(o.role || "").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean))])] },
   { key: "sub:func", label: "Функции", base: () => [...new Set(all("place").flatMap((o) => (o.functions || []) as string[]).filter((v) => v.includes(" › ")))] },
   { key: "author", label: "Авторы — группы", base: () => ["Архитекторы", "Инженеры", "Проектные организации"] },
   { key: "sub:author", label: "Авторы", base: () => [...new Set(["Архитекторы › Неизвестный архитектор", ...all("place").flatMap((o) => (o.authors || []) as string[]).filter((v) => v.includes(" › "))])] },
   { key: "customer", label: "Заказчики", base: () => [...new Set(["правительство", "ведомство", "управление", "муниципалитет", "кооператив", "профсоюз", "общественная организация", "неустановленный застройщик", ...all("place").flatMap((o) => (o.customers || []) as string[])])] },
   { key: "okn", label: "Статус ОКН", base: () => [...new Set(["федерального значения", "регионального значения", "местного значения", "выявленный", "не является ОКН", ...all("place").map((o) => String(o.okn || "").trim()).filter(Boolean)])] },
-  { key: "city", label: "Города", base: () => [...new Set([...all("place").map((o) => String(o.city || "").trim()), ...all("event").map((o) => String(o.city || "").trim())].filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru")) },
-  ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", placeType: "мест", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({
+  { key: "city", label: "Города", base: () => [...new Set([...all("place").map((o) => String(o.city || "").trim()), ...all("event").map((o) => String(o.city || "").trim()), ...all("person").flatMap((o) => (o.cities as string[]) || [])].filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru")) },
+  ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({
     key: "sub:" + tk, label: "Подтипы " + l, base: () => {
       const types = Object.keys(TYPEKEY).filter((t) => TYPEKEY[t] === tk);
       return [...new Set(S.raw.filter((o) => types.includes(o.type)).map((o) => { const [t, sub] = typeSubOf(o, tk); return t && sub ? t + " › " + sub : ""; }).filter(Boolean))].sort() as string[];

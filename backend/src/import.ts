@@ -17,24 +17,46 @@ const COMMON_TAIL: Col[] = [
   { key: "tags", label: "Теги", hint: "служебные теги через «;»" },
 ];
 const LINK_COLS: [string, string][] = [["person", "Личности"], ["place", "Места"], ["event", "События"], ["theme", "Темы"], ["project", "Проекты Центра"], ["collection", "Коллекции"], ["org", "Организации"], ["material", "Материалы"], ["source", "Тексты"]];
-const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string }[] = [
-  { type: "material", sheet: "Материалы", dateKey: "date", cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Дата", hint: "год или диапазон: 1927 или 1920–1929" }] },
-  { type: "person", sheet: "Личности", dateKey: "life", cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "role", label: "Роль", hint: "художник, архитектор…" }, { key: "life", label: "Годы жизни", hint: "1891–1956" }] },
-  { type: "place", sheet: "Места", dateKey: "date", cols: [{ key: "placeType", label: "Тип", hint: "из справочника типов мест", dict: "placeType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "city", label: "Город", hint: "" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "date", label: "Дата", hint: "год постройки или диапазон" }, { key: "okn", label: "Статус ОКН", hint: "одно из: федерального значения / регионального значения / местного значения / выявленный / не является ОКН" }, { key: "functions", label: "Функции", hint: "группа › функция, через «;»: Жильё › Дом-коммуна; Культура › Рабочий клуб" }, { key: "archs", label: "Архитекторы", hint: "через «;» или «,»: Мельников К.С.; Шухов В.Г. Если неизвестен — Неизвестный архитектор (пустая ячейка = неизвестный)" }, { key: "engs", label: "Инженеры", hint: "через «;» или «,»" }, { key: "dorgs", label: "Проектные организации", hint: "через «;»" }, { key: "customers", label: "Заказчики", hint: "один или несколько из: правительство; ведомство; управление; муниципалитет; кооператив; профсоюз; общественная организация; неустановленный застройщик" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }] },
-  { type: "event", sheet: "События", dateKey: "date", cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "" }, { key: "date", label: "Дата", hint: "1927 или 12 марта 1927" }] },
-  { type: "theme", sheet: "Темы", dateKey: "", cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
-  { type: "project", sheet: "Проекты Центра", dateKey: "dates", cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Даты проведения", hint: "12.03–30.06.1927" }, { key: "curators", label: "Кураторы", hint: "" }] },
-  { type: "collection", sheet: "Коллекции", dateKey: "period", cols: [{ key: "colType", label: "Тип коллекции", hint: "Открытое хранение / Личная коллекция", dict: "colType" }, { key: "period", label: "Период", hint: "1920-е" }] },
-  { type: "org", sheet: "Организации", dateKey: "period", cols: [{ key: "orgType", label: "Тип", hint: "", dict: "orgType" }, { key: "period", label: "Период деятельности", hint: "1920 — 1930" }] },
-  { type: "source", sheet: "Тексты", dateKey: "year", cols: [{ key: "srcType", label: "Тип текста", hint: "статья, рецензия, каталог…", dict: "srcType" }, { key: "year", label: "Год", hint: "год публикации" }, { key: "author", label: "Автор", hint: "" }, { key: "publisher", label: "Издательство", hint: "" }, { key: "pubplace", label: "Место издания", hint: "" }] },
+// лист → тип карточек; даты везде называются «Период» (смысл — в подсказке); links — какие колонки связей показывать в шаблоне
+// (импорт принимает любые колонки связей на любом листе, это только состав шаблона)
+const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string; links: string[] }[] = [
+  { type: "material", sheet: "Материалы", dateKey: "date", links: ["person", "place", "event", "theme", "collection", "project"], cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Период", hint: "год или диапазон: 1927 или 1920–1929" }] },
+  { type: "person", sheet: "Личности", dateKey: "life", links: ["event", "theme", "org", "material"], cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "spheres", label: "Сфера деятельности", hint: "одна или несколько через «;» из справочника: архитектура; дизайн; фотография…" }, { key: "life", label: "Период", hint: "годы жизни: 1891–1956" }, { key: "cities", label: "Город", hint: "города через «;» — где жил и работал (фильтр «Город»)" }] },
+  { type: "place", sheet: "Места", dateKey: "date", links: ["place"], cols: [{ key: "fgroup", label: "Тип", hint: "группа функции из справочника: Жильё / Администрация / Культура / Транспорт…" }, { key: "fsubs", label: "Подтип", hint: "функции внутри группы, одна или несколько через «;»: Дом-коммуна; Гостиница" }, { key: "city", label: "Город", hint: "из справочника городов" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "okn", label: "Статус ОКН", hint: "одно из: федерального значения / регионального значения / местного значения / выявленный / не является ОКН" }, { key: "date", label: "Период", hint: "год постройки или диапазон" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }, { key: "archs", label: "Архитекторы", hint: "имена через «;» — если есть карточка личности, связь проставится сама; если автор неизвестен — «Неизвестный архитектор» (пустая ячейка = неизвестный)" }, { key: "engs", label: "Инженеры", hint: "имена через «;»" }, { key: "dorgs", label: "Проектные организации", hint: "названия через «;»" }, { key: "customers", label: "Заказчики", hint: "один или несколько через «;»: правительство; ведомство; управление; муниципалитет; кооператив; профсоюз; общественная организация; неустановленный застройщик" }] },
+  { type: "event", sheet: "События", dateKey: "date", links: ["person", "place", "theme", "org"], cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Период", hint: "1927, 12 марта 1927 или диапазон 1927–1928" }, { key: "city", label: "Город", hint: "из справочника городов; если пусто — подставится из привязанного места" }] },
+  { type: "theme", sheet: "Темы", dateKey: "", links: ["person", "place", "event", "project", "collection", "org", "material", "source"], cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
+  { type: "project", sheet: "Проекты Центра", dateKey: "dates", links: ["person", "place", "event", "theme", "collection", "org", "material", "source"], cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Период", hint: "даты проведения: 12.03–30.06.1927" }, { key: "curators", label: "Кураторы", hint: "" }] },
+  { type: "collection", sheet: "Коллекции", dateKey: "period", links: ["person", "place", "event", "theme", "project", "org", "material", "source"], cols: [{ key: "colType", label: "Тип коллекции", hint: "Коллекция Центра «Зотов» / Музеи / Библиотеки / Архивы / Частные собрания", dict: "colType" }, { key: "period", label: "Период", hint: "1920-е" }] },
+  { type: "org", sheet: "Организации", dateKey: "period", links: ["person", "place", "event", "theme", "project", "collection", "material", "source"], cols: [{ key: "orgType", label: "Тип", hint: "", dict: "orgType" }, { key: "period", label: "Период", hint: "период деятельности: 1920 — 1930" }] },
+  { type: "source", sheet: "Тексты", dateKey: "year", links: ["person", "theme", "collection"], cols: [{ key: "srcType", label: "Тип текста", hint: "Тексты конструктивистов / Тексты о конструктивистах / Каталоги", dict: "srcType" }, { key: "year", label: "Период", hint: "год публикации" }, { key: "author", label: "Автор", hint: "" }, { key: "publisher", label: "Издательство", hint: "необязательно" }, { key: "pubplace", label: "Место издания", hint: "необязательно" }] },
 ];
+
 // связи со своим же типом — колонка «Связанные места» / «Связанные личности» и т. д.
 const linkLabel = (t: string, l: string, own: string) => (t === own ? "Связанные " + l.toLowerCase() : l);
-const colsOf = (s: (typeof SHEETS)[number]): Col[] => [...COMMON_HEAD, ...s.cols, ...LINK_COLS.map(([t, l]) => ({ key: "link:" + t, label: linkLabel(t, l, s.type), hint: "названия через «;» — карточки из архива или строки этого файла" })), ...COMMON_TAIL];
+const linkHint = (t: string, own: string) => (own === "person" && t === "material" ? "обычно заполняется со стороны материала (колонка «Личности»); здесь — для списков работ" : own === "source" && t === "collection" ? "названия через «;» — коллекции, где хранится текст" : "названия через «;» — карточки из архива или строки этого файла");
+// колонки листа в шаблоне: общие + свои + связи из списка links (остальные связи импорт тоже примет, если добавить колонку)
+const colsOf = (s: (typeof SHEETS)[number]): Col[] => [...COMMON_HEAD, ...s.cols, ...LINK_COLS.filter(([t]) => s.links.includes(t)).map(([t, l]) => ({ key: "link:" + t, label: linkLabel(t, l, s.type), hint: linkHint(t, s.type) })), ...COMMON_TAIL];
+// все возможные колонки листа (для сопоставления и разбора): связи — любые
+const allColsOf = (s: (typeof SHEETS)[number]): Col[] => [...COMMON_HEAD, ...s.cols, ...LINK_COLS.map(([t, l]) => ({ key: "link:" + t, label: linkLabel(t, l, s.type), hint: "" })), ...COMMON_TAIL];
 const ACCESS: Record<string, string> = { "открытый": "open", "по запросу": "request", "ограниченный": "restricted" };
 const STATUS: Record<string, string> = { "опубликовано": "published", "черновик": "draft", "на модерации": "moderation" };
 // значения справочников как в админке: из карточек + добавленные − убранные (сущности dict-<ключ>)
-const DICT_TYPE: Record<string, string> = { mtype: "material", group: "person", placeType: "place", evType: "event", prType: "project", colType: "collection", orgType: "org", srcType: "source" };
+const DICT_TYPE: Record<string, string> = { mtype: "material", group: "person", evType: "event", prType: "project", colType: "collection", orgType: "org", srcType: "source" };
+const FUNC_GROUPS_DEF = ["Жильё", "Администрация", "Промышленность", "Культура", "Наука", "Здравоохранение", "Воспитание и образование", "Спорт", "Связь", "Коммунальное хозяйство", "Торговля", "Транспорт"];
+// функции мест: группы (справочник func + стартовые + из карточек) и функции «Группа › функция»
+async function funcDict() {
+  const { entities } = await repo.exportAll();
+  const fromPlaces = entities.filter((e) => e.type === "place").flatMap((e: any) => (Array.isArray(e.functions) ? e.functions as string[] : []));
+  const d = entities.find((e) => e.id === "dict-func") as any, rem = new Set<string>(d?.removed || []);
+  const groups = [...new Set([...FUNC_GROUPS_DEF, ...fromPlaces.map((v) => v.split(" › ")[0]), ...((d?.added as string[]) || [])])].filter((v) => v && !rem.has(v));
+  return { groups, subs: [...new Set(fromPlaces.filter((v) => v.includes(" › ")))] };
+}
+async function sphereDict() {
+  const { entities } = await repo.exportAll();
+  const d = entities.find((e) => e.id === "dict-sphere") as any, rem = new Set<string>(d?.removed || []);
+  const vals = entities.filter((e) => e.type === "person").flatMap((e: any) => (Array.isArray(e.spheres) ? e.spheres as string[] : String(e.role || "").split(/[,;]/).map((x: string) => x.trim().toLowerCase()).filter(Boolean)));
+  return [...new Set([...vals, ...((d?.added as string[]) || [])])].filter((v) => v && !rem.has(v)).sort((a, b) => a.localeCompare(b, "ru"));
+}
 async function dictValues(): Promise<Record<string, string[]>> {
   const { entities } = await repo.exportAll();
   const out: Record<string, string[]> = {};
@@ -50,6 +72,8 @@ const norm = (s: unknown) => String(s ?? "").replace(/\s+/g, " ").trim();
 const key = (s: string) => norm(s).toLowerCase().replace(/ё/g, "е").normalize("NFC");
 const split = (s: string) => norm(s).split(/\s*;\s*/).filter(Boolean);
 export const EXAMPLE = "ПРИМЕР";
+// старые названия колонок → новые (шаблоны прошлых версий продолжают загружаться)
+const ALIAS: Record<string, string> = { "дата": "Период", "годы жизни": "Период", "даты проведения": "Период", "год": "Период", "период деятельности": "Период", "роль": "Сфера деятельности", "функции": "Подтип", "авторы": "Архитекторы", "заказчик": "Заказчики", "города": "Город" };
 
 // ---- шаблон: лист «Инструкция» + лист на каждый тип с подсказками и строкой-примером ----
 export async function template(): Promise<Buffer> {
@@ -62,7 +86,7 @@ export async function template(): Promise<Buffer> {
     ["2. «Название» обязательно. Если карточка с таким названием и типом уже есть в архиве, она обновится: заполненные ячейки перезапишут поля, пустые ничего не тронут."],
     ["3. Связи («Личности», «Места», «Темы»…) — названия через «;». Можно ссылаться на карточки архива и на строки этого же файла (на любом листе). Связи двусторонние: достаточно указать с одной стороны."],
     ["4. Типы и подтипы — из справочников (списки ниже). Новое значение добавится в справочник, в отчёте будет предупреждение."],
-    ["5. Даты: год или диапазон «с–по» (1920–1929). Неточные даты задаются диапазоном: «1920-е» → 1920–1929. У личности — годы жизни, у проекта — даты проведения."],
+    ["5. «Период»: год или диапазон «с–по» (1920–1929). Неточные даты задаются диапазоном: «1920-е» → 1920–1929. У личности — годы жизни, у проекта — даты проведения."],
     ["6. «Файлы» — имена файлов из папки через «;»: фото (JPG/PNG/WebP/TIFF), видео (MP4/WebM), аудио (MP3/M4A/WAV), документы (PDF). Первое фото строки станет обложкой. Папка выбирается в админке на втором шаге; из неё берутся только файлы, упомянутые в таблице."],
     ["   Подпись к файлу на сайте (название, автор, год) — через «|» после имени: cover.jpg | Обложка книги «Маяковский улыбается» | Александр Родченко | 1918. Все части необязательны; без названия файл подписывается названием карточки."],
     ["   Субтитры к видео и аудио — файлом рядом с тем же именем: film.mp4 → film.ru.srt, film.en.vtt (без языка = русский). В таблицу субтитры писать не нужно, они подхватятся сами."],
@@ -72,13 +96,18 @@ export async function template(): Promise<Buffer> {
     [""],
     ["Справочники (текущие значения):"],
   ];
-  const DL: Record<string, string> = { mtype: "Типы материалов", group: "Типы личностей", placeType: "Типы мест", evType: "Типы событий", prType: "Типы проектов", colType: "Типы коллекций", orgType: "Типы организаций", srcType: "Типы текстов" };
+  const DL: Record<string, string> = { mtype: "Типы материалов", group: "Типы личностей", evType: "Типы событий", prType: "Типы проектов", colType: "Типы коллекций", orgType: "Типы организаций", srcType: "Типы текстов" };
   for (const [k, l] of Object.entries(DL)) instr.push([l + ": " + ((dicts[k] || []).join("; ") || "—")]);
+  const funcs = await funcDict();
+  instr.push(["Типы мест (группы функций; функции внутри групп — подтипы, полный список в админке): " + (funcs.groups.join("; ") || "—")]);
+  instr.push(["Статус ОКН: " + OKN_LIST.join("; ")]);
+  instr.push(["Заказчики: " + CUSTOMER_LIST.join("; ")]);
+  instr.push(["Сферы деятельности личностей: " + ((await sphereDict()).join("; ") || "архитектура; дизайн; фотография…") + " (полный список — в админке)"]);
   out.push({ name: "Инструкция", aoa: instr, widths: [160] });
   const EX: Record<string, Row> = {
     material: { title: "ПРИМЕР Афиша выставки «1927»", mtype: "Печатная продукция", subtype: "Афиша", date: "1927", "link:person": "Александр Родченко", "link:event": "Открытие выставки «1927»", "link:theme": "Конструктивизм", files: "afisha-1927.jpg | Афиша выставки | Александр Родченко | 1927; afisha-1927-back.jpg | Оборот афиши", desc: "Афиша к открытию выставки." },
     person: { title: "ПРИМЕР Александр Родченко", group: "Деятели эпохи", role: "художник, фотограф, дизайнер", life: "1891–1956", "link:place": "Дом Моссельпрома", files: "rodchenko.jpg" },
-    place: { title: "ПРИМЕР Дом Моссельпрома", placeType: "Здание", subtype: "административное", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "Существует", date: "1923–1925", okn: "регионального значения", functions: "Торговля › Универмаг; Жильё › Жилой дом", archs: "Струков Д.М.; Коган А.С.", engs: "Лолейт А.Ф.", customers: "кооператив", lat: "55.7563", lon: "37.6010" },
+    place: { title: "ПРИМЕР Дом Моссельпрома", fgroup: "Администрация", fsubs: "Контора; Универмаг", city: "Москва", address: "Калашный пер., 2/10", placeStatus: "Существует", date: "1923–1925", okn: "регионального значения", archs: "Струков Д.М.; Коган А.С.", engs: "Лолейт А.Ф.", customers: "кооператив", lat: "55.7563", lon: "37.6010" },
     event: { title: "ПРИМЕР Открытие выставки «1927»", evType: "Открытие выставки", date: "12 марта 1927", "link:place": "Дом Моссельпрома" },
     theme: { title: "ПРИМЕР Фотомонтаж", def: "Техника соединения фотографий в одно изображение." },
     project: { title: "ПРИМЕР Выставка «1927»", prType: "Выставочный проект", dates: "12.03–30.06.1927", curators: "Иван Иванов" },
@@ -120,7 +149,13 @@ export function normalizePlace(p: { fields: Record<string, string>; title: strin
   }
   if (f.authors) { for (const n of names(f.authors)) authors.push(n.includes(" › ") ? n : "Архитекторы › " + n); } // старая общая колонка «Авторы» — как архитекторы
   if (authors.length) (f as any).authors = [...new Set(authors)]; else delete (f as any).authors;
-  if (f.functions) (f as any).functions = split(f.functions).map((x) => x.replace(/\s*(?:›|\/|>|→|—|-)\s*/, " › ").trim()).filter(Boolean);
+  // типология места: «Тип» = группа функции, «Подтип» = функции внутри группы → functions ["Группа › функция"]; значение уже с «›» — как есть
+  const fg = (f as any).fgroup ? String((f as any).fgroup).trim() : "";
+  const fs = split(String((f as any).fsubs || "")).map((x) => x.replace(/\s*(?:›|\/|>|→)\s*/, " › ").trim()).filter(Boolean);
+  delete (f as any).fgroup; delete (f as any).fsubs;
+  const funcs = fs.map((x) => (x.includes(" › ") ? x : fg ? fg + " › " + x : x));
+  if (!funcs.length && fg) funcs.push(fg + " › " + fg); // группа без функции — сама группа как функция
+  if (funcs.length) (f as any).functions = [...new Set(funcs)];
   if (f.customers) (f as any).customers = split(f.customers).map((x) => x.trim().toLowerCase()).filter(Boolean);
   if (f.date) f.date = f.date.replace(/\.0$/, "").replace(/^(\d{4})\s*[-–—;,]\s*(\d{4})$/, "$1–$2");
   if (f.okn) { const k2 = key(f.okn); f.okn = k2.includes("федерал") ? "федерального значения" : k2.includes("регион") ? "регионального значения" : k2.includes("местн") ? "местного значения" : k2.includes("выявлен") ? "выявленный" : /лиш|исключ/.test(k2) ? "лишён статуса" : /без статуса|не является|нет/.test(k2) ? "не является ОКН" : f.okn; }
@@ -167,9 +202,9 @@ const SYN: Record<string, string[]> = {
   okn: ["окн", "okn", "статус окн", "охранный статус", "памятник"],
   archs: ["автор", "авторы", "архитектор", "архитекторы", "architects", "architect", "author", "authors"], engs: ["инженер", "инженеры", "engineers", "engineer", "конструктор"], dorgs: ["проектная организация", "проектные организации", "мастерская", "бюро"],
   customers: ["заказчик", "заказчики", "organisation", "организация-заказчик", "customer"],
-  functions: ["функция", "функции", "назначение", "function"],
-  placeType: ["тип", "type", "типология", "тип объекта", "тип места"], mtype: ["тип материала"], evType: ["тип события"], srcType: ["тип текста"], orgType: ["тип организации"], prType: ["тип проекта"], colType: ["тип коллекции"],
-  subtype: ["подтип", "subtype"], group: ["тип личности", "группа"], role: ["роль", "сфера", "профессия", "деятельность"],
+  fgroup: ["тип", "type", "типология", "тип объекта", "тип места", "группа функции", "функция группа"], fsubs: ["подтип", "подтип места", "функции", "функция", "назначение", "function"],
+  spheres: ["сфера деятельности", "сфера", "сферы", "роль", "профессия", "деятельность"], cities: ["города", "город деятельности"], mtype: ["тип материала"], evType: ["тип события"], srcType: ["тип текста"], orgType: ["тип организации"], prType: ["тип проекта"], colType: ["тип коллекции"],
+  subtype: ["подтип", "subtype"], group: ["тип личности", "группа"],
   author: ["автор текста"], publisher: ["издательство", "издатель"], pubplace: ["место издания"], curators: ["кураторы", "куратор"], def: ["определение", "краткое определение"],
   lat: ["широта", "lat", "latitude"], lon: ["долгота", "lon", "lng", "longitude"],
   files: ["файлы", "фото", "photo", "photos", "файл", "изображения", "images", "id", "код", "индекс", "code", "id connections", "connections"],
@@ -195,7 +230,7 @@ function guessType(name: string, headers: string[]): string {
 }
 export function targetsOf(type: string): { key: string; label: string }[] {
   const sdef = SHEETS.find((x) => x.type === type); if (!sdef) return [];
-  return colsOf(sdef).map((c) => ({ key: c.key, label: c.label }));
+  return allColsOf(sdef).map((c) => ({ key: c.key, label: c.label }));
 }
 function guessCols(type: string, headers: string[]): Record<string, string> {
   const allowed = new Set(targetsOf(type).map((t) => t.key));
@@ -219,6 +254,7 @@ export async function inspect(buf: Buffer): Promise<Inspect> {
     const body = rows.filter((r) => r.some((c) => norm(c)));
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
+    if (headers.filter(Boolean).length < 2) continue; // «Инструкция», «О файле» и прочие листы без таблицы
     const sdef = SHEETS.find((x) => x.sheet === name);
     const template = !!sdef && headers.some((h) => key(h) === "название");
     const type = sdef ? sdef.type : guessType(name, headers);
@@ -237,7 +273,7 @@ export async function applyMapping(buf: Buffer, mapping: Mapping): Promise<Buffe
   const byType: Record<string, string[][]> = {};
   for (const [name, m] of Object.entries(mapping)) {
     const ws = wb.sheets[name]; const sdef = SHEETS.find((x) => x.type === m.type); if (!ws || !sdef) continue;
-    const cols = colsOf(sdef);
+    const cols = allColsOf(sdef);
     const rows: unknown[][] = ws;
     const body = rows.filter((r) => r.some((c) => norm(c)));
     if (body.length < 2) continue;
@@ -271,8 +307,8 @@ async function parse(buf: Buffer) {
     const ws = wb.sheets[s.sheet]; if (!ws) continue;
     const rows: unknown[][] = ws;
     if (!rows.length) continue;
-    const head = rows[0].map((h) => key(String(h)));
-    const cols = colsOf(s);
+    const head = rows[0].map((h) => key(ALIAS[key(String(h))] || String(h)));
+    const cols = allColsOf(s);
     const idx = (label: string) => head.indexOf(key(label));
     if (idx("Название") < 0) { problems.push(`Лист «${s.sheet}»: нет колонки «Название» — лист пропущен`); continue; }
     const known = new Set(cols.map((c) => key(c.label)));
@@ -289,6 +325,7 @@ async function parse(buf: Buffer) {
       const p: Parsed = { type: s.type, sheet: s.sheet, row: r + 1, title, fields: {}, links: {}, files: splitFiles(get("Файлы")).map(parseFile).filter((f) => f.name), tags: split(get("Теги")) };
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       if (p.type === "place") normalizePlace(p);
+      if (p.type === "person") { const f: any = p.fields; for (const k of ["spheres", "cities"]) if (f[k]) f[k] = split(String(f[k])).map((x) => (k === "spheres" ? x.toLowerCase() : x)).filter(Boolean); }
       const d = get("Описание"); if (d) p.fields.desc = d;
       const acc = key(get("Доступ")); if (acc) { if (ACCESS[acc]) p.access = ACCESS[acc]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестный доступ «${get("Доступ")}»`); }
       const st = key(get("Публикация")); if (st) { if (STATUS[st]) p.status = STATUS[st]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестная публикация «${get("Публикация")}»`); }
@@ -328,7 +365,7 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
       const f: any = p.fields;
       if (f.okn && !OKN_LIST.includes(f.okn)) notes.push(`статус ОКН «${f.okn}» не из списка (${OKN_LIST.join(", ")})`);
       for (const c of (f.customers || []) as string[]) if (!CUSTOMER_LIST.includes(c)) notes.push(`заказчик «${c}» не из списка (${CUSTOMER_LIST.join(", ")})`);
-      for (const fn of (f.functions || []) as string[]) if (!fn.includes(" › ")) notes.push(`функция «${fn}» без группы — нужно «Группа › функция», например «Жильё › Дом-коммуна»`);
+      for (const fn of (f.functions || []) as string[]) if (!fn.includes(" › ")) notes.push(`функция «${fn}» без группы — укажите «Тип» (группу), например Жильё`);
     }
     if (p.type === "place" && Array.isArray((p.fields as any).authors)) {
       const found: string[] = [];
@@ -355,6 +392,7 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
     const sdef = SHEETS.find((x) => x.type === p.type)!;
     const fields = [...sdef.cols, ...COMMON_TAIL.filter((c) => c.key === "desc")].filter((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? v.length : !!v; }).map((c) => { const v = (p.fields as any)[c.key]; return Array.isArray(v) ? `${c.label.toLowerCase()} (${v.length})` : c.label.toLowerCase(); });
     if (Array.isArray((p.fields as any).authors)) fields.push(`авторы (${(p.fields as any).authors.length})`);
+    if (Array.isArray((p.fields as any).functions)) fields.unshift(`тип и функции (${(p.fields as any).functions.length})`);
     rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes, fields });
   }
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };

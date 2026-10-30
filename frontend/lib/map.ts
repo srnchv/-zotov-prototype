@@ -1,7 +1,7 @@
 // Логика страницы «Карта» по ТЗ DEV: места архива с координатами, поиск по названию и адресу,
 // шесть категорий фильтров (Город, Функция, Период, Автор, Заказчик, Статус ОКН), сортировка списка.
 // Внутри категории — «ИЛИ», между категориями — «И» (решение 27.10, как в поиске и хронографе).
-import { published, type Entity } from "./api";
+import { published, type Entity, funcGroupOf } from "./api";
 import type { Group, Leaf } from "./search";
 import { decodeSel, type FCat, type Sel } from "./chrono";
 
@@ -31,7 +31,7 @@ export const coordsOf = (e: Entity): [number, number] | null => {
 export const allPlaces = (db: Record<string, Entity>) => Object.values(db).filter((e) => e.type === "place" && published(e));
 const firstYear = (e: Entity) => Number((s(e, "date").match(/\d{4}/) || [0])[0]);
 export const placeStatus = (e: Entity) => (/утрач/i.test(s(e, "placeStatus")) ? "lost" : "exists") as "lost" | "exists";
-export const placeType = (e: Entity) => s(e, "placeType").split(" · ")[0].trim();
+export const placeType = (e: Entity) => funcGroupOf(e); // тип места = группа функции
 
 // ---- категории ----
 export function buildMapCats(db: Record<string, Entity>, places: Entity[]): FCat[] {
