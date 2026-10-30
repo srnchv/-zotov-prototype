@@ -1,7 +1,9 @@
 import "../../search/search.css";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import "../collections.css";
 import SearchView, { type SP } from "@/components/SearchView";
+import CollectionsView from "@/components/CollectionsView";
 import { PAGE_CATS } from "@/lib/search";
 import { CATS, CAT_PATHS } from "@/lib/cats";
 import { abs } from "@/lib/seo";
@@ -22,6 +24,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CatPage({ params, searchParams }: Props) {
   const { type } = await params; const c = CATS[type];
   if (!c || type === "text") notFound();
+  if (type === "collection") return <CollectionsView />; // по макету DEV 612:54229 — без поиска и фильтров
   // «Личности» — по макету DEV (550:75129): свой набор фильтров, поиск только по именам
   const site = type === "person" ? await getSite() : null;
   const section = site ? { catKeys: PAGE_CATS.person, intro: site.personIntro, ph: site.personPh, cls: "persons", cardsOf: "person" as const } : undefined;

@@ -28,6 +28,7 @@ export const SITE_DEFAULTS = {
   personPh: "Родченко",
   textsIntro: "Каталоги выставок, исследовательские статьи, периодика и печатная продукция. Многие из этих текстов служат источниками для описаний других материалов архива.",
   textsPh: "Название текста",
+  collIntro: "Фонды и коллекции Центра «Зотов». Материалы в них сгруппированы\nпо происхождению, принадлежности и логике хранения, внутри бывают вложенные разделы и отдельные подборки.",
   // SEO (раздел «Тексты сайта» → SEO и «Описания разделов»)
   seoTitle: "", seoDesc: "", ogImage: "", gscCode: "", ywCode: "", metrikaId: "",
   catDesc_theme: "", catDesc_project: "", catDesc_person: "", catDesc_collection: "", catDesc_text: "", catDesc_search: "", catDesc_chrono: "", catDesc_map: "",
