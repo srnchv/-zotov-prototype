@@ -24,7 +24,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CatPage({ params, searchParams }: Props) {
   const { type } = await params; const c = CATS[type];
   if (!c || type === "text") notFound();
-  if (type === "collection" || type === "theme") return <CatGrid kind={type} />; // витрины по макетам DEV 612:54229 / 612:50434 — без поиска и фильтров
+  if (type === "collection" || type === "theme" || type === "project") return <CatGrid kind={type} />; // витрины по макетам DEV 612:54229 / 612:50434 / 612:52873 — без поиска и фильтров
   // «Личности» — по макету DEV (550:75129): свой набор фильтров, поиск только по именам
   const site = type === "person" ? await getSite() : null;
   const section = site ? { catKeys: PAGE_CATS.person, intro: site.personIntro, ph: site.personPh, cls: "persons", cardsOf: "person" as const } : undefined;

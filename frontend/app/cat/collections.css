@@ -12,6 +12,10 @@
 .cc .k b{display:block;font-weight:700}
 .cc .k span{display:block;font-weight:500}
 .cc .im{aspect-ratio:3/2;width:100%;background:var(--grey5);overflow:hidden}
+/* проекты Центра: серая линия под интро, даты под названием, блок текста 132 */
+.projs .div8:not(.end){background:var(--grey4)}
+.cc .y{padding-top:2px;font-size:16px;line-height:18px;font-weight:500;letter-spacing:-.08px}
+.projs .cc .tx{min-height:132px}
 /* темы: серая линия под интро, 4 колонки, заголовок H3, квадратная картинка */
 .themes .div8:not(.end){background:var(--grey4)}
 .themes #cgrid{grid-template-columns:repeat(4,1fr)}
@@ -37,5 +41,7 @@
   .cc h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
   .themes #cgrid{grid-template-columns:1fr;row-gap:24px}
   .themes .cc h2{font-size:20px;line-height:20px;letter-spacing:0}
+  .projs .cc .tx{min-height:0}
+  .projs .cc .vb{flex:0 0 36px}
   .themes .cc .tx{min-height:160px}
 }
