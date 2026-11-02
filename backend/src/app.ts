@@ -441,11 +441,12 @@ export function createApp() {
     } catch { res.status(404).end(); }
   }));
 
-  // разовая миграция заголовков Cache-Control у старых файлов (см. media.migrateCache); ?dry=1 — только посчитать
+  // разовая миграция заголовков Cache-Control у старых файлов (см. media.migrateCache): POST запускает в фоне (?dry=1 — только посчитать), GET — ход и итог
   app.post("/api/media/migrate-cache", auth, ah(async (req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
-    res.json(await media.migrateCache(req.query.dry === "1"));
+    res.json(media.migrateCache(req.query.dry === "1"));
   }));
+  app.get("/api/media/migrate-cache", auth, (_req, res) => res.json(media.migrateStatus()));
   app.get("/api/media-selftest", auth, ah(async (_req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
     res.json(await media.selftest());

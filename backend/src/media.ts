@@ -91,27 +91,40 @@ export async function ensureCors() {
   } catch (e: any) { console.error("S3 CORS не выставлен:", e?.message || e); }
 }
 // Разовая миграция: файлам, залитым до появления Cache-Control, проставляем заголовок (копия объекта на самого себя
-// с заменой метаданных; содержимое и адрес не меняются). Уже правильные — пропускаем. dry=true — только посчитать.
-export async function migrateCache(dry = false, prefixes = ["media/", "assets/", "tours/"]) {
-  const out = { scanned: 0, fixed: 0, skipped: 0, failed: 0, errors: [] as string[], dry };
-  for (const prefix of prefixes) {
-    let token: string | undefined;
-    do {
-      const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
-      for (const o of r.Contents || []) {
-        const key = o.Key!; out.scanned++;
-        try {
-          const h = await s3().send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
-          const want = cacheFor(key);
-          if (h.CacheControl === want) { out.skipped++; continue; }
-          if (!dry) await s3().send(new CopyObjectCommand({ Bucket: BUCKET, Key: key, CopySource: `/${BUCKET}/${encodeURIComponent(key).replace(/%2F/g, "/")}`, MetadataDirective: "REPLACE", ContentType: h.ContentType || mimeOf(key), CacheControl: want, Metadata: h.Metadata }));
-          out.fixed++;
-        } catch (e: any) { out.failed++; if (out.errors.length < 10) out.errors.push(`${key}: ${String(e?.message || e).slice(0, 120)}`); }
+// с заменой метаданных; содержимое и адрес не меняются). Уже правильные — пропускаем. Работает в фоне (файлов много —
+// сегменты HLS, туры), по 8 файлов параллельно; ход — в migrateStatus(). dry=true — только посчитать.
+export type MigState = { running: boolean; dry: boolean; startedAt: number; doneAt: number; prefix: string; scanned: number; fixed: number; skipped: number; failed: number; errors: string[] };
+const mig: MigState = { running: false, dry: false, startedAt: 0, doneAt: 0, prefix: "", scanned: 0, fixed: 0, skipped: 0, failed: 0, errors: [] };
+export const migrateStatus = () => mig;
+export function migrateCache(dry = false, prefixes = ["media/", "assets/", "tours/"]) {
+  if (mig.running) return mig;
+  Object.assign(mig, { running: true, dry, startedAt: Date.now(), doneAt: 0, prefix: "", scanned: 0, fixed: 0, skipped: 0, failed: 0, errors: [] });
+  const fixOne = async (key: string) => {
+    mig.scanned++;
+    try {
+      const h = await s3().send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+      const want = cacheFor(key);
+      if (h.CacheControl === want) { mig.skipped++; return; }
+      if (!dry) await s3().send(new CopyObjectCommand({ Bucket: BUCKET, Key: key, CopySource: `/${BUCKET}/${encodeURIComponent(key).replace(/%2F/g, "/")}`, MetadataDirective: "REPLACE", ContentType: h.ContentType || mimeOf(key), CacheControl: want, Metadata: h.Metadata }));
+      mig.fixed++;
+    } catch (e: any) { mig.failed++; if (mig.errors.length < 10) mig.errors.push(`${key}: ${String(e?.message || e).slice(0, 120)}`); }
+  };
+  void (async () => {
+    try {
+      for (const prefix of prefixes) {
+        mig.prefix = prefix;
+        let token: string | undefined;
+        do {
+          const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
+          const keys = (r.Contents || []).map((o) => o.Key!);
+          for (let i = 0; i < keys.length; i += 8) await Promise.all(keys.slice(i, i + 8).map(fixOne));
+          token = r.IsTruncated ? r.NextContinuationToken : undefined;
+        } while (token);
       }
-      token = r.IsTruncated ? r.NextContinuationToken : undefined;
-    } while (token);
-  }
-  return out;
+    } catch (e: any) { mig.errors.push(`list: ${String(e?.message || e).slice(0, 120)}`); }
+    mig.running = false; mig.doneAt = Date.now(); mig.prefix = "";
+  })();
+  return mig;
 }
 export async function corsInfo() {
   try { const r = await s3().send(new GetBucketCorsCommand({ Bucket: BUCKET })); return { ok: true, rules: r.CORSRules || [] }; }
