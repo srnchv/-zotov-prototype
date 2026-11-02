@@ -415,6 +415,7 @@ export function createApp() {
       res.status(502).json({ error: "storage: " + (e?.message || "upload failed") });
     } finally { if (tmp) fs.promises.unlink(tmp).catch(() => {}); }
   });
+  app.get("/api/transcode/status", auth, ah(async (_req, res) => res.json({ ffmpeg: await transcode.hasFfmpeg(), ...transcode.queueState() })));
   // перекодировать видео заново (или впервые — для загруженных до появления HLS)
   app.post("/api/media/:id/transcode", auth, ah(async (req, res) => {
     const m = await repo.getEntity(String(req.params.id));

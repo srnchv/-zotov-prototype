@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Создание сущности: всё заполняется сразу — поля типа, связи, теги, файл; черновик по выбору
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
@@ -23,7 +24,7 @@ async function create(status?: "published" | "draft") {
   if (busy.value) return;
   // защита от дублей: такая карточка уже есть (например, повторная попытка после долгой загрузки файла)
   const same = S.raw.find((x) => x.type === f.type && x.title.trim().toLowerCase() === String(f.title).trim().toLowerCase());
-  if (same && !confirm(`Карточка «${same.title}» (${TYPES[same.type]?.l || same.type}) уже есть в архиве. Всё равно создать ещё одну?\n\n«Отмена» — откроется существующая.`)) { router.push("/edit/" + same.id); return; }
+  if (same && !(await ask("Такая карточка уже есть", `«${same.title}» (${TYPES[same.type]?.l || same.type}) уже есть в архиве. Создать ещё одну или открыть существующую?`, { ok: "Создать ещё одну", cancel: "Открыть существующую" }))) { router.push("/edit/" + same.id); return; }
   busy.value = true;
   try {
     const { type, title, status, ...rest } = f;

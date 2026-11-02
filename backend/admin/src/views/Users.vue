@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Пользователи админки (только администратор): логин, имя, роль, пароль, активность
 import { ref, onMounted } from "vue";
 import { S, api, toast } from "../lib/store";
@@ -17,7 +18,7 @@ async function save() {
   } catch (e: any) { toast("Ошибка: " + e.message); }
   busy.value = false;
 }
-async function del(u: U) { if (!confirm(`Удалить пользователя ${u.login}?`)) return; try { await api("/users/" + u.id, { method: "DELETE" }); await reload(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function del(u: U) { if (!(await ask("Удалить пользователя", `Удалить пользователя ${u.login}?`, { ok: "Удалить", danger: true }))) return; try { await api("/users/" + u.id, { method: "DELETE" }); await reload(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 const ROLE_HINT: Record<Role, string> = { admin: "всё, включая пользователей и статистику", editor: "контент, медиа, справочники, главная", moderator: "просмотр и смена статуса публикации" };
 </script>
 <template>

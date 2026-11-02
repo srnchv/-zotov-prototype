@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Список сущностей: фильтр по типу, поиск, сортировка по колонкам, массовые действия
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -26,7 +27,7 @@ const allSel = computed(() => rows.value.length > 0 && rows.value.every((o) => s
 const toggleAll = () => { const s = new Set(sel.value); allSel.value ? rows.value.forEach((o) => s.delete(o.id)) : rows.value.forEach((o) => s.add(o.id)); sel.value = s; };
 async function bulk(action: string) {
   const ids = [...sel.value]; if (!ids.length) return;
-  if (action === "delete" && !confirm(`Удалить ${ids.length} сущн. и все их связи?`)) return;
+  if (action === "delete" && !(await ask("Удалить карточки", `Удалить ${ids.length} карточек и все их связи?`, { ok: "Удалить", danger: true }))) return;
   try {
     for (const id of ids) action === "delete" ? await api("/entities/" + id, { method: "DELETE" }) : await api("/entities/" + id, { method: "PATCH", body: JSON.stringify({ status: action }) });
     sel.value = new Set(); await load(); loadAudit(true);

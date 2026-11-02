@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Медиатека: общее хранилище файлов; файл прикрепляется к сущностям связями
 import { ref, computed, watch, onUnmounted } from "vue";
 import { S, all, api, load, toast, uploadFile, canEdit } from "../lib/store";
@@ -13,7 +14,7 @@ watch(() => all("media").some((f) => ["queued", "processing"].includes(String(f.
 onUnmounted(() => { if (timer) clearInterval(timer); });
 const parents = (f: any) => (f.links || []).map((id: string) => S.db[id]).filter((x: any) => x && x.type !== "media");
 async function onFile() { const file = inp.value?.files?.[0]; if (!file) return; status.value = "Загрузка…"; try { await uploadFile(file); await load(); toast("Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); } status.value = ""; if (inp.value) inp.value.value = ""; }
-async function del(id: string) { if (!confirm("Удалить файл из архива? Файл пропадёт из всех карточек.")) return; try { await api("/entities/" + id, { method: "DELETE" }); await load(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function del(id: string) { if (!(await ask("Удалить файл", "Файл пропадёт из всех карточек.", { ok: "Удалить", danger: true }))) return; try { await api("/entities/" + id, { method: "DELETE" }); await load(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 </script>
 <template>
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap"><h1>Медиатека</h1>
@@ -26,7 +27,7 @@ async function del(id: string) { if (!confirm("Удалить файл из ар
       <div class="media" style="margin-bottom:10px" :style="f.thumb ? { backgroundImage: `url('${f.thumb}')` } : {}"></div>
       <div style="font-size:13px;font-weight:500;word-break:break-all">{{ f.title }}</div>
       <div class="muted" style="font-size:12px">{{ kindOf(f) === 'tour' ? '3D-тур' : (f.format || '') }}<template v-if="f.size"> · {{ fmtSize(f.size) }}</template></div>
-      <div v-if="kindOf(f) === 'video'" style="font-size:11px;margin-top:4px" :style="f.hlsStatus === 'error' ? 'color:#9a2e2e' : f.hlsStatus === 'done' ? '' : 'color:#b8860b'">{{ f.hlsStatus === 'done' ? 'адаптивное: ' + (f.hlsLevels || []).map((h: number) => h + 'p').join('/') : f.hlsStatus === 'processing' ? 'конвертируется ' + (f.hlsProgress || 0) + '%' : f.hlsStatus === 'queued' ? 'в очереди на конвертацию' : f.hlsStatus === 'error' ? 'ошибка конвертации' : 'одно качество' }}</div>
+      <div v-if="kindOf(f) === 'video'" style="font-size:11px;margin-top:4px" :style="f.hlsStatus === 'error' ? 'color:#9a2e2e' : f.hlsStatus === 'done' ? '' : 'color:#b8860b'">{{ f.hlsStatus === 'done' ? 'адаптивное: ' + (f.hlsLevels || []).map((h: number) => h + 'p').join('/') : f.hlsStatus === 'processing' ? 'конвертируется ' + (f.hlsProgress || 0) + '%' + (f.hlsStage ? ' · ' + f.hlsStage : '') : f.hlsStatus === 'queued' ? 'в очереди на конвертацию' : f.hlsStatus === 'error' ? 'ошибка конвертации' : 'одно качество' }}</div>
       <div v-if="parents(f).length" class="muted" style="font-size:11px;margin-top:8px">Прикреплён: {{ parents(f).map((x: any) => x.title).join(', ') }}</div>
       <div v-else style="font-size:11px;margin-top:8px;color:#b8860b">Не прикреплён к сущностям</div>
     </div>

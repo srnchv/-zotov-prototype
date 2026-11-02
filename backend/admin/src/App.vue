@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Dialog from "./components/Dialog.vue";
 // Каркас админки: чёрная шапка, меню слева, содержимое справа; тосты
 import { onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
@@ -37,4 +38,5 @@ const out = () => { logout(); location.href = "/admin/login"; };
     </main>
   </template>
   <div v-for="t in S.toasts" :key="t.id" class="toast">{{ t.msg }}</div>
+  <Dialog />
 </template>

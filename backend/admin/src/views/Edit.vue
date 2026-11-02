@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Карточка сущности: единый шаблон, различия — данными типа.
 // Слева: поля (Сущность → Название → Тип → Подтип → Дата → специфичные → Описание), блок «Главная страница», связи.
 // Справа: медиа по этажам (фото с обложкой и кадром, видео/аудио с субтитрами, 3D-тур, документы), служебное, статистика и журнал.
@@ -70,7 +71,7 @@ async function patch(p: Record<string, unknown>) {
 }
 async function del(id = props.id) {
   const isFile = S.db[id]?.type === "media";
-  if (!confirm(isFile ? "Удалить файл из архива? Файл пропадёт из всех карточек." : "Удалить сущность и все её связи?")) return;
+  if (!(await ask(isFile ? "Удалить файл" : "Удалить карточку", isFile ? "Файл пропадёт из всех карточек." : "Карточка и все её связи будут удалены.", { ok: "Удалить", danger: true }))) return;
   try { await api("/entities/" + id, { method: "DELETE" }); await load(); toast("Удалено"); if (!isFile) router.push("/entities"); } catch (e: any) { toast("Ошибка: " + e.message); }
 }
 async function link(x: Entity) {
@@ -118,13 +119,13 @@ function toggleMulti(k: string, v: string) { const cur: string[] = Array.isArray
 const subsUpload = (mid: string) => { subsFor.value = mid; subsInput.value?.click(); };
 async function onSubs() {
   const file = subsInput.value?.files?.[0]; if (!file) return;
-  const lang = (prompt("Язык субтитров (код: ru, en…):", "ru") || "ru").trim();
+  const lang = ((await askInput("Субтитры", "Язык субтитров (код: ru, en…):", "ru")) || "ru").trim();
   try { const fd = new FormData(); fd.append("file", file); fd.append("lang", lang); await api(`/media/${subsFor.value}/subtitles`, { method: "POST", body: fd }); await load(); toast("Субтитры загружены"); }
   catch (e: any) { toast("Ошибка: " + e.message); }
   if (subsInput.value) subsInput.value.value = "";
 }
 async function subsRm(mid: string, lang: string) {
-  if (!confirm("Убрать субтитры?")) return;
+  if (!(await ask("Убрать субтитры", "", { ok: "Убрать", danger: true }))) return;
   try { await api(`/media/${mid}/subtitles/${lang}`, { method: "DELETE" }); await load(); toast("Убрано"); } catch (e: any) { toast("Ошибка: " + e.message); }
 }
 const pool = computed(() => {

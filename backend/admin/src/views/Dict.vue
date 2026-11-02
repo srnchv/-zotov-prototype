@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Справочники: значения для карточек и фильтров сайта. Слева — навигация по разделам, справа — разделы по порядку.
 // У каждого справочника типы идут строками, подтипы — внутри своего типа (раскрываются). Для каждого значения:
 // переименовать (меняется и во всех карточках), удалить (только если нигде не используется), порядок стрелками —
@@ -25,7 +26,7 @@ const SECS: Sec[] = [
   { key: "a11y", title: "Доступность", where: "карточка материала: субтитры, РЖЯ, расшифровка…", sub: false, addLabel: "значение" },
 ];
 const NAV = computed(() => [["period", "Период"], ...SECS.map((s) => [s.key, s.title.split(" — ")[0]]), ["tags", "Теги"], ["access", "Уровни доступа"]]);
-const ask = (msg: string, v = "") => (prompt(msg, v) || "").trim();
+const askText = async (msg: string, v = "") => ((await askInput("Справочник", msg, v)) || "").trim();
 const busy = ref(false);
 // свёрнутость: длинные списки типов свёрнуты до 6 строк; подтипы внутри типа раскрываются по клику
 const openSec = reactive<Record<string, boolean>>({});
@@ -37,7 +38,7 @@ const used = (key: string, v: string) => dictUsage(key, v).length;
 const subLabel = (key: string) => (key === "group" ? "роль" : key === "func" ? "функцию" : key === "author" ? "автора" : "подтип");
 
 async function add(key: string, type?: string) {
-  const v = ask(type ? `Новый ${subLabel(key)} для «${type}»:` : "Новое значение:"); if (!v) return;
+  const v = await askText(type ? `Новый ${subLabel(key)} для «${type}»:` : "Новое значение:"); if (!v) return;
   const full = type ? type + " › " + v : v;
   const k = type ? "sub:" + key : key;
   if (dictValues(k).includes(full)) return toast("Такое значение уже есть");
@@ -47,12 +48,12 @@ async function rm(key: string, v: string) {
   const subs = key.startsWith("sub:") ? 0 : dictValues("sub:" + key).filter((x) => x.startsWith(v + " › ")).length;
   const n = dictUsage(key, v).length;
   if (n || subs) return alert(`«${v.split(" › ").pop()}» нельзя удалить: ${n ? `используется в карточках (${n})` : ""}${n && subs ? ", " : ""}${subs ? `есть ${subs} подтип(а)` : ""}. Сначала смените значение в карточках или переименуйте его.`);
-  if (!confirm(`Удалить «${v.split(" › ").pop()}»?`)) return;
+  if (!(await ask("Удалить значение", `Удалить «${v.split(" › ").pop()}»?`, { ok: "Удалить", danger: true }))) return;
   try { await dictPatch(key, (st) => { st.added = st.added.filter((x) => x !== v); if (!st.removed.includes(v)) st.removed.push(v); st.order = st.order.filter((x) => x !== v); }); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); }
 }
 async function rename(key: string, v: string, type?: string) {
   const cur = type ? v.slice(type.length + 3) : v;
-  const n = ask("Переименовать (поменяется и во всех карточках):", cur); if (!n || n === cur) return;
+  const n = await askText("Переименовать (поменяется и во всех карточках):", cur); if (!n || n === cur) return;
   const nv = type ? type + " › " + n : n;
   if (dictValues(key).includes(nv)) return toast("Такое значение уже есть");
   busy.value = true;
@@ -73,9 +74,9 @@ async function savePer() {
   if (!f || !t || f > t || f < 1000 || t > 2100) return toast("Укажите годы «с» и «по», например 1910 и 1940");
   try { await savePeriod(f, t); toast("Сохранено — фильтр «Период» на сайте обновлён"); } catch (e: any) { toast("Ошибка: " + e.message); }
 }
-async function tagCreate() { const n = ask("Новый тег:").replace(/^#/, ""); if (!n) return; if (all("tag").some((t) => t.title.toLowerCase() === n.toLowerCase())) return toast("Такой тег уже есть"); try { await api("/entities", { method: "POST", body: JSON.stringify({ type: "tag", title: n }) }); await load(); toast("Тег создан"); } catch (e: any) { toast("Ошибка: " + e.message); } }
-async function tagEdit(id: string) { const t = S.db[id]; const n = ask("Переименовать тег:", t.title).replace(/^#/, ""); if (!n || n === t.title) return; try { await api("/entities/" + id, { method: "PATCH", body: JSON.stringify({ title: n }) }); await load(); toast("Переименовано"); } catch (e: any) { toast("Ошибка: " + e.message); } }
-async function tagRm(id: string) { if (!confirm("Удалить тег? Он снимется со всех карточек.")) return; try { await api("/entities/" + id, { method: "DELETE" }); await load(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function tagCreate() { const n = (await askText("Новый тег:")).replace(/^#/, ""); if (!n) return; if (all("tag").some((t) => t.title.toLowerCase() === n.toLowerCase())) return toast("Такой тег уже есть"); try { await api("/entities", { method: "POST", body: JSON.stringify({ type: "tag", title: n }) }); await load(); toast("Тег создан"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function tagEdit(id: string) { const t = S.db[id]; const n = (await askText("Переименовать тег:", t.title)).replace(/^#/, ""); if (!n || n === t.title) return; try { await api("/entities/" + id, { method: "PATCH", body: JSON.stringify({ title: n }) }); await load(); toast("Переименовано"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function tagRm(id: string) { if (!(await ask("Удалить тег", "Он снимется со всех карточек.", { ok: "Удалить", danger: true }))) return; try { await api("/entities/" + id, { method: "DELETE" }); await load(); toast("Удалено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 const go = (id: string) => document.getElementById("d-" + id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 </script>
 <template>

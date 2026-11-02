@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ask, askInput } from "../lib/dialog";
 // Медиафайл: не карточка сайта, а файл из медиатеки — показывается внутри карточек, к которым прикреплён.
 // Здесь: превью, сведения о файле, подпись для сайта, кадр (для фото), статус адаптивного видео, список карточек-владельцев.
 import { ref, reactive, computed, watch, onUnmounted } from "vue";
@@ -19,13 +20,14 @@ const picker = ref(false), crop = ref(false);
 const pool = computed(() => { const cur = new Set((o.value?.links || []) as string[]); return S.raw.filter((x) => x.id !== props.id && !cur.has(x.id) && !["media", "dict", "tag"].includes(x.type)); });
 async function save() { try { await api("/entities/" + props.id, { method: "PATCH", body: JSON.stringify({ title: f.title.trim() || o.value.title, payload: { caption: f.caption.trim(), author: f.author.trim(), year: f.year.trim() } }) }); await load(); toast("Сохранено"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 async function attach(x: Entity) { try { await api(`/entities/${props.id}/links`, { method: "POST", body: JSON.stringify({ targetId: x.id }) }); await load(); toast("Прикреплён к «" + x.title + "»"); } catch (e: any) { toast("Ошибка: " + e.message); } }
-async function detach(x: Entity) { if (!confirm(`Открепить файл от «${x.title}»?`)) return; try { await api(`/entities/${props.id}/links/${x.id}`, { method: "DELETE" }); await load(); } catch (e: any) { toast("Ошибка: " + e.message); } }
-async function del() { if (!confirm("Удалить файл из архива? Он пропадёт из всех карточек.")) return; try { await api("/entities/" + props.id, { method: "DELETE" }); await load(); router.push("/media"); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function detach(x: Entity) { if (!(await ask("Открепить файл", `Открепить файл от «${x.title}»?`, { ok: "Открепить" }))) return; try { await api(`/entities/${props.id}/links/${x.id}`, { method: "DELETE" }); await load(); } catch (e: any) { toast("Ошибка: " + e.message); } }
+async function del() { if (!(await ask("Удалить файл", "Он пропадёт из всех карточек.", { ok: "Удалить", danger: true }))) return; try { await api("/entities/" + props.id, { method: "DELETE" }); await load(); router.push("/media"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 // превью видео/аудио/PDF — по подписанной ссылке на оригинал (редактору доступны и закрытые)
 const srcUrl = ref("");
-watch(o, async (v) => { if (!v || kind.value === "image" || kind.value === "tour") return; try { srcUrl.value = (await api<{ url: string }>("/media/" + v.id + "/original?ttl=3600")).url; } catch { srcUrl.value = ""; } }, { immediate: true });
+// ссылка берётся один раз на файл (а не при каждом обновлении данных — иначе плеер перезагружается каждые 5 секунд)
+watch(() => props.id, async (id) => { srcUrl.value = ""; if (!o.value || kind.value === "image" || kind.value === "tour") return; try { srcUrl.value = (await api<{ url: string }>("/media/" + id + "/original?ttl=3600")).url; } catch { srcUrl.value = ""; } }, { immediate: true });
 // адаптивное видео
-const hlsText = (m: Entity) => m.hlsStatus === "done" ? "готово" : m.hlsStatus === "processing" ? `кодируем, ${m.hlsProgress || 0}%` : m.hlsStatus === "queued" ? "в очереди" : m.hlsStatus === "error" ? "ошибка" : "не выполнялось — играет оригинал в одном качестве";
+const hlsText = (m: Entity) => m.hlsStatus === "done" ? "готово" : m.hlsStatus === "processing" ? `${m.hlsStage || "кодируем"}, ${m.hlsProgress || 0}%` : m.hlsStatus === "queued" ? "в очереди" : m.hlsStatus === "error" ? "ошибка" : "не выполнялось — играет оригинал в одном качестве";
 async function transcode() { try { await api("/media/" + props.id + "/transcode", { method: "POST" }); await load(); toast("Поставлено в очередь"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 let timer: ReturnType<typeof setInterval> | null = null;
 watch(() => ["queued", "processing"].includes(String(o.value?.hlsStatus || "")), (busy) => { if (busy && !timer) timer = setInterval(() => load(), 5000); if (!busy && timer) { clearInterval(timer); timer = null; } }, { immediate: true });
