@@ -19,6 +19,10 @@ const pool = computed(() => S.raw.filter((x) => (picker.value === "tag" ? x.type
 async function create(status?: "published" | "draft") {
   if (status) f.status = status;
   if (!String(f.title || "").trim()) return toast("Укажите название");
+  if (busy.value) return;
+  // защита от дублей: такая карточка уже есть (например, повторная попытка после долгой загрузки файла)
+  const same = S.raw.find((x) => x.type === f.type && x.title.trim().toLowerCase() === String(f.title).trim().toLowerCase());
+  if (same && !confirm(`Карточка «${same.title}» (${TYPES[same.type]?.l || same.type}) уже есть в архиве. Всё равно создать ещё одну?\n\n«Отмена» — откроется существующая.`)) { router.push("/edit/" + same.id); return; }
   busy.value = true;
   try {
     const { type, title, status, ...rest } = f;
@@ -30,8 +34,14 @@ async function create(status?: "published" | "draft") {
       tagIds.push(tag!.id);
     }
     const e = await api<Entity>("/entities", { method: "POST", body: JSON.stringify({ type, title: String(title).trim(), status: status || "published", payload, links: [...new Set([...links.value.map((l) => l.id), ...tagIds])] }) });
-    if (file.value) await uploadFile(file.value, e.id);
-    await load(); toast("Создано"); router.push("/edit/" + e.id);
+    await load();
+    // карточка создана — сразу открываем её; файл догружается уже в карточке с полосой прогресса, чтобы не было ощущения «зависло»
+    router.push("/edit/" + e.id);
+    if (file.value) {
+      const fv = file.value;
+      toast(`Карточка создана, загружаем файл ${fmtMb(fv.size)}…`);
+      uploadFile(fv, e.id).then(async () => { await load(); toast("Файл загружен и прикреплён к карточке"); }).catch((err: any) => toast("Файл не загрузился: " + err.message + ". Откройте карточку и загрузите ещё раз."));
+    } else toast("Создано");
   } catch (e: any) { toast("Ошибка: " + e.message); }
   busy.value = false;
 }

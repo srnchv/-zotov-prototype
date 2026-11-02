@@ -237,6 +237,7 @@ export function uploadFile(file: File, entityId?: string): Promise<Entity> {
     x.send(fd);
   });
 }
+if (typeof window !== "undefined") window.addEventListener("beforeunload", (e) => { if (UPLOAD.phase) { e.preventDefault(); e.returnValue = ""; } });
 export const fmtMb = (b: number) => (b >= 1024 * 1024 * 1024 ? (b / 1024 ** 3).toFixed(1) + " ГБ" : Math.round(b / 1024 / 1024) + " МБ");
 
 // ---- главная: состав и ограничения (одни данные с галочками в карточках) ----
