@@ -10,6 +10,7 @@ const f = reactive<Record<string, any>>({ type: "material", status: "published",
 // многозначные поля (функции, авторы, заказчики): массив строк из справочника
 function toggleMulti(k: string, v: string) { const cur: string[] = Array.isArray(f[k]) ? [...f[k]] : []; const i = cur.indexOf(v); if (i < 0) cur.push(v); else cur.splice(i, 1); f[k] = cur; }
 const nf = ref<HTMLInputElement>();
+const ACCESS_UI = false; // уровни доступа появятся вместе с личным кабинетом; пока все карточки открытые
 const links = ref<Entity[]>([]), tags = ref<string[]>([]), file = ref<File | null>(null), picker = ref<null | "link" | "tag">(null), newTag = ref(""), busy = ref(false);
 const t = computed(() => f.type as string), tk = computed(() => TYPEKEY[t.value] || "subtype"), sk = computed(() => SUBKEY[t.value] || "subtype"), dk = computed(() => DATEKEY[t.value] || "date");
 const rec = computed(() => t.value === "source" && f.srcKind === "record");
@@ -60,7 +61,7 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <div class="field" v-else-if="!NO_TYPE.has(t)"><label>{{ TYPELABEL[t] || "Тип" }}</label><select class="sel" v-model="f[tk]" @change="f[sk] = ''"><option value="">— не задано —</option><option v-for="v in typeVals" :key="v" :value="v">{{ v }}</option></select></div>
       <div class="field" v-if="!rec && t !== 'theme' && !NO_TYPE.has(t) && t !== 'person'"><label>{{ SUBLABEL[t] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label><select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
       <div class="field"><label>{{ DATELABEL[t] || "Дата / период" }}</label><input class="inp" v-model="f[dk]" :placeholder="DATEPH[t] || 'например 1927'"></div>
-      <div class="field" v-if="t === 'material'"><label>Уровень доступа</label><div class="chips"><span v-for="(l, v) in ACCESS" :key="v" class="fchip" :class="{ on: f.access === v }" @click="f.access = f.access === v ? '' : v">{{ l }}</span></div></div>
+      <div class="field" v-if="t === 'material' && ACCESS_UI"><label>Уровень доступа</label><div class="chips"><span v-for="(l, v) in ACCESS" :key="v" class="fchip" :class="{ on: f.access === v }" @click="f.access = f.access === v ? '' : v">{{ l }}</span></div></div>
       <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
           <template v-else-if="ph && ph.startsWith('dict:')"><input class="inp" v-model="f[k]" :list="'dl-' + k" placeholder="из справочника или новый"><datalist :id="'dl-' + k"><option v-for="v in dictValues(ph.slice(5))" :key="v" :value="v"></option></datalist></template>

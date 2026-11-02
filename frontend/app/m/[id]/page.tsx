@@ -60,14 +60,14 @@ const meta = (x: Entity, db: Record<string, Entity>) => {
 function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string, string][] {
   const t = TYPES[e.type]?.l || e.type;
   switch (e.type) {
-    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""], ["Права и доступ", ACCESS[s(e, "access")] || "Открытый доступ"]];
-    case "person": return [["Тип", `${t}, ${s(e, "group") || "—"}`], ["Сфера деятельности", spheresOf(e).join(", ") || "—"], ["Города", listOf(e, "cities").join(", ") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"], ["Права и доступ", "Открытый доступ"]];
-    case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
-    case "place": return [["Тип, функции", `${funcGroupOf(e) || "—"}${funcLabel(e) ? ", " + funcLabel(e) : ""}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"], ["Права и доступ", "Открытый доступ"]];
-    case "project": return [["Тип, подтип", s(e, "prType") || t], ["Кураторы", s(e, "curators") || "—"], ["Даты проведения", s(e, "dates") || "—"], ["Площадка", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Права и доступ", "Открытый доступ"]];
-    case "collection": return [["Тип, подтип", `${t}, ${s(e, "colType") || "—"}`], ["Период", s(e, "period") || "—"], ["Состав", `${linked(db, e, "material").length} материалов`], ["Хранение", "Центр «Зотов», Москва"], ["Права и доступ", "Открытый доступ"]];
-    case "org": return [["Тип, подтип", `${t}, ${s(e, "orgType") || "—"}`], ["Период", s(e, "period") || "—"], ["Адрес", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Связано в архиве", `${(e.links || []).length} объектов`], ["Права и доступ", "Открытый доступ"]];
-    default: return [["Тип", t], ["Дата/период", s(e, "date") || s(e, "year") || "—"], ["Права и доступ", "Открытый доступ"]];
+    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""]];
+    case "person": return [["Тип", `${t}, ${s(e, "group") || "—"}`], ["Сфера деятельности", spheresOf(e).join(", ") || "—"], ["Города", listOf(e, "cities").join(", ") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"]];
+    case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"]];
+    case "place": return [["Тип, функции", `${funcGroupOf(e) || "—"}${funcLabel(e) ? ", " + funcLabel(e) : ""}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"]];
+    case "project": return [["Тип, подтип", s(e, "prType") || t], ["Кураторы", s(e, "curators") || "—"], ["Даты проведения", s(e, "dates") || "—"], ["Площадка", linked(db, e, "place").map((p) => p.title).join(", ") || "—"]];
+    case "collection": return [["Тип, подтип", `${t}, ${s(e, "colType") || "—"}`], ["Период", s(e, "period") || "—"], ["Состав", `${linked(db, e, "material").length} материалов`], ["Хранение", "Центр «Зотов», Москва"]];
+    case "org": return [["Тип, подтип", `${t}, ${s(e, "orgType") || "—"}`], ["Период", s(e, "period") || "—"], ["Адрес", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Связано в архиве", `${(e.links || []).length} объектов`]];
+    default: return [["Тип", t], ["Дата/период", s(e, "date") || s(e, "year") || "—"]];
   }
 }
 
@@ -125,6 +125,7 @@ export default async function EntityPage({ params }: Props) {
     similar = [...similar, ...scored.slice(0, 3 - similar.length).map((c) => c.x)];
   }
   const paras = s(e, "desc").split(/\n\s*\n/).filter(Boolean);
+  // уровни доступа («по запросу», «ограниченный») появятся вместе с личным кабинетом — в паспорте строку не показываем
   const rows = infoRows(ent, db, coll).filter(([, v]) => v && v !== "—"); // пустые поля не показываем
   const gid = (t: string) => "g-" + t;
 

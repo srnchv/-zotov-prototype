@@ -38,6 +38,7 @@ const isCover = (m: Entity) => (o.value.cover ? o.value.cover === m.id : !!m.thu
 const sum = computed(() => S.audit?.summary?.[props.id]);
 const hist = computed(() => (S.audit?.recent || []).filter((a) => a.entity_id === props.id).slice(0, 5));
 const picker = ref<null | "link" | "media" | "tag">(null);
+const ACCESS_UI = false; // уровни доступа — вместе с личным кабинетом
 const crop = ref<Entity | null>(null), tour = ref(false), uplStatus = ref("");
 // адаптивное видео: статус кодирования из карточки медиафайла (обновляется опросом, пока идёт)
 const hlsText = (m: Entity) => m.hlsStatus === "done" ? `адаптивное: ${(m.hlsLevels || []).map((h: number) => h + "p").join("/")}` : m.hlsStatus === "processing" ? `кодируем ${m.hlsProgress || 0}%` : m.hlsStatus === "queued" ? "в очереди на кодирование" : m.hlsStatus === "error" ? "ошибка кодирования: " + (m.hlsError || "") : "одно качество (оригинал)";
@@ -232,7 +233,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
               </div>
             </div>
             <div v-if="canEdit" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-              <template v-if="k === 'tour'"><button class="btn sm" @click="tour = true">{{ JOB.cur && JOB.cur.parentId === o.id ? (JOB.cur.running ? 'Идёт загрузка…' : 'Загрузка остановлена') : '＋ Код эмбеда' }}</button><span class="muted" style="font-size:12px">Matterport, Kuula, 3DVista — тур встанет в галерею рядом с фото и видео</span></template>
+              <template v-if="k === 'tour'"><button class="btn sm" @click="tour = true">{{ JOB.cur && JOB.cur.parentId === o.id ? (JOB.cur.running ? 'Идёт загрузка…' : 'Загрузка остановлена') : '＋ Добавить тур' }}</button><span class="muted" style="font-size:12px">Папка тура, ZIP или ссылка (Matterport, Kuula, 3DVista) — тур встанет в галерею рядом с фото и видео</span></template>
               <template v-else><button class="btn sm" @click="uploadKind(accept)">＋ Загрузить</button><button v-if="o.type !== 'media'" class="btn sm" @click="picker = 'media'">＋ из медиатеки</button></template>
             </div>
           </div>
@@ -241,7 +242,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
         <div class="metabox">
           <div class="r"><span class="k">ID</span><span class="v">{{ o.id }}</span></div>
           <div class="r"><span class="k">Статус</span><span class="v"><select class="sel inline" :value="o.status || 'published'" @change="patch({ status: ($event.target as HTMLSelectElement).value })"><option value="published">Опубликовано</option><option value="draft">Черновик</option><option value="moderation">На модерации</option></select></span></div>
-          <div class="r"><span class="k">Уровень доступа</span><span class="v"><select class="sel inline" :disabled="!canEdit" :value="o.access || 'open'" @change="patch({ payload: { access: ($event.target as HTMLSelectElement).value } })"><option v-for="(l, v) in ACCESS" :key="v" :value="v">{{ l }}</option></select></span></div>
+          <div v-if="ACCESS_UI" class="r"><span class="k">Уровень доступа</span><span class="v"><select class="sel inline" :disabled="!canEdit" :value="o.access || 'open'" @change="patch({ payload: { access: ($event.target as HTMLSelectElement).value } })"><option v-for="(l, v) in ACCESS" :key="v" :value="v">{{ l }}</option></select></span></div>
           <div class="r" style="align-items:flex-start"><span class="k">Теги</span><span class="v"><span class="chips" style="justify-content:flex-end;margin:0">
             <span v-for="x in (byType.tag || [])" :key="x.id" class="chip" style="font-size:12px;padding:4px 8px">#{{ x.title }}<span v-if="canEdit" class="x" @click="unlink(x.id)">✕</span></span>
             <span v-if="canEdit" class="chip add" style="font-size:12px;padding:4px 8px" @click="picker = 'tag'">＋ тег</span></span></span></div>

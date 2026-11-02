@@ -6,6 +6,9 @@ import { siteVal, patchSite, toast, canEdit, chronoVal, saveChrono, uploadFile, 
 const chr = ref(chronoVal());
 async function saveChr() { const a = Number(chr.value.from), b = Number(chr.value.to); if (!a || !b || a > b) return toast("Укажите годы «с» и «по», например 1920 и 1935"); try { await saveChrono(a, b); toast("Сохранено — таймлайн обновлён"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 import { SITE_DEF } from "../lib/model";
+// вспомогательные блоки (SEO, описания разделов) свёрнуты — чтобы не скроллить до нужных полей
+const COLLAPSED = new Set(["SEO", "Описания разделов"]);
+const open = reactive<Record<string, boolean>>({});
 const f = reactive<Record<string, string>>({});
 SITE_DEF.flatMap((g) => g[1]).forEach(([k]) => (f[k] = siteVal(k)));
 // картинка превью ссылок (og:image) для страниц без обложки: главная, поиск, разделы, хронограф, карта. 1200×630
@@ -17,10 +20,14 @@ async function ogImg(ev: Event) {
 async function save() { try { await patchSite(Object.fromEntries(Object.entries(f).map(([k, v]) => [k, v.trim()]))); toast("Сохранено — тексты обновлены на сайте"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 </script>
 <template>
-  <h1>Тексты сайта</h1>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;position:sticky;top:0;z-index:5;background:#fff;padding:10px 0;margin:-10px 0 0"><h1 style="margin:0">Тексты сайта</h1>
+    <button v-if="canEdit" class="btn dark" @click="save">Сохранить</button></div>
   <div class="muted" style="font-size:14px;margin:6px 0 18px;max-width:720px">Тексты поиска, карты и хронографа, ссылки в меню и футере, соцсети, описания разделов и SEO. Тексты главной — в разделе «Главная страница». Сохранённое сразу появляется на сайте.</div>
   <div class="grid g2" style="gap:16px;align-items:start">
-    <div v-for="[title, fields] in SITE_DEF" :key="title" class="card"><b>{{ title }}</b>
+    <div v-for="[title, fields] in SITE_DEF" :key="title" class="card" :class="{ folded: COLLAPSED.has(title) && !open[title] }">
+      <b v-if="!COLLAPSED.has(title)">{{ title }}</b>
+      <b v-else style="cursor:pointer;display:flex;justify-content:space-between" @click="open[title] = !open[title]">{{ title }} <span class="muted" style="font-weight:400;font-size:12px">{{ open[title] ? "свернуть" : "развернуть" }}</span></b>
+      <template v-if="!COLLAPSED.has(title) || open[title]">
       <div v-for="[k, l, , ta] in fields" :key="k" class="field" style="margin-top:10px"><label>{{ l }}</label>
         <textarea v-if="ta" class="inp" v-model="f[k]" style="min-height:96px" :disabled="!canEdit"></textarea><input v-else class="inp" v-model="f[k]" :disabled="!canEdit"></div>
       <div v-if="title === 'SEO'" class="field" style="margin-top:10px"><label>Картинка превью ссылок <span class="muted">— для главной и страниц без обложки, 1200×630; у карточек превью — их обложка</span></label>
@@ -30,6 +37,7 @@ async function save() { try { await patchSite(Object.fromEntries(Object.entries(
       <div v-if="title === 'Хронограф'" class="field" style="margin-top:10px"><label>Диапазон лет таймлайна <span class="muted">— все годы в ряд; годы без событий — неактивные</span></label>
         <div style="display:flex;gap:8px;align-items:center"><span>с</span><input class="inp" v-model="chr.from" inputmode="numeric" style="width:100px" placeholder="1920" :disabled="!canEdit"><span>по</span><input class="inp" v-model="chr.to" inputmode="numeric" style="width:100px" placeholder="1935" :disabled="!canEdit"><button v-if="canEdit" class="btn sm" @click="saveChr">Сохранить</button></div>
         <div v-if="!chronoVal().from" class="muted" style="font-size:12px;margin-top:6px">Пока не задан — по датам событий.</div></div>
+      </template>
     </div>
   </div>
   <div v-if="canEdit" style="display:flex;gap:10px;margin-top:20px"><button class="btn dark" @click="save">Сохранить</button></div>

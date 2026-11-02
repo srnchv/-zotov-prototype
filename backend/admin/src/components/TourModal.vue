@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 3D-тур: папка от студии (index.html + ресурсы, хоть гигабайты) заливается из браузера файл за файлом в наше хранилище —
+// 3D-тур: распакованная папка (index.html + ресурсы, хоть гигабайты) заливается из браузера файл за файлом в наше хранилище —
 // тур живёт у нас. Загрузка идёт и при закрытом окне, прогресс виден в карточке. Либо ZIP до 2 ГБ, либо ссылка / код эмбеда.
 import { ref, computed, onMounted } from "vue";
 import Modal from "./Modal.vue";
@@ -74,7 +74,7 @@ async function saveLink() {
       </template>
       <template v-else>
         <div class="field"><label>Название</label><input class="inp" v-model="title" placeholder="3D-тур по выставке"></div>
-        <div class="field"><label>Распакованная папка тура от студии (с index.html внутри)</label>
+        <div class="field"><label>Распакованная папка тура <span class="muted">— внутри должен быть файл index.html, с него тур открывается</span></label>
           <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <button class="btn sm" @click="inpDir?.click()">Выбрать папку</button>
