@@ -9,6 +9,7 @@ import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
 import * as repo from "./repo.js";
 import * as media from "./media.js";
+import { notifyFront } from "./revalidate.js";
 
 export const VARIANTS = [
   { h: 1080, vb: 4500, ab: 160 }, { h: 720, vb: 2500, ab: 128 }, { h: 480, vb: 1200, ab: 96 }, { h: 360, vb: 700, ab: 96 },
@@ -91,7 +92,7 @@ async function transcodeOne(mediaId: string) {
     const files = (await fs.readdir(out, { recursive: true })) as string[];
     for (const f of files) { const full = path.join(out, f); if ((await fs.stat(full)).isDirectory()) continue; await media.putFile(prefix + f.replace(/\\/g, "/"), full, f.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t"); }
     await setStatus(mediaId, { hls: prefix + "master.m3u8", hlsStatus: "done", hlsProgress: 100, hlsLevels: variants.map((v) => v.h), hlsError: "", hlsStage: "" });
-    stage(mediaId, "done");
+    stage(mediaId, "done"); notifyFront();
   } catch (e: any) {
     if (cancelled === mediaId) { cancelled = ""; stage(mediaId, "cancelled"); await setStatus(mediaId, { hlsStatus: "error", hlsError: "остановлено вручную", hlsStage: "" }); return; }
     console.error("transcode failed", mediaId, e?.message);

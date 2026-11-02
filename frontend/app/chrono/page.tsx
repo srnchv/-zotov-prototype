@@ -15,7 +15,7 @@ import { CKEYS, allEvents, buildChronoCats, chronoRange, decodeSel, removeOne, m
 
 // Хронограф по ТЗ DEV (Figma 450:71516): все события по годам, пять категорий фильтров (общий компонент с поиском),
 // таймлайн по диапазону из админки, закрепляется при прокрутке; состояние — в адресе (?person=…&y=1927).
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 // описание — из админки («Описания разделов»), варианты с фильтрами в индекс не идут
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
   const [sp, site] = await Promise.all([searchParams, getSite()]);

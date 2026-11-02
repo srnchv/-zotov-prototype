@@ -10,13 +10,16 @@ import { abs } from "@/lib/seo";
 import { getSite, type Site } from "@/lib/site";
 
 // Разделы меню (темы, проекты, личности, коллекции…): та же выдача, что в поиске, с зафиксированной типологией
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 type Props = { params: Promise<{ type: string }>; searchParams: Promise<SP> };
 
+// витрины (коллекции, темы, проекты) не читают параметры адреса — кэшируются целиком; у личностей — поиск и фильтры, страница динамическая
+const GRID = new Set(["collection", "theme", "project"]);
+export async function generateStaticParams() { return []; } // страницы собираются по первому запросу и живут в кэше
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { type } = await params; const c = CATS[type]; if (!c || type === "text") return {};
-  const [sp, site] = await Promise.all([searchParams, getSite()]);
-  const hasParams = Object.keys(sp).length > 0;
+  const site = await getSite();
+  const hasParams = GRID.has(type) ? false : Object.keys(await searchParams).length > 0;
   const description = String(site[("catDesc_" + type) as keyof Site] || "") || `${c.title} в архиве Центра «Зотов».`;
   return { title: c.title, description, alternates: { canonical: abs(CAT_PATHS[type]) }, robots: hasParams ? { index: false, follow: true } : undefined };
 }
@@ -24,7 +27,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default async function CatPage({ params, searchParams }: Props) {
   const { type } = await params; const c = CATS[type];
   if (!c || type === "text") notFound();
-  if (type === "collection" || type === "theme" || type === "project") return <CatGrid kind={type} />; // витрины по макетам DEV 612:54229 / 612:50434 / 612:52873 — без поиска и фильтров
+  if (GRID.has(type)) return <CatGrid kind={type as "collection" | "theme" | "project"} />; // витрины по макетам DEV 612:54229 / 612:50434 / 612:52873 — без поиска и фильтров
   // «Личности» — по макету DEV (550:75129): свой набор фильтров, поиск только по именам
   const site = type === "person" ? await getSite() : null;
   const section = site ? { catKeys: PAGE_CATS.person, intro: site.personIntro, ph: site.personPh, cls: "persons", cardsOf: "person" as const } : undefined;

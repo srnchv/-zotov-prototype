@@ -38,7 +38,7 @@ export const SITE_DEFAULTS = {
 export type Site = typeof SITE_DEFAULTS;
 export async function getSite(): Promise<Site> {
   try {
-    const r = await fetch(`${API}/entities/site`, { cache: "no-store" });
+    const r = await fetch(`${API}/entities/site`, { next: { tags: ["archive"], revalidate: 3600 } });
     if (!r.ok) return SITE_DEFAULTS;
     const e = await r.json();
     const out = { ...SITE_DEFAULTS };

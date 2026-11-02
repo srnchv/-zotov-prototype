@@ -15,8 +15,10 @@ export const TYPES: Record<string, { l: string; pl: string }> = {
   source: { l: "Источник", pl: "Источники" }, media: { l: "Медиафайл", pl: "Медиафайлы" }, tag: { l: "Тег", pl: "Теги" },
 };
 
-async function get<T>(path: string, revalidate = 60): Promise<T> {
-  const r = await fetch(API + path, { next: { revalidate } });
+// Данные кэшируются по тегу «archive»: страницы собираются из кэша, а при любом сохранении в админке API дёргает
+// /api/revalidate и кэш сбрасывается. Страховка — пересборка не реже раза в час (revalidate на страницах).
+async function get<T>(path: string): Promise<T> {
+  const r = await fetch(API + path, { next: { tags: ["archive"], revalidate: 3600 } });
   if (!r.ok) throw new Error(`API ${path}: ${r.status}`);
   return r.json();
 }
@@ -37,7 +39,7 @@ export const linked = (db: Record<string, Entity>, e: Entity, t?: string) =>
   (e.links || []).map((id) => db[id]).filter((x) => x && published(x) && (!t || x.type === t));
 
 export async function getEntity(id: string): Promise<EntityFull | null> {
-  const r = await fetch(`${API}/entities/${encodeURIComponent(id)}`, { next: { revalidate: 60 } });
+  const r = await fetch(`${API}/entities/${encodeURIComponent(id)}`, { next: { tags: ["archive"], revalidate: 3600 } });
   if (r.status === 404) return null;
   if (!r.ok) throw new Error(`API entity ${id}: ${r.status}`);
   return r.json();

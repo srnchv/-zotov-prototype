@@ -1,13 +1,22 @@
 "use client";
 // Плеер видео/аудио — Plyr (MIT). Субтитры WebVTT из медиатеки, оформление через CSS-переменные (см. media.css) —
 // когда придёт дизайн, перекрашиваем переменные и иконки, логику не трогаем.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "plyr/dist/plyr.css";
+import { API } from "@/lib/api";
 
 export type Track = { lang: string; label: string; url: string };
 // hls — адрес мастер-плейлиста адаптивного видео (несколько качеств): плеер подбирает качество под сеть и размер экрана,
 // в настройках можно выбрать вручную («Авто» / 1080p / 720p…). Без hls (или пока кодирование не закончилось) играет оригинал src.
-export default function Player({ kind, src, hls, poster, tracks = [], title }: { kind: "video" | "audio"; src: string; hls?: string; poster?: string; tracks?: Track[]; title?: string }) {
+// mediaId — плеер сам запрашивает подписанную ссылку на оригинал (6 часов) и играет из хранилища напрямую; без неё — src (поток через API)
+export default function Player({ kind, src, mediaId, hls, poster, tracks = [], title }: { kind: "video" | "audio"; src: string; mediaId?: string; hls?: string; poster?: string; tracks?: Track[]; title?: string }) {
+  const [realSrc, setRealSrc] = useState(src);
+  useEffect(() => {
+    let alive = true;
+    if (!mediaId || hls) { setRealSrc(src); return; }
+    fetch(`${API}/media/${mediaId}/original?ttl=21600`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive && j?.url) setRealSrc(String(j.url)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [mediaId, src, hls]);
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
   useEffect(() => {
     let plyr: { destroy: () => void } | null = null;
@@ -38,9 +47,9 @@ export default function Player({ kind, src, hls, poster, tracks = [], title }: {
       });
     })();
     return () => { plyr?.destroy(); hlsInst?.destroy(); };
-  }, [src, hls, kind, tracks]);
+  }, [realSrc, hls, kind, tracks]);
   const trackEls = tracks.map((t, i) => <track key={t.lang} kind="captions" label={t.label} srcLang={t.lang} src={t.url} default={i === 0} />);
   return kind === "video"
-    ? <div className="player video"><video ref={ref} playsInline controls preload="metadata" poster={poster} title={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()}><source src={src} />{trackEls}</video></div>
-    : <div className="player audio"><audio ref={ref} controls preload="metadata" title={title} controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}><source src={src} />{trackEls}</audio></div>;
+    ? <div className="player video"><video ref={ref} key={realSrc} playsInline controls preload="metadata" poster={poster} title={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()}><source src={realSrc} />{trackEls}</video></div>
+    : <div className="player audio"><audio ref={ref} key={realSrc} controls preload="metadata" title={title} controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}><source src={realSrc} />{trackEls}</audio></div>;
 }

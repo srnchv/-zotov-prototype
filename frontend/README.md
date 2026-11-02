@@ -16,9 +16,12 @@ npm i && NEXT_PUBLIC_API_URL=https://srnchv-zotov-prototype-27ea.twc1.net/api np
 ## Деплой (Timeweb App Platform)
 Новое приложение → Docker → тот же репозиторий, подпапка `frontend/`, порт 3000. Переменная `NEXT_PUBLIC_API_URL` — адрес API (по умолчанию стенд).
 
+## Кэш страниц
+Страницы собираются из кэша (ISR) и пересобираются по сигналу из API после любого сохранения в админке: API делает `POST /api/revalidate` с заголовком `x-revalidate-secret`. Переменная `REVALIDATE_SECRET` должна совпадать на фронте и в API (`FRONT_URL` в API — адрес сайта). Страховка — пересборка не реже раза в час. Поиск с параметрами — динамический.
+
 ## Домен и индексация
 - `SITE_URL` — основной домен (по умолчанию `https://archive.centrezotov.ru`): canonical, sitemap, OG-ссылки.
-- Любой другой хост (тестовый стенд `*.twc1.net`, превью) автоматически отдаёт `noindex` и `robots.txt: Disallow: /`, sitemap пустой. `NOINDEX=1` закрывает сайт принудительно, `NOINDEX=0` — открывает независимо от хоста.
+- Любой другой хост (тестовый стенд `*.twc1.net`, превью) получает заголовок `X-Robots-Tag: noindex` (middleware), `robots.txt: Disallow: /` и пустой sitemap. На тестовом стенде дополнительно ставится `NOINDEX=1` — тогда и мета-тег robots в страницах noindex (страницы кэшируются и хоста не знают). `NOINDEX=0` открывает независимо от хоста.
 - `/robots.txt`, `/sitemap.xml` (только опубликованные карточки), свои title/description/canonical/og:image у карточек, `noindex` у поиска и разделов с параметрами. Разделы меню (`/cat/theme`, `/cat/person`, `/texts`…) — серверные страницы на базе поиска.
 
 ## Локальный просмотр без деплоя

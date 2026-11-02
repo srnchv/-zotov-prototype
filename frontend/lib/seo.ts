@@ -6,8 +6,10 @@ export const SITE_HOST = new URL(SITE_URL).host;
 export const SITE_NAME = "ЗОТОВ. Архив";
 export const abs = (p: string) => SITE_URL + p;
 
-// хост текущего запроса; NOINDEX=1 закрывает сайт принудительно (на время наполнения), NOINDEX=0 — открывает
-// независимо от хоста (на случай, если прокси хостинга не передаёт внешний домен)
+// Страницы кэшируются (ISR), поэтому в их метаданных noindex решается только переменной окружения: NOINDEX=1 — закрыто.
+// На тестовом стенде NOINDEX=1 ставится в env; дополнительно middleware отдаёт X-Robots-Tag: noindex на любом хосте, кроме основного.
+export const noindexEnv = () => process.env.NOINDEX === "1";
+// хост текущего запроса (robots.txt, sitemap — динамические маршруты); NOINDEX=1 закрывает принудительно, NOINDEX=0 — открывает независимо от хоста
 export async function noindex(): Promise<boolean> {
   if (process.env.NOINDEX === "1") return true;
   if (process.env.NOINDEX === "0") return false;

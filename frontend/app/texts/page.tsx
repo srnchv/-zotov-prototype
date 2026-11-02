@@ -7,7 +7,7 @@ import { abs } from "@/lib/seo";
 import { getSite } from "@/lib/site";
 
 // «Тексты» — источники-тексты архива: выдача поиска с типологией «текст»
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 type Props = { searchParams: Promise<SP> };
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const [sp, site] = await Promise.all([searchParams, getSite()]);

@@ -4,13 +4,13 @@ import Sidebar from "@/components/Sidebar";
 import HomeScale from "@/components/HomeScale";
 import LinkNav from "@/components/LinkNav";
 import { getSite } from "@/lib/site";
-import { SITE_URL, SITE_NAME, noindex } from "@/lib/seo";
+import { SITE_URL, SITE_NAME, noindexEnv } from "@/lib/seo";
 
 const DESCRIPTION = "Цифровой архив Центра «Зотов»: материалы, личности, события, места и проекты, объединённые в единую систему связей";
 // Общие метаданные: основной домен (SITE_URL), шаблон заголовка, превью для соцсетей; тексты и картинка — из админки («Тексты сайта» → SEO).
 // На любом хосте, кроме основного (тестовый стенд), и при NOINDEX=1 — noindex для всех страниц, коды подтверждения не подставляются.
 export async function generateMetadata(): Promise<Metadata> {
-  const [closed, site] = await Promise.all([noindex(), getSite()]);
+  const closed = noindexEnv(), site = await getSite();
   const title = site.seoTitle || "ЗОТОВ — Архив", description = site.seoDesc || DESCRIPTION;
   return {
     metadataBase: new URL(SITE_URL),
@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // Каркас общий для всех страниц: фиксированное меню слева (180) + контент; меню при переходах не перерисовывается
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [site, closed] = await Promise.all([getSite(), noindex()]);
+  const site = await getSite(), closed = noindexEnv();
   const metrika = !closed && /^\d+$/.test(site.metrikaId) ? site.metrikaId : "";
   return (
     <html lang="ru">

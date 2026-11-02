@@ -8,7 +8,7 @@ import { Lettering, SectionLink } from "@/components/Lettering";
 import { loadArchive, ofType, linked, yearOf, imgOf, imgPos, mediaPos, frameStyle, framesOf, mediaKind, spheresOf, type Entity } from "@/lib/api";
 import { getSite } from "@/lib/site";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 
 const LETTERS = ["a", "r", "h", "i", "v"];
 const s = (e: Entity, k: string) => String(e[k] ?? "");

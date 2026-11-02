@@ -17,7 +17,7 @@ import { MKEYS, allPlaces, buildMapCats, runMap, coordsOf, placeStatus, placeTyp
 
 // Карта по ТЗ DEV (Figma 123:27632): поиск по названию и адресу, шесть категорий фильтров (общий компонент),
 // счётчик, карта с флажками и кластерами, карточка места, список; состояние — в адресе (?q=…&city=…&place=…).
-export const dynamic = "force-dynamic";
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 // описание — из админки («Описания разделов»), варианты с фильтрами в индекс не идут
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }): Promise<Metadata> {
   const [sp, site] = await Promise.all([searchParams, getSite()]);

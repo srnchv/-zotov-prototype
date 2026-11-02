@@ -5,6 +5,7 @@ import { z } from "zod";
 import * as repo from "./repo.js";
 import * as media from "./media.js";
 import * as transcode from "./transcode.js";
+import { notifyFront, revalidateState } from "./revalidate.js";
 import * as imp from "./import.js";
 import * as users from "./users.js";
 import path from "node:path";
@@ -22,6 +23,13 @@ export function createApp() {
   app.use((req, res, next) => {
     res.set({ "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin", "X-Frame-Options": "DENY", "Permissions-Policy": "camera=(), microphone=(), geolocation=()" });
     if (req.secure || req.get("x-forwarded-proto") === "https") res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    next();
+  });
+  // после любой записи (кроме счётчиков просмотров и входа) — сброс кэша страниц сайта
+  app.use("/api", (req, res, next) => {
+    if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+    if (/^\/(entities\/[^/]+\/view|hit|login|geo|users|import\/(preview|inspect)|transcode\/status)/.test(req.path)) return next();
+    res.on("finish", () => { if (res.statusCode < 400) notifyFront(); });
     next();
   });
   // CORS: только домены сайта и админки (CORS_ORIGINS через запятую); без переменной — любой (локальная разработка)
@@ -123,7 +131,7 @@ export function createApp() {
   }
 
   app.get("/robots.txt", (_req, res) => res.type("text/plain").send("User-agent: *\nDisallow: /\n"));
-  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.4.0" }));
+  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.5.0", revalidate: revalidateState() }));
   // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
   // ymapsV3 — ключ открыт для JavaScript API 3.0 (YANDEX_JS_V3=1): фронт включает векторную карту со стилями дизайнера; иначе 2.1
   app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "", ymapsV3: process.env.YANDEX_JS_V3 === "1" }));

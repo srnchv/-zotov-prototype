@@ -18,7 +18,8 @@ import { abs, descOf } from "@/lib/seo";
 import { spheresOf, funcLabel, funcGroupOf, listOf } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
-export const dynamic = "force-dynamic";
+export async function generateStaticParams() { return []; } // карточки собираются по первому запросу и живут в кэше до правки в админке
+export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
 const SAVE_ENABLED = false; // появится вместе с личным кабинетом
 type Props = { params: Promise<{ id: string }> };
 
@@ -89,13 +90,8 @@ export default async function EntityPage({ params }: Props) {
   const video = media.find((m) => mediaKind(m) === "video"), audio = media.find((m) => mediaKind(m) === "audio"), pdf = media.find((m) => mediaKind(m) === "pdf");
   // субтитры — через свой роут /subs (тот же origin, поэтому <video> не нужен crossorigin и CORS хранилища)
   const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m!.id}/${t.lang}.vtt` }));
-  // видео и аудио играют напрямую из хранилища по подписанной ссылке (без прокси — иначе подтормаживает); срок — 6 часов
-  const playUrl = async (m?: Entity) => {
-    if (!m) return "";
-    try { const r = await fetch(`${API}/media/${m.id}/original?ttl=21600`, { cache: "no-store" }); if (r.ok) return String((await r.json()).url || ""); } catch {}
-    return fileUrl(m);
-  };
-  const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
+  // видео и аудио играют напрямую из хранилища по подписанной ссылке — её запрашивает плеер на клиенте (страница кэшируется, ссылка протухла бы); запасной вариант — поток через API
+  const videoSrc = video ? fileUrl(video) : "", audioSrc = audio ? fileUrl(audio) : "";
   // адаптивные версии (HLS) готовы — плеер играет их через API; иначе оригинал
   const hlsUrl = video && video.hls && video.hlsStatus === "done" ? `${API}/hls/${video.id}/master.m3u8` : undefined;
   // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
@@ -168,8 +164,8 @@ export default async function EntityPage({ params }: Props) {
               {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
                 : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
                 : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" ? slides[0].pos : undefined} /></div>
-                : topKind === "video" ? <Player kind="video" src={videoSrc} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
-                : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
+                : topKind === "video" ? <Player kind="video" src={videoSrc} mediaId={video!.id} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
+                : topKind === "audio" ? <Player kind="audio" src={audioSrc} mediaId={audio!.id} tracks={tracks(audio)} title={String(audio!.title)} />
                 : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}
               {topKind !== "images" || slides.length <= 1 ? (() => {
                 // одно фото с собственной подписью — её и показываем; иначе название материала + первая личность и дата
@@ -188,8 +184,8 @@ export default async function EntityPage({ params }: Props) {
             {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
             {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
               <div className="embed2">
-                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
-                {audio && topKind !== "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
+                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} mediaId={video.id} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
+                {audio && topKind !== "audio" ? <Player kind="audio" src={audioSrc} mediaId={audio.id} tracks={tracks(audio)} title={String(audio.title)} /> : null}
                 {pdf ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               </div>
             ) : null}
