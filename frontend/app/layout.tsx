@@ -20,6 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: { siteName: SITE_NAME, locale: "ru_RU", type: "website", title, description, images: site.ogImage ? [{ url: site.ogImage }] : undefined },
     twitter: { card: site.ogImage ? "summary_large_image" : "summary" },
     alternates: { canonical: "/" },
+    icons: { icon: [{ url: "/favicon.svg", type: "image/svg+xml" }, { url: "/favicon-32.png", sizes: "32x32", type: "image/png" }], apple: "/apple-touch-icon.png" },
     robots: closed ? { index: false, follow: false, nocache: true } : { index: true, follow: true },
     verification: closed ? undefined : { ...(site.gscCode ? { google: site.gscCode } : {}), ...(site.ywCode ? { yandex: site.ywCode } : {}) },
   };

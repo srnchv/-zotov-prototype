@@ -19,6 +19,7 @@ import { spheresOf, funcLabel, funcGroupOf, listOf } from "@/lib/api";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export const dynamic = "force-dynamic";
+const SAVE_ENABLED = false; // появится вместе с личным кабинетом
 type Props = { params: Promise<{ id: string }> };
 
 // Свои title / description / canonical / картинка превью у каждой карточки
@@ -151,10 +152,11 @@ export default async function EntityPage({ params }: Props) {
               {relCount ? <NavRel total={relCount} groups={groups.map(([t, arr]) => ({ id: gid(t), label: REL_HEAD[t], n: arr.length }))} /> : null}
               {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
             </nav>
-            <button id="saveBtn" type="button">
+            {/* «Сохранить» — закладки личного кабинета (следующий этап); до него кнопку не показываем */}
+            {SAVE_ENABLED ? <button id="saveBtn" type="button">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>
               <span>Сохранить</span>
-            </button>
+            </button> : null}
           </section>
 
           {/* правая колонка: медиа, описание, документы, источники, связанные */}
