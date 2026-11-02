@@ -96,6 +96,8 @@ export default async function EntityPage({ params }: Props) {
     return fileUrl(m);
   };
   const [videoSrc, audioSrc] = await Promise.all([playUrl(video), playUrl(audio)]);
+  // адаптивные версии (HLS) готовы — плеер играет их через API; иначе оригинал
+  const hlsUrl = video && video.hls && video.hlsStatus === "done" ? `${API}/hls/${video.id}/master.m3u8` : undefined;
   // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
   // подпись к фото: своё название файла (caption), иначе название материала; ниже — автор и год файла (необязательные поля)
@@ -165,7 +167,7 @@ export default async function EntityPage({ params }: Props) {
               {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
                 : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
                 : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" ? slides[0].pos : undefined} /></div>
-                : topKind === "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
+                : topKind === "video" ? <Player kind="video" src={videoSrc} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
                 : topKind === "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio!.title)} />
                 : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}
               {topKind !== "images" || slides.length <= 1 ? (() => {
@@ -185,7 +187,7 @@ export default async function EntityPage({ params }: Props) {
             {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
             {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
               <div className="embed2">
-                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
+                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
                 {audio && topKind !== "audio" ? <Player kind="audio" src={audioSrc} tracks={tracks(audio)} title={String(audio.title)} /> : null}
                 {pdf ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
               </div>

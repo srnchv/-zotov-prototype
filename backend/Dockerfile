@@ -16,6 +16,8 @@ RUN npm run build
 FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production DB_PATH=/data/zotov.db
+# ffmpeg — адаптивное видео (HLS в нескольких качествах) после загрузки
+RUN apk add --no-cache ffmpeg
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist

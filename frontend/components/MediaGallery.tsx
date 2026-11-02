@@ -5,7 +5,7 @@ import { useState } from "react";
 import Player, { type Track } from "./Player";
 export type MSlide =
   | { kind: "image"; src: string; title: string; pos?: React.CSSProperties; sub?: string } // sub — «Автор, год» из полей файла
-  | { kind: "video" | "audio"; src: string; title: string; poster?: string; tracks?: Track[] }
+  | { kind: "video" | "audio"; src: string; hls?: string; title: string; poster?: string; tracks?: Track[] }
   | { kind: "tour"; src: string; title: string };
 const Arrow = ({ left }: { left?: boolean }) => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={left ? { transform: "scaleX(-1)" } : undefined}><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>
@@ -25,7 +25,7 @@ export default function MediaGallery({ slides, caption }: { slides: MSlide[]; ca
       <div className="mgal-view">
         {cur.kind === "image" ? <img src={cur.src} alt={cur.title} style={cur.pos} />
           : cur.kind === "tour" ? <Tour src={cur.src} title={cur.title} />
-          : <Player key={cur.src} kind={cur.kind} src={cur.src} poster={cur.poster} tracks={cur.tracks || []} title={cur.title} />}
+          : <Player key={cur.src} kind={cur.kind} src={cur.src} hls={cur.hls} poster={cur.poster} tracks={cur.tracks || []} title={cur.title} />}
         {n > 1 ? <>
           <button type="button" className="mgal-arr l" aria-label="Предыдущий" onClick={() => go(-1)}><Arrow left /></button>
           <button type="button" className="mgal-arr r" aria-label="Следующий" onClick={() => go(1)}><Arrow /></button>

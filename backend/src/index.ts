@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { q } from "./db.js";
 import { bootstrap, requireSecrets } from "./users.js";
+import { resume as resumeTranscode } from "./transcode.js";
 
 requireSecrets();
 
@@ -16,4 +17,5 @@ await bootstrap();
 const port = Number(process.env.PORT || 3000);
 createApp().listen(port, () => {
   console.log(`Zotov Archive API · http://localhost:${port}/api/health`);
+  void resumeTranscode(); // незавершённое кодирование видео — заново
 });

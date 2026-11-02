@@ -4,6 +4,7 @@ import multer from "multer";
 import { z } from "zod";
 import * as repo from "./repo.js";
 import * as media from "./media.js";
+import * as transcode from "./transcode.js";
 import * as imp from "./import.js";
 import * as users from "./users.js";
 import path from "node:path";
@@ -172,7 +173,7 @@ export function createApp() {
   // что видит посетитель без токена: опубликованные записи; у закрытых материалов (по запросу / ограниченный) —
   // без ссылок на файлы и копии; медиафайлы закрытых материалов не отдаются вовсе
   const isPublic = (e: any) => e && !["draft", "moderation"].includes(String(e.status || ""));
-  const FILE_KEYS = ["thumb", "med", "big", "img", "imgBig", "origKey", "embed", "subtitles", "tourPrefix", "url"];
+  const FILE_KEYS = ["thumb", "med", "big", "img", "imgBig", "origKey", "embed", "subtitles", "tourPrefix", "url", "hls"];
   const scrub = (e: any) => { const o = { ...e }; for (const k of FILE_KEYS) delete o[k]; return o; };
   const publicView = (entities: any[]) => {
     const closed = new Set(entities.filter((e) => e.type !== "media" && String(e.access || "open") !== "open").map((e) => e.id));
@@ -407,12 +408,37 @@ export function createApp() {
         ...(kind === "image" ? { buffer: await fs.promises.readFile(tmp) } : { path: tmp, size: req.file.size }),
       });
       await repo.logAct("media", entityId || m.id, m.title, actor(req));
+      if (kind === "video") void transcode.enqueue(m.id); // адаптивные версии — в фоне, страница пока играет оригинал
       res.status(201).json(m);
     } catch (e: any) {
       console.error("media upload failed:", e);
       res.status(502).json({ error: "storage: " + (e?.message || "upload failed") });
     } finally { if (tmp) fs.promises.unlink(tmp).catch(() => {}); }
   });
+  // перекодировать видео заново (или впервые — для загруженных до появления HLS)
+  app.post("/api/media/:id/transcode", auth, ah(async (req, res) => {
+    const m = await repo.getEntity(String(req.params.id));
+    if (!m || m.type !== "media" || String(m.kind) !== "video") return res.status(404).json({ error: "not found" });
+    await transcode.enqueue(m.id);
+    res.json({ ok: true, queue: transcode.queueState() });
+  }));
+  // плейлисты и сегменты HLS — через API (тот же origin для плеера, кэш у сегментов на год); доступ как у файла
+  app.get("/api/hls/:id/*", ah(async (req, res) => {
+    if (!media.mediaEnabled()) return res.status(503).end();
+    const rel = String(req.params[0] || "");
+    if (!/^[\w\/.-]+\.(m3u8|ts)$/.test(rel) || rel.includes("..")) return res.status(400).end();
+    const m = await repo.getEntity(String(req.params.id));
+    if (!m || m.type !== "media" || !m.hls) return res.status(404).end();
+    const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
+    const access = String((parent?.access ?? m.access) || "open");
+    const staff = await isStaff(req);
+    if ((access !== "open" || (parent && !isPublic(parent))) && !staff) return res.status(403).end();
+    try {
+      const s = await media.streamKey(`media/${m.id.replace(/^md-/, "")}/hls/${rel}`);
+      res.set({ "content-type": rel.endsWith(".m3u8") ? "application/vnd.apple.mpegurl" : "video/mp2t", "cache-control": rel.endsWith(".m3u8") ? "public, max-age=60" : "public, max-age=31536000, immutable", ...(s.length != null ? { "content-length": String(s.length) } : {}) });
+      (s.body as any).pipe(res);
+    } catch { res.status(404).end(); }
+  }));
 
   app.get("/api/media-selftest", auth, ah(async (_req, res) => {
     if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });

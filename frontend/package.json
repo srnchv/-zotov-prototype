@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "hls.js": "^1.7.4",
     "next": "^15.5.28",
     "pdfjs-dist": "^4.10.38",
     "plyr": "^3.8.4",

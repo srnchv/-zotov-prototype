@@ -74,6 +74,23 @@ async function put(key: string, body: Buffer, contentType: string) {
   await s3().send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }));
 }
 
+export async function putFile(key: string, filePath: string, contentType: string) {
+  await new Upload({ client: s3(), params: { Bucket: BUCKET, Key: key, Body: createReadStream(filePath), ContentType: contentType, CacheControl: key.endsWith(".m3u8") ? "public, max-age=60" : "public, max-age=31536000, immutable" } }).done();
+}
+export async function deletePrefix(prefix: string) {
+  let token: string | undefined;
+  do {
+    const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
+    const keys = (r.Contents || []).map((o) => ({ Key: o.Key! }));
+    if (keys.length) await s3().send(new DeleteObjectsCommand({ Bucket: BUCKET, Delete: { Objects: keys } }));
+    token = r.IsTruncated ? r.NextContinuationToken : undefined;
+  } while (token);
+}
+// поток объекта из хранилища (плейлисты и сегменты HLS отдаются через API: у бакета нет CORS для XHR плеера)
+export async function streamKey(key: string) {
+  const r = await s3().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+  return { body: r.Body as NodeJS.ReadableStream, contentType: r.ContentType || "application/octet-stream", length: r.ContentLength };
+}
 // большие файлы (видео, аудио, PDF) — потоком с диска в хранилище частями, без буфера в памяти
 async function putPrivateStream(key: string, path: string, contentType: string) {
   const up = (acl?: "private") => new Upload({ client: s3(), params: { Bucket: BUCKET, Key: key, Body: createReadStream(path), ContentType: contentType, ...(acl ? { ACL: acl } : {}) }, partSize: 16 * 1024 * 1024, queueSize: 3 }).done();
