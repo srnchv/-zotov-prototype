@@ -42,7 +42,7 @@ const picker = ref<null | "link" | "media" | "tag">(null);
 const ACCESS_UI = false; // уровни доступа — вместе с личным кабинетом
 const crop = ref<Entity | null>(null), tour = ref(false), uplStatus = ref("");
 // адаптивное видео: статус кодирования из карточки медиафайла (обновляется опросом, пока идёт)
-const hlsText = (m: Entity) => m.hlsStatus === "done" ? `адаптивное: ${(m.hlsLevels || []).map((h: number) => h + "p").join("/")}` : m.hlsStatus === "processing" ? `кодируем ${m.hlsProgress || 0}%` : m.hlsStatus === "queued" ? "в очереди на кодирование" : m.hlsStatus === "error" ? "ошибка кодирования: " + (m.hlsError || "") : "одно качество (оригинал)";
+const hlsText = (m: Entity) => m.hlsStatus === "done" ? `адаптивное: ${(m.hlsLevels || []).map((h: number) => h + "p").join("/")}` : m.hlsStatus === "processing" ? `конвертируется ${m.hlsProgress || 0}%${m.hlsStage ? " · " + m.hlsStage : ""}` : m.hlsStatus === "queued" ? "в очереди на конвертацию" : m.hlsStatus === "error" ? "ошибка конвертации: " + (m.hlsError || "") : "ждёт конвертации";
 async function transcode(m: Entity) { try { await api("/media/" + m.id + "/transcode", { method: "POST" }); await load(); toast("Поставлено в очередь — страница играет оригинал, пока версии не готовы"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 let hlsTimer: ReturnType<typeof setInterval> | null = null;
 watch(() => files.value.some((m) => ["queued", "processing"].includes(String(m.hlsStatus || ""))), (busyNow) => { if (busyNow && !hlsTimer) hlsTimer = setInterval(() => load(), 5000); if (!busyNow && hlsTimer) { clearInterval(hlsTimer); hlsTimer = null; } }, { immediate: true });
@@ -99,7 +99,7 @@ const uploadKind = (accept: string) => { if (fileInput.value) { fileInput.value.
 async function onFile() {
   const file = fileInput.value?.files?.[0]; if (!file) return;
   uplStatus.value = "Загрузка…";
-  try { const m = await uploadFile(file, props.id); await load(); toast(kindOf(m) === "video" ? "Видео загружено. Сейчас оно конвертируется в несколько качеств — статус в медиатеке и в карточке файла; сайт пока играет оригинал." : "Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); }
+  try { const m = await uploadFile(file, props.id); await load(); if (kindOf(m) === "video") void ask("Видео загружено", "Файл сохранён и прикреплён к карточке. Сейчас сервер конвертирует его в несколько качеств для разных скоростей интернета — это занимает от нескольких минут до часа. Вкладку можно закрыть, конвертация идёт на сервере; статус виден в медиатеке и здесь, у файла. Пока версии не готовы, сайт играет оригинал.", { ok: "Понятно", cancel: "Закрыть" }); else toast("Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); }
   uplStatus.value = ""; if (fileInput.value) fileInput.value.value = "";
 }
 const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%", imgFrame: m.frame || null } });
@@ -213,7 +213,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
               <div style="display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px">
                 <span class="thumbmini" :style="bg(m)"></span>
                 <span style="min-width:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1"><router-link :to="'/edit/' + m.id">{{ m.title }}</router-link><br><span class="muted" style="font-size:11px">{{ k === 'tour' ? (m.uploading ? (JOB.cur && JOB.cur.id === m.id ? jobText(JOB.cur) : 'загрузка не завершена — «＋ Код эмбеда» → «Папка тура» → докачать') : String(m.embed || '').replace(/^https?:\/\//, '').slice(0, 60) + (m.files ? ' · ' + m.files + ' файлов · ' + fmtSize(m.size) : '')) : (m.format || '') + ' · ' + fmtSize(m.size) + (k === 'video' ? ' · ' + hlsText(m) : '') }}</span></span>
-                <span v-if="k === 'video' && canEdit && m.hlsStatus !== 'processing' && m.hlsStatus !== 'queued'" class="lnk" style="font-size:12px;white-space:nowrap" title="Собрать версии видео для разных скоростей интернета (1080/720/480/360)" @click="transcode(m)">{{ m.hlsStatus === 'done' ? 'Перекодировать' : 'Сделать адаптивным' }}</span>
+                <span v-if="k === 'video' && canEdit && (m.hlsStatus === 'done' || m.hlsStatus === 'error')" class="lnk" style="font-size:12px;white-space:nowrap" title="Собрать версии видео заново" @click="transcode(m)">{{ m.hlsStatus === 'error' ? 'Повторить конвертацию' : 'Перекодировать' }}</span>
                 <template v-if="k === 'image' && canEdit">
                   <span class="lnk" style="font-size:12px;white-space:nowrap" title="Какая область фото попадёт в карточки" @click="crop = m">Кадр</span>
                   <span v-if="isCover(m)" class="statbadge" title="Показывается в карточках и на странице">Обложка</span>

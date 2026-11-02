@@ -114,5 +114,6 @@ export const queueState = () => ({ running, queued: [...queue], current: { ...cu
 export async function resume() {
   if (!media.mediaEnabled()) return;
   const { entities } = await repo.exportAll();
-  for (const e of entities) if (e.type === "media" && String((e as any).kind) === "video" && ["queued", "processing"].includes(String((e as any).hlsStatus || ""))) await enqueue(e.id);
+  // незавершённые — заново; видео без версий вообще (загружены до появления адаптивного режима) — тоже в очередь, автоматически
+  for (const e of entities) { const x = e as any; if (e.type === "media" && String(x.kind) === "video" && (["queued", "processing"].includes(String(x.hlsStatus || "")) || (!x.hlsStatus && !x.hls))) await enqueue(e.id); }
 }
