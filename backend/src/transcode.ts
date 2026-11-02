@@ -21,9 +21,12 @@ export const current = { id: "", stage: "", since: 0, lastLog: "" };
 const stage = (id: string, st: string, extra = "") => { current.id = id; current.stage = st; current.since = Date.now(); current.lastLog = extra; console.log(`[transcode] ${id}: ${st} ${extra}`); };
 export const hasFfmpeg = () => new Promise<boolean>((res) => { const p = spawn("ffmpeg", ["-version"]); p.on("error", () => res(false)); p.on("exit", (c) => res(c === 0)); });
 
+let child: ReturnType<typeof spawn> | null = null; // текущий ffmpeg/ffprobe — чтобы остановить по кнопке
+let cancelled = "";
 function run(cmd: string, args: string[], onLine?: (l: string) => void): Promise<string> {
   return new Promise((res, rej) => {
     const p = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    child = p; p.on("exit", () => { if (child === p) child = null; });
     let out = "", err = "";
     p.stdout.on("data", (d) => { out += d; if (onLine) for (const l of String(d).split("\n")) if (l) onLine(l); });
     p.stderr.on("data", (d) => { err += d; if (err.length > 20000) err = err.slice(-20000); });
@@ -38,6 +41,7 @@ async function probe(file: string) {
   return { w: Number(st.width || 0), h: Number(st.height || 0), dur: Number(j.format?.duration || 0) };
 }
 
+const chk = (id: string) => { if (cancelled === id) throw new Error("cancelled"); };
 const setStatus = (id: string, payload: Record<string, unknown>) => repo.updateEntity(id, { payload }).catch(() => {});
 
 async function transcodeOne(mediaId: string) {
@@ -53,7 +57,7 @@ async function transcodeOne(mediaId: string) {
     const s = await media.streamOriginal(mediaId);
     if (!s) throw new Error("оригинал не найден в хранилище");
     await pipeline(s.body as NodeJS.ReadableStream, createWriteStream(src));
-    stage(mediaId, "probe");
+    chk(mediaId); stage(mediaId, "probe");
     const info = await probe(src);
     if (!info.h) throw new Error("ffprobe: не удалось прочитать видео");
     stage(mediaId, "encode", `${info.w}x${info.h} ${Math.round(info.dur)}s`);
@@ -74,13 +78,13 @@ async function transcodeOne(mediaId: string) {
           const sec = Number(mm[1]) / 1e6; const pct = Math.min(99, Math.round(((doneSec + sec) / total) * 100));
           if (pct - last >= 3) { last = pct; void setStatus(mediaId, { hlsProgress: pct }); }
         });
-      doneSec += info.dur || 1;
+      doneSec += info.dur || 1; chk(mediaId);
     }
     // мастер-плейлист: BANDWIDTH — видео + аудио с запасом 10 %
     const master = ["#EXTM3U", "#EXT-X-VERSION:3", ...variants.flatMap((v) => { const w = Math.round((info.w / info.h) * v.h / 2) * 2; return [`#EXT-X-STREAM-INF:BANDWIDTH=${Math.round((v.vb + v.ab) * 1100)},RESOLUTION=${w}x${v.h},NAME="${v.h}p"`, `${v.h}/index.m3u8`]; })].join("\n") + "\n";
     await fs.writeFile(path.join(out, "master.m3u8"), master);
     // в хранилище: сегменты — кэшируются год, плейлисты — минуту
-    stage(mediaId, "upload");
+    chk(mediaId); stage(mediaId, "upload");
     await setStatus(mediaId, { hlsStage: "выгружаем в хранилище" });
     const prefix = `media/${mediaId.replace(/^md-/, "")}/hls/`;
     await media.deletePrefix(prefix); // старая версия, если перекодируем заново
@@ -89,6 +93,7 @@ async function transcodeOne(mediaId: string) {
     await setStatus(mediaId, { hls: prefix + "master.m3u8", hlsStatus: "done", hlsProgress: 100, hlsLevels: variants.map((v) => v.h), hlsError: "", hlsStage: "" });
     stage(mediaId, "done");
   } catch (e: any) {
+    if (cancelled === mediaId) { cancelled = ""; stage(mediaId, "cancelled"); await setStatus(mediaId, { hlsStatus: "error", hlsError: "остановлено вручную", hlsStage: "" }); return; }
     console.error("transcode failed", mediaId, e?.message);
     stage(mediaId, "error", String(e?.message || e).slice(0, 200));
     await setStatus(mediaId, { hlsStatus: "error", hlsError: String(e?.message || e).slice(0, 500), hlsStage: "" });
@@ -108,6 +113,13 @@ export async function enqueue(mediaId: string) {
   if (!(await hasFfmpeg())) { await setStatus(mediaId, { hlsStatus: "error", hlsError: "ffmpeg не установлен на сервере" }); return; }
   if (!queue.includes(mediaId)) { queue.push(mediaId); await setStatus(mediaId, { hlsStatus: "queued", hlsProgress: 0, hlsError: "" }); }
   void pump();
+}
+// снять с очереди или остановить текущее задание (процесс ffmpeg убивается, файл помечается «остановлено»)
+export async function cancel(mediaId: string) {
+  const i = queue.indexOf(mediaId);
+  if (i >= 0) { queue.splice(i, 1); await setStatus(mediaId, { hlsStatus: "error", hlsError: "снято с очереди", hlsStage: "" }); return "dequeued"; }
+  if (running && current.id === mediaId) { cancelled = mediaId; if (child) { try { child.kill("SIGKILL"); } catch {} } return "killed"; }
+  return "not-found";
 }
 export const queueState = () => ({ running, queued: [...queue], current: { ...current, sinceSec: current.since ? Math.round((Date.now() - current.since) / 1000) : 0 } });
 // при старте: всё, что осталось в очереди или оборвалось на кодировании — заново

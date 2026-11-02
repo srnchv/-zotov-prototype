@@ -28,6 +28,7 @@ const srcUrl = ref("");
 watch(() => props.id, async (id) => { srcUrl.value = ""; if (!o.value || kind.value === "image" || kind.value === "tour") return; try { srcUrl.value = (await api<{ url: string }>("/media/" + id + "/original?ttl=3600")).url; } catch { srcUrl.value = ""; } }, { immediate: true });
 // адаптивное видео
 const hlsText = (m: Entity) => m.hlsStatus === "done" ? "готово" : m.hlsStatus === "processing" ? `${m.hlsStage || "кодируем"}, ${m.hlsProgress || 0}%` : m.hlsStatus === "queued" ? "в очереди" : m.hlsStatus === "error" ? "ошибка" : "не выполнялось — играет оригинал в одном качестве";
+async function cancelQ() { if (!(await ask(o.value.hlsStatus === "processing" ? "Остановить конвертацию" : "Снять с очереди", "Запустить заново можно будет здесь же.", { ok: o.value.hlsStatus === "processing" ? "Остановить" : "Снять", danger: true }))) return; try { await api("/transcode/cancel", { method: "POST", body: JSON.stringify({ id: props.id }) }); await load(); } catch (e: any) { toast("Ошибка: " + e.message); } }
 async function transcode() { try { await api("/media/" + props.id + "/transcode", { method: "POST" }); await load(); toast("Поставлено в очередь"); } catch (e: any) { toast("Ошибка: " + e.message); } }
 let timer: ReturnType<typeof setInterval> | null = null;
 watch(() => ["queued", "processing"].includes(String(o.value?.hlsStatus || "")), (busy) => { if (busy && !timer) timer = setInterval(() => load(), 5000); if (!busy && timer) { clearInterval(timer); timer = null; } }, { immediate: true });
@@ -72,7 +73,11 @@ void all;
             <div v-if="o.hlsLevels" class="r"><span class="k">Качества</span><span class="v">{{ (o.hlsLevels || []).map((h: number) => h + 'p').join(', ') }}</span></div>
             <div v-if="o.hlsError" class="r"><span class="k">Ошибка</span><span class="v" style="color:#9a2e2e">{{ o.hlsError }}</span></div>
           </div>
-          <button v-if="canEdit && !['queued','processing'].includes(String(o.hlsStatus || ''))" class="btn sm" style="margin-top:8px" @click="transcode">{{ o.hlsStatus === 'done' ? 'Перекодировать заново' : 'Сделать адаптивным' }}</button>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <button v-if="canEdit && !['queued','processing'].includes(String(o.hlsStatus || ''))" class="btn sm" @click="transcode">{{ o.hlsStatus === 'done' ? 'Перекодировать заново' : o.hlsStatus === 'error' ? 'Запустить заново' : 'Конвертировать' }}</button>
+            <button v-if="canEdit && ['queued','processing'].includes(String(o.hlsStatus || ''))" class="btn sm" style="color:#9a2e2e;border-color:#9a2e2e" @click="cancelQ">{{ o.hlsStatus === 'processing' ? 'Остановить' : 'Снять с очереди' }}</button>
+            <router-link to="/media" class="btn sm">Очередь в медиатеке</router-link>
+          </div>
         </template>
       </div>
       <div>

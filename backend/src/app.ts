@@ -416,6 +416,7 @@ export function createApp() {
     } finally { if (tmp) fs.promises.unlink(tmp).catch(() => {}); }
   });
   app.get("/api/transcode/status", auth, ah(async (_req, res) => res.json({ ffmpeg: await transcode.hasFfmpeg(), ...transcode.queueState() })));
+  app.post("/api/transcode/cancel", auth, ah(async (req, res) => { const { id } = z.object({ id: z.string() }).parse(req.body); res.json({ result: await transcode.cancel(id) }); }));
   // перекодировать видео заново (или впервые — для загруженных до появления HLS)
   app.post("/api/media/:id/transcode", auth, ah(async (req, res) => {
     const m = await repo.getEntity(String(req.params.id));
