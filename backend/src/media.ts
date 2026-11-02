@@ -1,6 +1,6 @@
 // Медиа-хранилище: S3-совместимое (Timeweb / любой хостинг клиента — меняются только env-переменные).
 // Оригинал сохраняется как есть (по подписанной ссылке), наружу отдаются сжатые производные.
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand, PutBucketCorsCommand, GetBucketCorsCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand, PutBucketCorsCommand, GetBucketCorsCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import yauzl from "yauzl";
 import { Upload } from "@aws-sdk/lib-storage";
 import { createReadStream } from "node:fs";
@@ -89,6 +89,29 @@ export async function ensureCors() {
     await s3().send(new PutBucketCorsCommand({ Bucket: BUCKET, CORSConfiguration: { CORSRules: [{ AllowedMethods: ["GET", "HEAD"], AllowedOrigins: origins, AllowedHeaders: ["*"], ExposeHeaders: ["Content-Length", "Content-Range", "Accept-Ranges"], MaxAgeSeconds: 86400 }] } }));
     console.log("S3 CORS: GET/HEAD для", origins.join(", "));
   } catch (e: any) { console.error("S3 CORS не выставлен:", e?.message || e); }
+}
+// Разовая миграция: файлам, залитым до появления Cache-Control, проставляем заголовок (копия объекта на самого себя
+// с заменой метаданных; содержимое и адрес не меняются). Уже правильные — пропускаем. dry=true — только посчитать.
+export async function migrateCache(dry = false, prefixes = ["media/", "assets/", "tours/"]) {
+  const out = { scanned: 0, fixed: 0, skipped: 0, failed: 0, errors: [] as string[], dry };
+  for (const prefix of prefixes) {
+    let token: string | undefined;
+    do {
+      const r = await s3().send(new ListObjectsV2Command({ Bucket: BUCKET, Prefix: prefix, ContinuationToken: token }));
+      for (const o of r.Contents || []) {
+        const key = o.Key!; out.scanned++;
+        try {
+          const h = await s3().send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }));
+          const want = cacheFor(key);
+          if (h.CacheControl === want) { out.skipped++; continue; }
+          if (!dry) await s3().send(new CopyObjectCommand({ Bucket: BUCKET, Key: key, CopySource: `/${BUCKET}/${encodeURIComponent(key).replace(/%2F/g, "/")}`, MetadataDirective: "REPLACE", ContentType: h.ContentType || mimeOf(key), CacheControl: want, Metadata: h.Metadata }));
+          out.fixed++;
+        } catch (e: any) { out.failed++; if (out.errors.length < 10) out.errors.push(`${key}: ${String(e?.message || e).slice(0, 120)}`); }
+      }
+      token = r.IsTruncated ? r.NextContinuationToken : undefined;
+    } while (token);
+  }
+  return out;
 }
 export async function corsInfo() {
   try { const r = await s3().send(new GetBucketCorsCommand({ Bucket: BUCKET })); return { ok: true, rules: r.CORSRules || [] }; }
