@@ -1,6 +1,6 @@
 // Медиа-хранилище: S3-совместимое (Timeweb / любой хостинг клиента — меняются только env-переменные).
 // Оригинал сохраняется как есть (по подписанной ссылке), наружу отдаются сжатые производные.
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand, PutBucketCorsCommand, GetBucketCorsCommand } from "@aws-sdk/client-s3";
 import yauzl from "yauzl";
 import { Upload } from "@aws-sdk/lib-storage";
 import { createReadStream } from "node:fs";
@@ -70,12 +70,33 @@ async function putPrivate(key: string, body: Buffer, contentType: string) {
   catch { await put(key, body, contentType); } // хранилище без ACL — защищает секретный ключ
 }
 
+// Cache-Control при записи: файлы под media/<id>/ не меняются (уникальные имена) — кэш на год и для браузера, и для CDN;
+// ассеты сайта (assets/<имя>) могут перезаливаться под тем же именем — час.
+const cacheFor = (key: string) => key.endsWith(".m3u8") ? "public, max-age=60" : key.startsWith("assets/") ? "public, max-age=3600" : "public, max-age=31536000, immutable";
 async function put(key: string, body: Buffer, contentType: string) {
-  await s3().send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }));
+  await s3().send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType, CacheControl: cacheFor(key) }));
+}
+
+// ---- CDN-готовность ----
+// HLS_DIRECT=1 — плеер берёт плейлисты и сегменты прямо из хранилища/CDN (S3_PUBLIC_URL), а не через /api/hls (разгружает API).
+// Для этого у бакета должен быть CORS на GET с доменов сайта: S3_CORS=1 ставит его при старте (origins — CORS_ORIGINS или *).
+export const hlsDirect = () => process.env.HLS_DIRECT === "1";
+export const publicUrl = () => PUBLIC_URL;
+export async function ensureCors() {
+  if (!mediaEnabled() || process.env.S3_CORS !== "1") return;
+  const origins = (process.env.CORS_ORIGINS || "*").split(",").map((o) => o.trim()).filter(Boolean);
+  try {
+    await s3().send(new PutBucketCorsCommand({ Bucket: BUCKET, CORSConfiguration: { CORSRules: [{ AllowedMethods: ["GET", "HEAD"], AllowedOrigins: origins, AllowedHeaders: ["*"], ExposeHeaders: ["Content-Length", "Content-Range", "Accept-Ranges"], MaxAgeSeconds: 86400 }] } }));
+    console.log("S3 CORS: GET/HEAD для", origins.join(", "));
+  } catch (e: any) { console.error("S3 CORS не выставлен:", e?.message || e); }
+}
+export async function corsInfo() {
+  try { const r = await s3().send(new GetBucketCorsCommand({ Bucket: BUCKET })); return { ok: true, rules: r.CORSRules || [] }; }
+  catch (e: any) { return { ok: false, error: String(e?.message || e).slice(0, 200) }; }
 }
 
 export async function putFile(key: string, filePath: string, contentType: string) {
-  await new Upload({ client: s3(), params: { Bucket: BUCKET, Key: key, Body: createReadStream(filePath), ContentType: contentType, CacheControl: key.endsWith(".m3u8") ? "public, max-age=60" : "public, max-age=31536000, immutable" } }).done();
+  await new Upload({ client: s3(), params: { Bucket: BUCKET, Key: key, Body: createReadStream(filePath), ContentType: contentType, CacheControl: cacheFor(key) } }).done();
 }
 export async function deletePrefix(prefix: string) {
   let token: string | undefined;
@@ -190,7 +211,7 @@ export async function selftest() {
   try {
     await put("selftest/ping.txt", Buffer.from("ok"), "text/plain");
     await s3().send(new DeleteObjectCommand({ Bucket: BUCKET, Key: "selftest/ping.txt" }));
-    return { ...info, ok: true };
+    return { ...info, ok: true, hlsDirect: hlsDirect(), cors: await corsInfo() };
   } catch (e: any) {
     return {
       ...info, ok: false,

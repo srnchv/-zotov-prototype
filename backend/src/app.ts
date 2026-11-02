@@ -6,6 +6,8 @@ import * as repo from "./repo.js";
 import * as media from "./media.js";
 import * as transcode from "./transcode.js";
 import { notifyFront, revalidateState } from "./revalidate.js";
+import { hideOrig, isPublic, scrub, publicView } from "./publicview.js";
+import * as query from "./query.js";
 import * as imp from "./import.js";
 import * as users from "./users.js";
 import path from "node:path";
@@ -29,7 +31,7 @@ export function createApp() {
   app.use("/api", (req, res, next) => {
     if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
     if (/^\/(entities\/[^/]+\/view|hit|login|geo|users|import\/(preview|inspect)|transcode\/status)/.test(req.path)) return next();
-    res.on("finish", () => { if (res.statusCode < 400) notifyFront(); });
+    res.on("finish", () => { if (res.statusCode < 400) { query.invalidate(); notifyFront(); } });
     next();
   });
   // CORS: только домены сайта и админки (CORS_ORIGINS через запятую); без переменной — любой (локальная разработка)
@@ -131,10 +133,11 @@ export function createApp() {
   }
 
   app.get("/robots.txt", (_req, res) => res.type("text/plain").send("User-agent: *\nDisallow: /\n"));
-  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.5.0", revalidate: revalidateState() }));
+  app.get("/api/health", (_req, res) => res.json({ ok: true, version: "0.6.0", revalidate: revalidateState(), snapshot: query.snapshotInfo() }));
   // публичная конфигурация для фронта и админки: ключ Яндекс Карт JavaScript API (привязан к доменам, секретом не является)
   // ymapsV3 — ключ открыт для JavaScript API 3.0 (YANDEX_JS_V3=1): фронт включает векторную карту со стилями дизайнера; иначе 2.1
-  app.get("/api/config", (_req, res) => res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "", ymapsV3: process.env.YANDEX_JS_V3 === "1" }));
+  // mediaUrl + hlsDirect — фронт строит адрес HLS прямо в хранилище/CDN (см. media.ts, CDN-готовность); иначе плеер ходит через /api/hls
+  app.get("/api/config", (_req, res) => { res.set("cache-control", "public, max-age=300"); res.json({ ymapsKey: process.env.YANDEX_JS_KEY || "", ymapsV3: process.env.YANDEX_JS_V3 === "1", mediaUrl: media.mediaEnabled() ? media.publicUrl() : "", hlsDirect: media.hlsDirect() }); });
   // геосаджест Яндекса — подсказки адреса при вводе (ключ тоже только на сервере)
   app.get("/api/suggest", auth, ah(async (req, res) => {
     const key = process.env.YANDEX_SUGGEST_KEY;
@@ -173,26 +176,14 @@ export function createApp() {
     if (!q && !ll) return res.status(400).json({ error: "q or ll required" });
     try { res.json(await geocode(q || String(ll), req.get("host") || "")); } catch (e: any) { res.status(e.status || 502).json({ error: e.message }); }
   }));
+  // серверный поиск / хронограф / карта — параметры как в адресе страницы; ответ — фильтры и страница результатов
+  const qCache = (res: express.Response) => res.set("cache-control", "public, max-age=60, stale-while-revalidate=600");
+  app.get("/api/q/search", ah(async (req, res) => { qCache(res); res.json(await query.search(req.query as any, ["person", "text"].includes(String(req.query.section)) ? (String(req.query.section) as "person" | "text") : undefined)); }));
+  app.get("/api/q/chrono", ah(async (req, res) => { qCache(res); res.json(await query.chrono(req.query as any)); }));
+  app.get("/api/q/map", ah(async (req, res) => { qCache(res); res.json(await query.map(req.query as any)); }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
-  // ключ оригинала в хранилище — служебное поле, наружу не уходит (оригиналы только через /api/media/:id/file)
-  const hideOrig = (e: any) => { if (e && e.type === "media" && "origKey" in e) { const { origKey: _o, ...rest } = e; return rest; } return e; };
   const isStaff = async (req: express.Request) => !!(await whoIs(req));
-  // что видит посетитель без токена: опубликованные записи; у закрытых материалов (по запросу / ограниченный) —
-  // без ссылок на файлы и копии; медиафайлы закрытых материалов не отдаются вовсе
-  const isPublic = (e: any) => e && !["draft", "moderation"].includes(String(e.status || ""));
-  const FILE_KEYS = ["thumb", "med", "big", "img", "imgBig", "origKey", "embed", "subtitles", "tourPrefix", "url", "hls"];
-  const scrub = (e: any) => { const o = { ...e }; for (const k of FILE_KEYS) delete o[k]; return o; };
-  const publicView = (entities: any[]) => {
-    const closed = new Set(entities.filter((e) => e.type !== "media" && String(e.access || "open") !== "open").map((e) => e.id));
-    const out: any[] = [];
-    for (const e of entities) {
-      if (!isPublic(e)) continue;
-      if (e.type === "media") { if (e.parent && closed.has(String(e.parent))) continue; out.push(hideOrig(e)); continue; }
-      out.push(closed.has(e.id) ? scrub(e) : e);
-    }
-    return out;
-  };
   app.get("/api/export", ah(async (req, res) => {
     const d = await repo.exportAll();
     if (await isStaff(req)) return res.json(d);

@@ -1,4 +1,5 @@
 import "./map.css";
+import type React from "react";
 import type { Metadata } from "next";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
@@ -10,10 +11,10 @@ import MapView, { type MPlace } from "@/components/MapView";
 import YMap from "@/components/YMap";
 import { getSite } from "@/lib/site";
 import { abs } from "@/lib/seo";
-import { loadArchive, getConfig, imgOf, imgPos, type Entity } from "@/lib/api";
+import { qMap, getConfig } from "@/lib/api";
 import { fmt, resultsWord } from "@/lib/search";
 import { removeOne } from "@/lib/chrono";
-import { MKEYS, allPlaces, buildMapCats, runMap, coordsOf, placeStatus, placeType } from "@/lib/map";
+import { MKEYS } from "@/lib/map";
 
 // Карта по ТЗ DEV (Figma 123:27632): поиск по названию и адресу, шесть категорий фильтров (общий компонент),
 // счётчик, карта с флажками и кластерами, карточка места, список; состояние — в адресе (?q=…&city=…&place=…).
@@ -25,8 +26,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 
 type SP = Record<string, string | string[] | undefined>;
-const s = (e: Entity, k: string) => String(e[k] ?? "");
-const arr = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
 function href(base: Record<string, string[]>, patch: Record<string, string[] | undefined>) {
   const p = new URLSearchParams();
@@ -37,13 +36,9 @@ function href(base: Record<string, string[]>, patch: Record<string, string[] | u
 
 export default async function MapPage({ searchParams }: { searchParams: Promise<SP> }) {
   const raw = await searchParams;
-  const [db, site, cfg] = await Promise.all([loadArchive(), getSite(), getConfig()]);
-  const places = allPlaces(db).filter((p) => coordsOf(p));
-  const cats = buildMapCats(db, places);
-  const tokens = Object.fromEntries(MKEYS.map((k) => [k, arr(raw[k])])) as Record<string, string[]>;
-  const q = one(raw.q).trim();
-  const sortIn = ["rel", "az", "za"].includes(one(raw.sort)) ? one(raw.sort) : "";
-  const { found, sel, sort } = runMap(db, places, cats, tokens, q, sortIn);
+  // места и фильтры считает API на снимке архива (/api/q/map)
+  const [r, site, cfg] = await Promise.all([qMap(raw, MKEYS), getSite(), getConfig()]);
+  const { cats, tokens, q, sortIn, sort, sel, items: found } = r;
   const base: Record<string, string[]> = { ...tokens, ...(q ? { q: [q] } : {}), ...(sortIn ? { sort: [sortIn] } : {}) };
   const anyFilter = MKEYS.some((k) => sel[k].ids.length);
   const chips: Chip[] = [];
@@ -53,7 +48,7 @@ export default async function MapPage({ searchParams }: { searchParams: Promise<
     for (const id of sl.ids) chips.push({ cat: c.key, catLabel: c.chip, id, title: title.get(id) || id, href: href(base, { [c.key]: removeOne(c, sl.tokens, id) }) });
   }
   const selCount = Object.fromEntries(cats.map((c) => [c.key, sel[c.key].ids]));
-  const mplaces: MPlace[] = found.map((p) => { const c = coordsOf(p)!; return { id: p.id, title: p.title, city: s(p, "city"), address: s(p, "address"), type: placeType(p), status: placeStatus(p), lat: c[0], lon: c[1], img: imgOf(db, p, true) || undefined, pos: imgPos(db, p) }; });
+  const mplaces: MPlace[] = found.map((p) => ({ ...p, img: p.img || undefined, pos: p.pos as React.CSSProperties }));
   const place = one(raw.place);
 
   return (

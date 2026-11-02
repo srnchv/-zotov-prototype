@@ -1,7 +1,7 @@
 // Логика страницы «Карта» по ТЗ DEV: места архива с координатами, поиск по названию и адресу,
 // шесть категорий фильтров (Город, Функция, Период, Автор, Заказчик, Статус ОКН), сортировка списка.
 // Внутри категории — «ИЛИ», между категориями — «И» (решение 27.10, как в поиске и хронографе).
-import { published, type Entity, funcGroupOf } from "./api";
+import { published, type Entity, funcGroupOf } from "./core";
 import type { Group, Leaf } from "./search";
 import { decodeSel, type FCat, type Sel } from "./chrono";
 

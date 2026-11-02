@@ -1,4 +1,5 @@
 import "./chrono.css";
+import type React from "react";
 import type { Metadata } from "next";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
@@ -9,9 +10,9 @@ import SearchFilters, { SelectedChips, type Chip } from "@/components/SearchFilt
 import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
 import { abs } from "@/lib/seo";
-import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
+import { qChrono } from "@/lib/api";
 import { fmt, resultsWord } from "@/lib/search";
-import { CKEYS, allEvents, buildChronoCats, chronoRange, decodeSel, removeOne, makeChronoMatch, eventDate, sortInYear, type Sel } from "@/lib/chrono";
+import { CKEYS, removeOne } from "@/lib/chrono";
 
 // Хронограф по ТЗ DEV (Figma 450:71516): все события по годам, пять категорий фильтров (общий компонент с поиском),
 // таймлайн по диапазону из админки, закрепляется при прокрутке; состояние — в адресе (?person=…&y=1927).
@@ -23,8 +24,6 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 
 type SP = Record<string, string | string[] | undefined>;
-const s = (e: Entity, k: string) => String(e[k] ?? "");
-const arr = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).filter(Boolean);
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
 function href(base: Record<string, string[]>, patch: Record<string, string[] | undefined>) {
   const p = new URLSearchParams();
@@ -35,16 +34,11 @@ function href(base: Record<string, string[]>, patch: Record<string, string[] | u
 
 export default async function ChronoPage({ searchParams }: { searchParams: Promise<SP> }) {
   const raw = await searchParams;
-  const [db, site] = await Promise.all([loadArchive(), getSite()]);
-  const events = allEvents(db);
-  const cats = buildChronoCats(db, events);
-  const tokens = Object.fromEntries(CKEYS.map((k) => [k, arr(raw[k])])) as Record<string, string[]>;
-  const sel = Object.fromEntries(cats.map((c) => [c.key, decodeSel(c, tokens[c.key] || [])])) as Record<string, Sel>;
-  const match = makeChronoMatch(db, cats, sel);
-  const found = events.filter((e) => eventDate(e).y && match(e));
-  const [from, to] = chronoRange(db, events);
+  // события и фильтры считает API на снимке архива (/api/q/chrono)
+  const [r, site] = await Promise.all([qChrono(raw, CKEYS), getSite()]);
+  const { cats, tokens, sel, from, to, items: found } = r;
   const yearsAll = Array.from({ length: to - from + 1 }, (_, i) => from + i);
-  const hasAny = new Set(events.map((e) => eventDate(e).y)), hasFound = new Set(found.map((e) => eventDate(e).y));
+  const hasAny = new Set(r.hasAny), hasFound = new Set(r.hasFound);
   const years = yearsAll.filter((y) => hasFound.has(y));
   const yearSel = Number(one(raw.y)) || 0;
   const anyFilter = CKEYS.some((k) => sel[k].ids.length);
@@ -92,16 +86,13 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
                   <section className="yblock" key={y} id={"y-" + y}>
                     <div className="ylab"><div className="div8" /><div className="yn">{y}</div></div>
                     <div className="ygrid">
-                      {found.filter((e) => eventDate(e).y === y).sort(sortInYear).map((e) => {
-                        const im = imgOf(db, e);
-                        return (
-                          <a className="vcard small ev" key={e.id} href={`/m/${e.id}`}>
-                            <div className="dv" />
-                            <div className="tx"><h3>{e.title}</h3><div className="vb" /><div className="inf"><b>Событие</b>{(() => { const t = s(e, "subtype") || s(e, "evType"); return t && t !== "Событие" ? <span>{t}</span> : null; })()}</div></div>
-                            {im ? <div className="im"><img src={im} alt="" loading="lazy" style={imgPos(db, e)} /></div> : null}
-                          </a>
-                        );
-                      })}
+                      {found.filter((e) => e.year === y).map((e) => (
+                        <a className="vcard small ev" key={e.id} href={`/m/${e.id}`}>
+                          <div className="dv" />
+                          <div className="tx"><h3>{e.title}</h3><div className="vb" /><div className="inf"><b>Событие</b>{e.sub ? <span>{e.sub}</span> : null}</div></div>
+                          {e.img ? <div className="im"><img src={e.img} alt="" loading="lazy" style={e.pos as React.CSSProperties} /></div> : null}
+                        </a>
+                      ))}
                     </div>
                   </section>
                 ))}

@@ -92,8 +92,9 @@ export default async function EntityPage({ params }: Props) {
   const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m!.id}/${t.lang}.vtt` }));
   // видео и аудио играют напрямую из хранилища по подписанной ссылке — её запрашивает плеер на клиенте (страница кэшируется, ссылка протухла бы); запасной вариант — поток через API
   const videoSrc = video ? fileUrl(video) : "", audioSrc = audio ? fileUrl(audio) : "";
-  // адаптивные версии (HLS) готовы — плеер играет их через API; иначе оригинал
-  const hlsUrl = video && video.hls && video.hlsStatus === "done" ? `${API}/hls/${video.id}/master.m3u8` : undefined;
+  // адаптивные версии (HLS) готовы — плеер играет их прямо из хранилища/CDN (HLS_DIRECT у API, только открытый доступ) или через API; иначе оригинал
+  const hlsOpen = (m: Entity) => String(m.access || "open") === "open" && String(ent.access || "open") === "open";
+  const hlsUrl = video && video.hls && video.hlsStatus === "done" ? (cfg.hlsDirect && cfg.mediaUrl && hlsOpen(video) ? `${cfg.mediaUrl}/${video.hls}` : `${API}/hls/${video.id}/master.m3u8`) : undefined;
   // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
   const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
   // подпись к фото: своё название файла (caption), иначе название материала; ниже — автор и год файла (необязательные поля)

@@ -1,3 +1,4 @@
+import type React from "react";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
@@ -7,14 +8,12 @@ import Dropdown from "@/components/Dropdown";
 import SearchPh from "@/components/SearchPh";
 import EmptyResults from "@/components/EmptyResults";
 import { getSite } from "@/lib/site";
-import { loadArchive, imgOf, imgPos, type Entity } from "@/lib/api";
-import { buildCats, runSearch, toCard, fmt, resultsWord, unitsWord, authorOrYear, CAT_KEYS, KINDS, SORTS, type CatKey } from "@/lib/search";
+import { qSearch } from "@/lib/api";
+import { fmt, resultsWord, unitsWord, CAT_KEYS, KINDS, SORTS, type CatKey } from "@/lib/search";
 
 // Поиск по ТЗ DEV (Figma «Поиск», 50:3709): запрос + 8 категорий фильтров + типология + сортировка + пагинация.
 // Всё состояние — в адресе: ?q=…&mat=…&mat=…&type=…&sort=…&page=… (ссылкой можно поделиться, «Назад» работает).
 export type SP = Record<string, string | string[] | undefined>;
-const arr = (v: string | string[] | undefined) => (Array.isArray(v) ? v : v ? [v] : []).flatMap((x) => x.split("|")).filter(Boolean);
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) || "";
 
 // ссылка с изменёнными параметрами; смена чего угодно, кроме страницы, возвращает на первую страницу
 function hrefAt(path: string, base: Record<string, string[]>, patch: Record<string, string[] | undefined>, keepPage = false) {
@@ -45,15 +44,10 @@ function pageList(cur: number, total: number, win: number): (number | "…")[] {
 export type Section = { catKeys: CatKey[]; intro: string; ph: string; cls: string; cardsOf: "person" | "text" };
 export default async function SearchView({ raw, path = "/search", fixed = "", lettering = "поиск", section }: { raw: SP; path?: string; fixed?: string; lettering?: string; section?: Section }) {
   const href = (base: Record<string, string[]>, patch: Record<string, string[] | undefined>, keepPage = false) => hrefAt(path, base, patch, keepPage);
-  const [db, site] = await Promise.all([loadArchive(), getSite()]);
   const keys: CatKey[] = section ? section.catKeys : CAT_KEYS;
-  const cats = buildCats(db).filter((c) => keys.includes(c.key)).sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key));
-  const sel = Object.fromEntries(keys.map((k) => [k, arr(raw[k])])) as Record<CatKey, string[]>;
-  sel.per?.sort(); // годы в чипсах по порядку
-  const q = one(raw.q).trim();
-  const type = fixed || (KINDS.some(([k]) => k === one(raw.type)) ? one(raw.type) : "");
-  const sortIn = SORTS.some(([k]) => k === one(raw.sort)) ? one(raw.sort) : "";
-  const r = runSearch(db, { q, sel, type, sort: sortIn, page: Number(one(raw.page)) || 1, titleOnly: !!section, perPage: section ? 36 : undefined }, cats);
+  // результаты считает API на снимке архива (/api/q/search): сюда приходят фильтры, счётчики и одна страница карточек
+  const [r, site] = await Promise.all([qSearch(raw, keys, { ...(section ? { section: section.cardsOf } : {}), ...(fixed ? { type: fixed } : {}) }), getSite()]);
+  const { cats, sel, q, type, sortIn, cards } = r;
   const word = section ? unitsWord : resultsWord;
 
   // текущее состояние для ссылок
@@ -70,8 +64,6 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
   }
   const clearAll = href({ ...(q ? { q: [q] } : {}), ...typeQ, ...(sortIn ? { sort: [sortIn] } : {}) }, {});
 
-  // карточка текста в разделе «Тексты»: под названием автор, если его нет — год (макет)
-  const cards = r.items.map((e) => { const c = toCard(db, e, (x: Entity) => imgOf(db, x), (x: Entity) => imgPos(db, x)); return section?.cardsOf === "text" ? { ...c, date: authorOrYear(e) } : c; });
   const typeItems = [{ label: "все результаты", href: href(base, { type: undefined }), active: !type },
     ...KINDS.map(([k, l]) => ({ label: l, count: `(${fmt(r.counts[k] || 0)})`, href: r.counts[k] ? href(base, { type: [k] }) : undefined, active: type === k }))];
   const sortItems = SORTS.map(([k, l]) => ({ label: l, href: href(base, { sort: [k] }), active: r.sort === k }));
@@ -129,7 +121,7 @@ export default async function SearchView({ raw, path = "/search", fixed = "", le
                         <div className="vb" />
                         {section?.cardsOf === "person" ? null : section?.cardsOf === "text" ? (c.sub ? <div className="k"><b>{c.sub}</b></div> : null) : <div className="k"><b>{c.type}</b>{c.sub ? <span>{c.sub}</span> : null}</div>}
                       </div>
-                      {c.img ? <div className="im"><img src={c.img} alt="" loading="lazy" style={c.pos} /></div> : null}
+                      {c.img ? <div className="im"><img src={c.img} alt="" loading="lazy" style={c.pos as React.CSSProperties} /></div> : null}
                     </a>
                   ))}
                 </div>

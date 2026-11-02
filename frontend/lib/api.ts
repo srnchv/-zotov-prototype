@@ -1,28 +1,8 @@
-import type React from "react";
-// Слой данных: единственное место, где фронт знает про API стенда.
-// Все страницы рендерятся на сервере (SSR) — карточки индексируются поисковиками.
-export const API = process.env.NEXT_PUBLIC_API_URL || "https://srnchv-zotov-prototype-27ea.twc1.net/api";
-
-type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
-export type Entity = Base & { links?: string[] };
-export type EntityFull = Base & { links: Entity[] };
-
-export const TYPES: Record<string, { l: string; pl: string }> = {
-  material: { l: "Материал", pl: "Материалы" }, person: { l: "Личность", pl: "Личности" },
-  place: { l: "Место", pl: "Места" }, event: { l: "Событие", pl: "События" },
-  theme: { l: "Тема", pl: "Темы" }, project: { l: "Выставка / проект", pl: "Проекты Центра" },
-  org: { l: "Организация", pl: "Организации" }, collection: { l: "Коллекция / фонд", pl: "Коллекции" },
-  source: { l: "Источник", pl: "Источники" }, media: { l: "Медиафайл", pl: "Медиафайлы" }, tag: { l: "Тег", pl: "Теги" },
-};
-
-// Данные кэшируются по тегу «archive»: страницы собираются из кэша, а при любом сохранении в админке API дёргает
-// /api/revalidate и кэш сбрасывается. Страховка — пересборка не реже раза в час (revalidate на страницах).
-async function get<T>(path: string): Promise<T> {
-  const r = await fetch(API + path, { next: { tags: ["archive"], revalidate: 3600 } });
-  if (!r.ok) throw new Error(`API ${path}: ${r.status}`);
-  return r.json();
-}
-
+// Слой данных: единственное место, где фронт знает про API стенда. Чистая логика — в ./core (общая с сервером).
+export * from "./core";
+import { type Entity, type EntityFull, type SearchHit, type Style } from "./core";
+import type { Cat } from "./search";
+// loadArchive — снимок архива с бэкенда (сущности + связи), строим индекс по id
 // Полный снимок архива: сущности + связи. Для главной и связанных блоков.
 export async function loadArchive() {
   const { entities, links } = await get<{ entities: Entity[]; links: [string, string][] }>("/export");
@@ -32,11 +12,14 @@ export async function loadArchive() {
   return db;
 }
 
-// опубликовано всё, что не черновик и не на модерации (в старых данных у мест в status лежало состояние здания)
-export const published = (e?: Entity) => !!e && !["draft", "moderation"].includes(String(e.status || "")) && e.type !== "dict";
-export const ofType = (db: Record<string, Entity>, t: string) => Object.values(db).filter((e) => e.type === t && published(e));
-export const linked = (db: Record<string, Entity>, e: Entity, t?: string) =>
-  (e.links || []).map((id) => db[id]).filter((x) => x && published(x) && (!t || x.type === t));
+// Слой данных: единственное место, где фронт знает про API стенда.
+export const API = process.env.NEXT_PUBLIC_API_URL || "https://srnchv-zotov-prototype-27ea.twc1.net/api";
+
+async function get<T>(path: string): Promise<T> {
+  const r = await fetch(API + path, { next: { tags: ["archive"], revalidate: 3600 } });
+  if (!r.ok) throw new Error(`API ${path}: ${r.status}`);
+  return r.json();
+}
 
 export async function getEntity(id: string): Promise<EntityFull | null> {
   const r = await fetch(`${API}/entities/${encodeURIComponent(id)}`, { next: { tags: ["archive"], revalidate: 3600 } });
@@ -45,30 +28,6 @@ export async function getEntity(id: string): Promise<EntityFull | null> {
   return r.json();
 }
 
-// списки в payload (функции, авторы, сферы, города личности): массив или строка через «;»
-type AnyEnt = { [k: string]: unknown } | undefined;
-export const listOf = (e: AnyEnt, k: string): string[] => { const v = e?.[k]; return Array.isArray(v) ? v.map(String).filter(Boolean) : v ? String(v).split(";").map((x) => x.trim()).filter(Boolean) : []; };
-// сферы деятельности личности: поле spheres, у старых карточек — роль через запятую
-export const spheresOf = (e: { [k: string]: unknown }) => { const sp = listOf(e, "spheres"); return sp.length ? sp : String(e.role || "").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean); };
-// типология места — функции «Группа › функция»; группа — первая часть
-export const funcsOf = (e: { [k: string]: unknown }) => listOf(e, "functions");
-export const funcGroupOf = (e: { [k: string]: unknown }) => (funcsOf(e)[0] || String(e.placeType || "").split(" · ")[0]).split(" › ")[0].trim();
-export const funcLabel = (e: { [k: string]: unknown }) => funcsOf(e).map((f) => f.split(" › ").pop()!.trim()).join(", ") || String(e.placeType || "").split(" · ").pop()?.trim() || "";
-export const yearOf = (s?: unknown) => { const m = String(s ?? "").match(/\d{4}/); return m ? +m[0] : 0; };
-
-// год сущности — по первому датированному полю, каким бы оно ни называлось у типа
-export const entityYear = (e: Entity) => yearOf(e.date || e.year || e.dates || e.period || e.life);
-
-// картинка карточки: своё поле или первый привязанный медиафайл-изображение
-export const imgOf = (db: Record<string, Entity>, e: Entity, big = false) => {
-  const own = big ? (e.imgBig || e.img) : e.img;
-  if (own) return String(own);
-  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image");
-  return m ? String(big ? (m.big || m.med) : (m.med || m.thumb)) : "";
-};
-
-// серверный поиск (PG FTS с морфологией и опечатками); порядок items — релевантность
-export type SearchHit = { id: string; direct: boolean; snippet?: string; via?: string };
 export async function searchApi(q: string): Promise<SearchHit[]> {
   try {
     const r = await fetch(`${API}/search?q=${encodeURIComponent(q)}`, { cache: "no-store" });
@@ -77,53 +36,25 @@ export async function searchApi(q: string): Promise<SearchHit[]> {
   } catch { return []; }
 }
 
-// вид медиафайла: kind с сервера, иначе по mime/расширению (файлы, загруженные до появления kind)
-export const mediaKind = (m: Entity) => {
-  const k = String(m.kind || "");
-  if (["image", "video", "audio", "pdf", "tour"].includes(k)) return k; // tour — 3D-тур (эмбед)
-  const mime = String(m.mime || ""), ext = String(m.format || m.title || "").toLowerCase().split(".").pop() || "";
-  if (mime.startsWith("audio/") || ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext)) return "audio";
-  if (mime.startsWith("video/") || ["mp4", "mov", "webm"].includes(ext)) return "video";
-  if (mime === "application/pdf" || ext === "pdf") return "pdf";
-  if (mime.startsWith("image/")) return "image";
-  return "file";
-};
+// Серверный поиск / хронограф / карта: в API уходят только параметры адреса, обратно — фильтры и страница результатов.
+// Ответы кэшируются как и остальные данные (тег archive) — сбрасываются из админки при сохранении.
+export type SP = Record<string, string | string[] | undefined>;
+function qs(raw: SP, keys: readonly string[]) {
+  const p = new URLSearchParams();
+  for (const k of keys) for (const v of (Array.isArray(raw[k]) ? raw[k] as string[] : raw[k] ? [raw[k] as string] : [])) if (v) p.append(k, v);
+  const q = p.toString();
+  return q ? "?" + q : "";
+}
+export type QCard = { id: string; title: string; date: string; type: string; sub: string; img: string; pos?: Style };
+export type QSearch = { cats: Cat[]; sel: Record<string, string[]>; q: string; type: string; sortIn: string; total: number; counts: Record<string, number>; page: number; pages: number; sort: string; cards: QCard[] };
+export const qSearch = (raw: SP, keys: readonly string[], extra: Record<string, string> = {}) => get<QSearch>("/q/search" + qs({ ...raw, ...extra }, [...keys, "q", "type", "sort", "page", "section"]));
+export type QSel = Record<string, { ids: string[]; tokens: string[] }>;
+export type QChrono = { cats: Cat[]; tokens: Record<string, string[]>; sel: QSel; from: number; to: number; hasAny: number[]; hasFound: number[]; total: number; items: { id: string; title: string; year: number; sub: string; img: string; pos?: Style }[] };
+export const qChrono = (raw: SP, keys: readonly string[]) => get<QChrono>("/q/chrono" + qs(raw, keys));
+export type QMap = { cats: Cat[]; tokens: Record<string, string[]>; q: string; sortIn: string; sort: string; sel: QSel; total: number; items: { id: string; title: string; city: string; address: string; type: string; status: "exists" | "lost"; lat: number; lon: number; img: string; pos?: Style }[] };
+export const qMap = (raw: SP, keys: readonly string[]) => get<QMap>("/q/map" + qs(raw, [...keys, "q", "sort"]));
 
-// Кадр фото: точка (x, y в %) и масштаб — отдельно для десктопа (d) и мобайла (m, ≤599px).
-// Задаётся в админке («Кадр»): у медиафайла — frame, у сущности-владельца обложки — imgFrame; старый формат focus/imgPos «x% y%» читается как кадр без масштаба.
-export type Frame = { x: number; y: number; s: number };
-export type Frames = { d?: Frame; m?: Frame };
-const parsePos = (v: unknown): Frame | undefined => { const m = String(v || "").match(/([\d.]+)%\s+([\d.]+)%/); return m ? { x: +m[1], y: +m[2], s: 1 } : undefined; };
-export const framesOf = (frames: unknown, pos?: unknown): Frames | undefined => {
-  const f = (frames && typeof frames === "object" ? (frames as Frames) : undefined) || {};
-  const d = f.d || parsePos(pos);
-  if (!d && !f.m) return undefined;
-  return { d, m: f.m };
-};
-// стиль для <img>: CSS-переменные, которые globals.css превращает в object-position + scale (на мобайле — свои)
-export const frameStyle = (fr?: Frames): React.CSSProperties | undefined => {
-  if (!fr || (!fr.d && !fr.m)) return undefined;
-  const d = fr.d || { x: 50, y: 50, s: 1 };
-  const st: Record<string, string> = { "--fx": `${d.x}%`, "--fy": `${d.y}%`, "--fs": String(d.s || 1) };
-  if (fr.m) { st["--mfx"] = `${fr.m.x}%`; st["--mfy"] = `${fr.m.y}%`; st["--mfs"] = String(fr.m.s || 1); }
-  return st as React.CSSProperties;
-};
-// кадр карточки сущности: свой (обложка) или у привязанного медиафайла-изображения
-export const imgPos = (db: Record<string, Entity>, e: Entity): React.CSSProperties | undefined => {
-  const own = framesOf(e.imgFrame, e.imgPos);
-  if (own) return frameStyle(own);
-  const m = (e.links || []).map((id) => db[id]).find((x) => x && x.type === "media" && x.kind === "image" && (x.focus || x.frame));
-  return m ? frameStyle(framesOf(m.frame, m.focus)) : undefined;
-};
-export const mediaPos = (m?: Entity) => (m ? frameStyle(framesOf(m.frame, m.focus)) : undefined);
-
-// публичная конфигурация стенда (ключ Яндекс Карт JavaScript API — доменный, не секрет)
-export async function getConfig(): Promise<{ ymapsKey: string; ymapsV3?: boolean }> {
+export async function getConfig(): Promise<{ ymapsKey: string; ymapsV3?: boolean; mediaUrl?: string; hlsDirect?: boolean }> {
   try { const r = await fetch(`${API}/config`, { next: { revalidate: 300 } }); if (r.ok) return r.json(); } catch {}
   return { ymapsKey: "" };
 }
-// координаты сущности (места): числа или null
-export const coordsOf = (e: Entity): [number, number] | null => {
-  const lat = parseFloat(String(e.lat ?? "").replace(",", ".")), lon = parseFloat(String(e.lon ?? "").replace(",", "."));
-  return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
-};

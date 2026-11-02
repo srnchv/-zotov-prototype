@@ -2,7 +2,7 @@
 // (Личность, Организация, Тема, Событие, Город), таймлайн по диапазону из админки.
 // Внутри категории всё по «ИЛИ». Группы в адресе хранятся как g:<группа>, снятые из неё элементы — как x:<id>
 // (компактный адрес и чипсы по элементам).
-import { published, type Entity } from "./api";
+import { published, type Entity } from "./core";
 import type { Group, Leaf } from "./search";
 // категория фильтра (структура общая с поиском)
 export type FCat = { key: string; label: string; labelM?: string; chip: string; ph: string; groups: Group[] }; // labelM — короткая подпись на узких экранах
