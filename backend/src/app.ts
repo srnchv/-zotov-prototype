@@ -9,7 +9,7 @@ import * as users from "./users.js";
 import path from "node:path";
 import os from "node:os";
 import { unlink } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import fs, { existsSync } from "node:fs";
 
 // Express 4 не ловит исключения из async-обработчиков — оборачиваем
 const ah = (fn: (req: express.Request, res: express.Response) => Promise<unknown>): express.RequestHandler =>
@@ -392,20 +392,26 @@ export function createApp() {
     } finally { if (tmp) unlink(tmp).catch(() => {}); }
   });
 
-  app.post("/api/media", auth, limit(120), upload.single("file"), fixFile, async (req, res) => {
+  // медиа: файл пишется на диск (до 2 ГБ), фото читается в память для копий (до 100 МБ), видео/аудио/PDF уходят в хранилище потоком
+  const uploadMediaDisk = multer({ storage: multer.diskStorage({ destination: os.tmpdir() }), limits: { fileSize: media.MEDIA_LIMITS.file } });
+  app.post("/api/media", auth, limit(120), uploadMediaDisk.single("file"), fixFile, async (req, res) => {
+    const tmp = req.file?.path;
     try {
       if (!media.mediaEnabled()) return res.status(503).json({ error: "storage not configured" });
-      if (!req.file) return res.status(400).json({ error: "no file" });
+      if (!req.file || !tmp) return res.status(400).json({ error: "no file" });
       const { entityId } = z.object({ entityId: z.string().optional() }).parse(req.body);
+      const kind = media.kindOfMime(req.file.mimetype);
+      if (kind === "image" && req.file.size > media.MEDIA_LIMITS.image) return res.status(413).json({ error: `фото больше ${Math.round(media.MEDIA_LIMITS.image / 1024 / 1024)} МБ — уменьшите перед загрузкой` });
       const m = await media.uploadMedia({
-        entityId, filename: req.file.originalname, mime: req.file.mimetype, buffer: req.file.buffer,
+        entityId, filename: req.file.originalname, mime: req.file.mimetype,
+        ...(kind === "image" ? { buffer: await fs.promises.readFile(tmp) } : { path: tmp, size: req.file.size }),
       });
       await repo.logAct("media", entityId || m.id, m.title, actor(req));
       res.status(201).json(m);
     } catch (e: any) {
       console.error("media upload failed:", e);
       res.status(502).json({ error: "storage: " + (e?.message || "upload failed") });
-    }
+    } finally { if (tmp) fs.promises.unlink(tmp).catch(() => {}); }
   });
 
   app.get("/api/media-selftest", auth, ah(async (_req, res) => {

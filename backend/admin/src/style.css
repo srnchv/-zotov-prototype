@@ -110,3 +110,8 @@ textarea.inp{min-height:110px;resize:vertical}
 .tabs{display:flex;gap:4px;align-items:center;border-bottom:1px solid var(--grey5,#e5e5e5)}
 .tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font:inherit;font-size:14px;cursor:pointer;color:var(--muted);margin-bottom:-1px}
 .tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* полоса прогресса загрузки файла */
+.upbar{position:relative;height:28px;background:var(--fill,#f2f2f2);border-radius:2px;overflow:hidden;margin:8px 0;font-size:12px}
+.upbar .upfill{position:absolute;left:0;top:0;bottom:0;background:#e5e5e5;transition:width .2s}
+.upbar span{position:relative;line-height:28px;padding:0 10px}

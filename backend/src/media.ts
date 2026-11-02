@@ -2,6 +2,8 @@
 // Оригинал сохраняется как есть (по подписанной ссылке), наружу отдаются сжатые производные.
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import yauzl from "yauzl";
+import { Upload } from "@aws-sdk/lib-storage";
+import { createReadStream } from "node:fs";
 import { createHash } from "node:crypto";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
@@ -72,21 +74,33 @@ async function put(key: string, body: Buffer, contentType: string) {
   await s3().send(new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }));
 }
 
-export async function uploadMedia(opts: { entityId?: string; filename: string; mime: string; buffer: Buffer }) {
-  const { entityId, filename, mime, buffer } = opts;
+// большие файлы (видео, аудио, PDF) — потоком с диска в хранилище частями, без буфера в памяти
+async function putPrivateStream(key: string, path: string, contentType: string) {
+  const up = (acl?: "private") => new Upload({ client: s3(), params: { Bucket: BUCKET, Key: key, Body: createReadStream(path), ContentType: contentType, ...(acl ? { ACL: acl } : {}) }, partSize: 16 * 1024 * 1024, queueSize: 3 }).done();
+  try { await up("private"); } catch { await up(); }
+}
+export const MEDIA_LIMITS = { image: 100 * 1024 * 1024, file: 2 * 1024 * 1024 * 1024 }; // фото — в память (sharp), остальное — до 2 ГБ потоком
+export const kindOfMime = (mime: string) => (mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "file");
+
+// buffer — для изображений (нужен sharp); path + size — для остальных (стрим с диска)
+export async function uploadMedia(opts: { entityId?: string; filename: string; mime: string; buffer?: Buffer; path?: string; size?: number }) {
+  const { entityId, filename, mime } = opts;
   const id = randomUUID().slice(0, 8);
-  const kind = mime.startsWith("image/") ? "image" : mime === "application/pdf" ? "pdf" : mime.startsWith("video/") ? "video" : mime.startsWith("audio/") ? "audio" : "file";
+  const kind = kindOfMime(mime);
   const origKey = origKeyFor(id, filename);
+  const buffer = opts.buffer;
+  const size = buffer ? buffer.length : opts.size || 0;
 
   const payload: Record<string, unknown> = {
     kind, mime, filename,
-    size: buffer.length,
+    size,
     format: (filename.split(".").pop() || "").toUpperCase(),
     origKey,
     parent: entityId || null,
   };
 
   if (kind === "image") {
+    if (!buffer) throw new Error("image needs buffer");
     const { renditions, width, height } = await processImage(buffer, await siteWatermark());
     payload.width = width; payload.height = height;
     for (const [name, body] of Object.entries(renditions)) {
@@ -94,7 +108,9 @@ export async function uploadMedia(opts: { entityId?: string; filename: string; m
       payload[name] = `${PUBLIC_URL}/media/${id}/${name}.webp`;
     }
   }
-  await putPrivate(origKey, buffer, mime);
+  if (buffer) await putPrivate(origKey, buffer, mime);
+  else if (opts.path) await putPrivateStream(origKey, opts.path, mime);
+  else throw new Error("no file body");
 
   const media = await repo.createEntity({
     id: `md-${id}`, type: "media", title: filename,

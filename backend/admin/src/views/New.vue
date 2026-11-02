@@ -2,7 +2,7 @@
 // Создание сущности: всё заполняется сразу — поля типа, связи, теги, файл; черновик по выбору
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
-import { S, api, load, toast, dictValues, subOptions, uploadFile } from "../lib/store";
+import { S, api, load, toast, dictValues, subOptions, uploadFile, UPLOAD, fmtMb } from "../lib/store";
 import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, DATEPH, SPECIFIC, SRCKIND, ACCESS, fmtSize, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 const router = useRouter();
@@ -66,6 +66,7 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
       <div class="muted" style="font-size:12px;margin-top:16px">«Создать и опубликовать» — карточка сразу появится на сайте. «Сохранить черновиком» — не видна на сайте, можно доработать и опубликовать позже.</div>
       <!-- две кнопки действия вместо переключателя: сразу понятно, что произойдёт -->
+      <div v-if="busy" class="muted" style="font-size:13px;margin-top:12px">{{ UPLOAD.phase === 'send' ? `Создано, загружаем файл ${fmtMb(UPLOAD.size)}: ${UPLOAD.pct}%` : UPLOAD.phase === 'process' ? 'Файл получен, сохраняем в хранилище…' : 'Создаём карточку…' }}</div>
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><button class="btn dark" :disabled="busy" @click="create('published')">Создать и опубликовать</button><button class="btn" :disabled="busy" @click="create('draft')">Сохранить черновиком</button><router-link class="btn" to="/entities" style="margin-left:auto">Отмена</router-link></div>
     </div>
     <div>
@@ -78,9 +79,10 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
       <template v-if="!rec">
         <h3>Медиа</h3>
         <input type="file" ref="nf" accept="image/*,application/pdf,video/*,audio/*" style="display:none" @change="file = ($event.target as HTMLInputElement).files?.[0] || null">
-        <div v-if="file" style="font-size:13px;margin-bottom:8px">{{ file.name }} · {{ fmtSize(file.size) }} <span class="lnk" @click="file = null">✕</span></div>
-        <button class="btn sm" @click="nf?.click()">＋ Загрузить файл</button>
-        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности. Файлы из медиатеки можно прикрепить в карточке.</div>
+        <div v-if="file" style="font-size:13px;margin-bottom:8px">{{ file.name }} · {{ fmtSize(file.size) }} <span v-if="!busy" class="lnk" @click="file = null">✕</span></div>
+        <div v-if="busy && UPLOAD.phase" class="upbar"><div class="upfill" :style="{ width: UPLOAD.pct + '%' }"></div><span>{{ UPLOAD.phase === 'send' ? `Загружаем ${fmtMb(UPLOAD.size)}: ${UPLOAD.pct}%` : 'Сохраняем в хранилище…' }}</span></div>
+        <button class="btn sm" :disabled="busy" @click="nf?.click()">＋ Загрузить файл</button>
+        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности. Фото до 100 МБ, видео, аудио и PDF — до 2 ГБ; загрузка большого видео занимает несколько минут, не закрывайте вкладку. Файлы из медиатеки можно прикрепить в карточке.</div>
       </template>
     </div>
   </div>

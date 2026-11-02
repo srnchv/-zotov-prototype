@@ -215,10 +215,29 @@ export async function patchSite(payload: Record<string, unknown>) {
   await load();
 }
 // загрузка файла в медиатеку (прикрепляется к сущности, если задана)
-export async function uploadFile(file: File, entityId?: string) {
+// загрузка файла с прогрессом: XHR (fetch прогресс отправки не отдаёт); состояние — в UPLOAD, его показывают формы
+export const UPLOAD = reactive({ name: "", pct: 0, size: 0, phase: "" as "" | "send" | "process" });
+export function uploadFile(file: File, entityId?: string): Promise<Entity> {
   const fd = new FormData(); fd.append("file", file); if (entityId) fd.append("entityId", entityId);
-  return api<Entity>("/media", { method: "POST", body: fd });
+  UPLOAD.name = file.name; UPLOAD.size = file.size; UPLOAD.pct = 0; UPLOAD.phase = "send";
+  return new Promise<Entity>((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open("POST", API + "/media");
+    if (S.token) x.setRequestHeader("authorization", "Bearer " + S.token);
+    x.upload.onprogress = (e) => { if (e.lengthComputable) UPLOAD.pct = Math.round((e.loaded / e.total) * 100); };
+    x.upload.onload = () => { UPLOAD.pct = 100; UPLOAD.phase = "process"; }; // файл дошёл до сервера — он пишет в хранилище и делает копии
+    x.onerror = () => { UPLOAD.phase = ""; reject(new Error("сеть: загрузка прервалась")); };
+    x.onload = () => {
+      UPLOAD.phase = "";
+      if (x.status === 401 && S.token) { logout(); return reject(new Error("сессия истекла")); }
+      let body: any = null; try { body = JSON.parse(x.responseText); } catch {}
+      if (x.status < 200 || x.status >= 300) return reject(new Error(body?.error || "HTTP " + x.status));
+      resolve(body as Entity);
+    };
+    x.send(fd);
+  });
 }
+export const fmtMb = (b: number) => (b >= 1024 * 1024 * 1024 ? (b / 1024 ** 3).toFixed(1) + " ГБ" : Math.round(b / 1024 / 1024) + " МБ");
 
 // ---- главная: состав и ограничения (одни данные с галочками в карточках) ----
 export const homeList = (t: string) => all(t).filter(onHome);

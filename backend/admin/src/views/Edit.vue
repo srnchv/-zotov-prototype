@@ -4,7 +4,7 @@
 // Справа: медиа по этажам (фото с обложкой и кадром, видео/аудио с субтитрами, 3D-тур, документы), служебное, статистика и журнал.
 import { ref, reactive, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { S, SITE, api, load, loadAudit, toast, canEdit, dictValues, subOptions, uploadFile, homeCheck, collHighlights } from "../lib/store";
+import { S, SITE, api, load, loadAudit, toast, canEdit, dictValues, subOptions, uploadFile, UPLOAD, fmtMb, homeCheck, collHighlights } from "../lib/store";
 import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIFIC, PAYLOAD_KEYS, SRCKIND, isRecord, ACCESS, ACTL, REL_ORDER, REL_HEAD, MEDIA_FLOORS, HOME_TYPES, HOME_KEY, kindOf, fmtAt, fmtSize, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 import Modal from "../components/Modal.vue";
@@ -195,7 +195,8 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
           <h3 style="margin-top:0">Медиа</h3>
           <div class="media" :style="o.type === 'media' ? bg(o) : (o.imgBig || o.img ? { backgroundImage: `url('${o.imgBig || o.img}')`, backgroundPosition: o.imgPos || 'center' } : {})"></div>
           <input type="file" ref="fileInput" style="display:none" @change="onFile"><input type="file" ref="subsInput" accept=".vtt,.srt,text/vtt" style="display:none" @change="onSubs">
-          <span class="muted" style="font-size:12px">{{ uplStatus }}</span>
+          <span v-if="uplStatus && !UPLOAD.phase" class="muted" style="font-size:12px">{{ uplStatus }}</span>
+          <div v-if="UPLOAD.phase" class="upbar"><div class="upfill" :style="{ width: UPLOAD.pct + '%' }"></div><span>{{ UPLOAD.phase === 'send' ? `Загружаем ${UPLOAD.name} (${fmtMb(UPLOAD.size)}): ${UPLOAD.pct}%` : 'Файл получен, сохраняем в хранилище…' }}</span></div>
           <div v-for="[k, l, accept] in MEDIA_FLOORS" :key="k" style="margin-top:14px">
             <div class="kicker" style="display:flex;justify-content:space-between">{{ l }} <span class="muted">{{ files.filter(m => kindOf(m) === k).length || "" }}</span></div>
             <div v-for="m in files.filter(m => kindOf(m) === k)" :key="m.id">
