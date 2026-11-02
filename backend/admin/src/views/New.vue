@@ -3,7 +3,7 @@
 import { ref, reactive, computed } from "vue";
 import { useRouter } from "vue-router";
 import { S, api, load, toast, dictValues, subOptions, uploadFile, UPLOAD, fmtMb } from "../lib/store";
-import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, DATEPH, SPECIFIC, SRCKIND, ACCESS, fmtSize, type Entity } from "../lib/model";
+import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, DATEPH, SPECIFIC, SRCKIND, ACCESS, fmtSize, kindOf, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
 const router = useRouter();
 const f = reactive<Record<string, any>>({ type: "material", status: "published", srcKind: "text" });
@@ -40,7 +40,7 @@ async function create(status?: "published" | "draft") {
     if (file.value) {
       const fv = file.value;
       toast(`Карточка создана, загружаем файл ${fmtMb(fv.size)}…`);
-      uploadFile(fv, e.id).then(async () => { await load(); toast("Файл загружен и прикреплён к карточке"); }).catch((err: any) => toast("Файл не загрузился: " + err.message + ". Откройте карточку и загрузите ещё раз."));
+      uploadFile(fv, e.id).then(async (m) => { await load(); toast(kindOf(m) === "video" ? "Видео загружено и прикреплено. Сейчас оно конвертируется в несколько качеств — статус в медиатеке." : "Файл загружен и прикреплён к карточке"); }).catch((err: any) => toast("Файл не загрузился: " + err.message + ". Откройте карточку и загрузите ещё раз."));
     } else toast("Создано");
   } catch (e: any) { toast("Ошибка: " + e.message); }
   busy.value = false;

@@ -10,6 +10,7 @@ import Picker from "../components/Picker.vue";
 import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
 import CropModal, { type Frames } from "../components/CropModal.vue";
+import MediaFile from "./MediaFile.vue";
 import TourModal from "../components/TourModal.vue";
 import GeoPick from "../components/GeoPick.vue";
 import { JOB, jobText } from "../lib/tourJob";
@@ -96,7 +97,7 @@ const uploadKind = (accept: string) => { if (fileInput.value) { fileInput.value.
 async function onFile() {
   const file = fileInput.value?.files?.[0]; if (!file) return;
   uplStatus.value = "Загрузка…";
-  try { await uploadFile(file, props.id); await load(); toast("Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); }
+  try { const m = await uploadFile(file, props.id); await load(); toast(kindOf(m) === "video" ? "Видео загружено. Сейчас оно конвертируется в несколько качеств — статус в медиатеке и в карточке файла; сайт пока играет оригинал." : "Файл загружен"); } catch (e: any) { toast("Ошибка: " + e.message); }
   uplStatus.value = ""; if (fileInput.value) fileInput.value.value = "";
 }
 const setCover = (m: Entity) => patch({ payload: { cover: m.id, img: m.thumb || "", imgBig: m.med || m.thumb || "", imgPos: m.focus || "50% 50%", imgFrame: m.frame || null } });
@@ -136,6 +137,7 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
 </script>
 <template>
   <div v-if="!o" class="muted">{{ S.loaded ? "Не найдено" : "Загружаем…" }}</div>
+  <MediaFile v-else-if="o.type === 'media'" :id="id" />
   <template v-else>
     <div class="crumbs"><router-link to="/entities">Сущности</router-link> / Карточка сущности</div>
     <div class="kicker" style="margin-top:6px">Карточка сущности / {{ TYPES[o.type]?.l || o.type }}<template v-if="rec"> · {{ SRCKIND.record }}</template></div>
