@@ -136,13 +136,16 @@ export default async function EntityPage({ params }: Props) {
   const headOf = (t: string) => (e.type === "project" && t === "person" ? "Кураторы и участники" : REL_HEAD[t]);
   // «Похожее»: закреплённые в админке первыми, затем того же типа по общим связям (темы и прочие)
   const pinned = ((e.pinned as string[]) || []).map((pid) => db[pid]).filter((x) => x && published(x) && x.id !== e.id);
+  // «Похожее» всегда до трёх: закреплённые → того же типа с общими связями (темы, личности…) → того же подтипа → любые того же типа
   let similar: Entity[] = [...pinned];
   if (similar.length < 3) {
     const mine = new Set(ent.links || []);
     const taken = new Set([e.id, ...similar.map((x) => x.id)]);
+    const sub = (x: Entity) => s(x, "mtype") || s(x, "evType") || s(x, "group") || s(x, "colType") || s(x, "orgType") || s(x, "prType") || s(x, "srcType") || funcGroupOf(x);
+    const mySub = sub(ent);
     const scored = Object.values(db).filter((x) => x.type === e.type && published(x) && !taken.has(x.id))
-      .map((x) => ({ x, n: (x.links || []).filter((lid) => mine.has(lid)).length })).filter((c) => c.n > 0)
-      .sort((a, b) => b.n - a.n || a.x.title.localeCompare(b.x.title, "ru"));
+      .map((x) => ({ x, n: (x.links || []).filter((lid) => mine.has(lid)).length * 10 + (mySub && sub(x) === mySub ? 3 : 0) + (s(x, "subtype") && s(x, "subtype") === s(ent, "subtype") ? 2 : 0) }))
+      .sort((a, b) => b.n - a.n || String(b.x.updated_at || "").localeCompare(String(a.x.updated_at || "")) || a.x.title.localeCompare(b.x.title, "ru"));
     similar = [...similar, ...scored.slice(0, 3 - similar.length).map((c) => c.x)];
   }
   similar = similar.slice(0, 3);
