@@ -44,13 +44,23 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
         h = new Hls({ capLevelToPlayerSize: true, startLevel: -1, maxBufferLength: 30 });
         hlsRef.current = h;
         h.on(Hls.Events.MANIFEST_PARSED, () => { setLevels([...new Set((h.levels as { height: number }[]).map((l) => l.height))].sort((a, b) => b - a)); if (autoPlay) el.play().catch(() => {}); });
-        h.on(Hls.Events.ERROR, (_e: unknown, d: { fatal: boolean }) => { if (d.fatal) { h.destroy(); hlsRef.current = null; setUseHls(false); } });
+        h.on(Hls.Events.ERROR, (_e: unknown, d: { fatal: boolean }) => { if (d.fatal) { h.destroy(); h = null; hlsRef.current = null; setLevels([]); setLevel(-1); setUseHls(false); } });
         h.loadSource(hls); h.attachMedia(el);
       } else if (el.canPlayType("application/vnd.apple.mpegurl")) { el.src = hls; }
       else setUseHls(false);
     })();
     return () => { dead = true; h?.destroy(); hlsRef.current = null; };
   }, [hls, useHls, kind, autoPlay]);
+  // ссылка меняется без перемонтирования элемента: подставляем src и сохраняем позицию и воспроизведение
+  const lastSrc = useRef("");
+  useEffect(() => {
+    const el = ref.current; if (!el || hls && useHls) return;
+    if (!realSrc || realSrc === lastSrc.current) return;
+    const pos = el.currentTime, wasPlaying = !el.paused;
+    lastSrc.current = realSrc; el.src = realSrc; el.load();
+    if (pos) el.currentTime = pos;
+    if (wasPlaying) el.play().catch(() => {});
+  }, [realSrc, hls, useHls]);
   useEffect(() => { const el = ref.current; if (el) { el.playbackRate = speed; } }, [speed, realSrc]);
   useEffect(() => { const el = ref.current; if (el) { el.volume = vol; el.muted = muted; } }, [vol, muted, realSrc]);
   useEffect(() => { const el = ref.current; if (!el) return; for (const tr of Array.from(el.textTracks)) tr.mode = cc ? "showing" : "hidden"; }, [cc, tracks, realSrc]);
@@ -59,11 +69,11 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
   const seek = (e: React.MouseEvent<HTMLDivElement>) => { const el = ref.current; if (!el || !dur) return; const r = e.currentTarget.getBoundingClientRect(); el.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
   const pickLevel = (h: number) => { setLevel(h); setMenu(""); const H = hlsRef.current; if (H) H.currentLevel = h === -1 ? -1 : H.levels.findIndex((l) => l.height === h); };
   const media = kind === "video"
-    ? <video ref={ref} key={realSrc || "hls"} playsInline preload="metadata" poster={poster} title={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} autoPlay={autoPlay && !hls} crossOrigin={tracks.length ? undefined : undefined}
+    ? <video ref={ref} playsInline preload="metadata" poster={poster} title={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} autoPlay={autoPlay && !hls}
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
-        {realSrc ? <source src={realSrc} /> : null}{tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</video>
-    : <audio ref={ref} key={realSrc} preload="metadata" title={title} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
-        {realSrc ? <source src={realSrc} /> : null}{tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</audio>;
+        {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</video>
+    : <audio ref={ref} preload="metadata" title={title} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
+        {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</audio>;
   const bar = (
     <div className={"avbar" + (big ? " big" : "")}>
       <button type="button" className="avplay" onClick={toggle} aria-label={playing ? "Пауза" : "Воспроизвести"}>{playing ? I.pause : I.play}</button>

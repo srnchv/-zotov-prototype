@@ -132,6 +132,7 @@
   #cover h1{font-size:37px;line-height:36px;letter-spacing:-.74px}
   #cover .actions,.pnav{display:none}
   #rightcol{padding-bottom:0}
+  .ft{padding-bottom:64px} /* место под липкую плашку навигации */
   .pbar{position:fixed;left:8px;right:8px;bottom:8px;z-index:60;display:flex;align-items:center;gap:48px;background:#f2f2f2;padding:8px 8px 8px 8px}
   .pbar-items{flex:1 1 auto;display:flex;justify-content:space-between;gap:8px}
   .pbar-items a{border-left:4px solid var(--ink);padding:0 8px;min-height:32px;display:flex;align-items:center;max-width:120px}

@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const kind = TYPES[e.type]?.l || "";
   const sub = [kind, s(e, "mtype") || s(e, "evType") || funcLabel(e) || s(e, "group") || spheresOf(e).join(", "), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
   const description = s(e, "seoDesc") || descOf(toHtml(s(e, "desc")).replace(/<[^>]+>/g, " "), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
-  const img = imgOf(db, { ...e, links: e.links.map((l) => l.id) } as unknown as Entity, true);
+  const img = imgOf(db, { ...e, links: (e.links || []).map((l) => l.id) } as unknown as Entity, true);
   const url = abs(`/m/${encodeURIComponent(e.id)}`);
   return {
     title: e.title, description,
@@ -92,7 +92,7 @@ export default async function EntityPage({ params }: Props) {
   const { id } = await params;
   const [e, db, site, cfg] = await Promise.all([getEntity(id), loadArchive(), getSite(), getConfig()]);
   if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) notFound();
-  const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
+  const ent: Entity = db[e.id] || { ...(e as Base), links: (e.links || []).map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
   const media: Entity[] = (e.links || []).filter((x) => x.type === "media");
   const isOpen = (s(e, "access") || "open") === "open";
@@ -107,15 +107,14 @@ export default async function EntityPage({ params }: Props) {
   const videos = media.filter((m) => mediaKind(m) === "video"), audios = media.filter((m) => mediaKind(m) === "audio"), pdfs = media.filter((m) => mediaKind(m) === "pdf");
   const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
   const docs = media.filter((m) => !["image", "tour", "video", "audio"].includes(mediaKind(m)));
-  const poster = images[0] ? String(images[0].med || images[0].big) : undefined;
-  const slides: Slide[] = isOpen ? [
-    ...images.map((m): Slide => ({ kind: "image", src: String(m.med || m.big), big: String(m.big || m.med), w: Number(m.width) || undefined, h: Number(m.height) || undefined, caption: s(m, "caption") || e.title, credit: metaOf(m), pos: mediaPos(m) })),
-    ...videos.map((m): Slide => ({ kind: "video", src: fileUrl(m), mediaId: m.id, hls: hlsUrl(m), poster, tracks: tracks(m), caption: s(m, "caption") || e.title, credit: metaOf(m) })),
-    ...tours.map((m): Slide => ({ kind: "tour", src: String(m.embed), caption: s(m, "caption") || `3D-тур: ${e.title}`, credit: metaOf(m) })),
-  ] : [];
-  // порядок — как в поле «Файлы»: сохраняем порядок media, если он смешанный
-  const order = new Map(media.map((m, i) => [m.id, i]));
-  slides.sort((a, b) => (order.get(a.kind === "video" ? a.mediaId : "") ?? 0) - (order.get(b.kind === "video" ? b.mediaId : "") ?? 0));
+  // фото, видео и 3D-туры — одна галерея в порядке файлов карточки; постер видео — его собственная картинка, если есть
+  const slides: Slide[] = isOpen ? media.flatMap((m): Slide[] => {
+    const k = mediaKind(m);
+    if (k === "image" && (m.big || m.med)) return [{ kind: "image", src: String(m.med || m.big), big: String(m.big || m.med), w: Number(m.width) || undefined, h: Number(m.height) || undefined, caption: s(m, "caption") || e.title, credit: metaOf(m), pos: mediaPos(m) }];
+    if (k === "video") return [{ kind: "video", src: fileUrl(m), mediaId: m.id, hls: hlsUrl(m), poster: m.med ? String(m.med) : undefined, thumb: m.thumb ? String(m.thumb) : undefined, tracks: tracks(m), caption: s(m, "caption") || e.title, credit: metaOf(m) }];
+    if (k === "tour" && m.embed) return [{ kind: "tour", src: String(m.embed), caption: s(m, "caption") || `3D-тур: ${e.title}`, credit: metaOf(m) }];
+    return [];
+  }) : [];
   const coords = e.type === "place" ? coordsOf(ent) : null;
   const audio = audios[0];
   const coverIsAudio = !slides.length && audio && isOpen; // состояние 9
@@ -189,14 +188,14 @@ export default async function EntityPage({ params }: Props) {
             {slides.length ? <Media slides={slides} />
               : coverIsAudio ? <div className="mblock audio"><AvPlayer kind="audio" src={fileUrl(audio!)} mediaId={audio!.id} tracks={tracks(audio!)} title={s(audio!, "caption") || e.title} /></div>
               : coverIsMap ? <div className="mblock map"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords![0], lon: coords![1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div>
-              : !isOpen ? <div className="mblock closed"><div className="ph">Материал доступен по запросу</div></div>
+              : !isOpen ? <div className="mblock closed"><div className="mframe"><div className="ph">Материал доступен по запросу</div></div></div>
               : null}
 
             <div className="div8" id="a-desc" />
             <div className="tsm">Описание</div>
             {html ? <Description html={html} head={head} cut={cut} notes={notes} /> : <div className="desc"><div className="rich"><p className="grey">Описание готовится к публикации.</p></div></div>}
 
-            {slides.length && coords ? <div className="mblock map after"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords[0], lon: coords[1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div> : null}
+            {coords && !coverIsMap ? <div className="mblock map after"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords[0], lon: coords[1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div> : null}
             {slides.length && audio && isOpen ? <div className="mblock audio after"><AvPlayer kind="audio" src={fileUrl(audio)} mediaId={audio.id} tracks={tracks(audio)} title={s(audio, "caption") || e.title} /></div> : null}
             {audios.slice(1).map((a) => isOpen ? <div className="mblock audio after" key={a.id}><AvPlayer kind="audio" src={fileUrl(a)} mediaId={a.id} tracks={tracks(a)} title={s(a, "caption") || e.title} /></div> : null)}
 
