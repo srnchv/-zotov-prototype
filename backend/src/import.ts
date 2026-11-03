@@ -131,7 +131,14 @@ type Parsed = { type: string; sheet: string; row: number; title: string; fields:
 // «нет фото», «—» и прочие пометки кириллицей — не имена файлов
 // имена файлов — через «;»; если подписей «|» нет, то и через запятую (a.jpg, b.jpg)
 const splitFiles = (v: string) => (v.includes("|") ? split(v) : norm(v).split(/\s*[;,]\s*/).filter(Boolean));
-const parseFile = (v: string): FileSpec => { const [name0, caption, author, year] = v.split("|").map((x) => norm(x)); const name = /[а-яё]/i.test(name0) || name0 === "-" || name0 === "—" ? "" : name0; return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) }; };
+// имя | название | автор | год; если частей больше четырёх (в самой подписи встретилась «|»), середина — подпись, последние две — автор и год
+const parseFile = (v: string): FileSpec => {
+  const parts = v.split("|").map((x) => norm(x));
+  const name0 = parts[0] || "";
+  const [caption, author, year] = parts.length > 4 ? [parts.slice(1, -2).join(" | "), parts[parts.length - 2], parts[parts.length - 1]] : parts.slice(1);
+  const name = /[а-яё]/i.test(name0) || name0 === "-" || name0 === "—" ? "" : name0;
+  return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) };
+};
 // место: «да/yes/существует» → Существует, «снесён/нет/утрачен» → Утрачено; город из адреса «Москва, …» / «г. Москва, …»;
 // авторы/функции/заказчики — списки (через «;», у авторов допускается «,»)
 const CITY_RE = /^(?:г\.\s*)?([А-ЯЁ][а-яё\-]+(?:[ -][А-ЯЁ][а-яё\-]+)?)\s*[,.]\s*(.+)$/;
