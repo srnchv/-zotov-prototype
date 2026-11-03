@@ -171,7 +171,7 @@ export default async function EntityPage({ params }: Props) {
         <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
         <div id="matgrid">
           {/* левая колонка: липкая — заходная группа, заголовок, поля шапки; внизу «Цитировать» и навигация по странице */}
-          <section id="cover">
+          <section id="cover"><div className="covin">
             <div className="top">
               <div className="div8" />
               <div className="crumbs"><a href={crumb.href}>{crumb.a}</a><Arr /><span>{crumb.b}</span></div>
@@ -180,7 +180,7 @@ export default async function EntityPage({ params }: Props) {
             </div>
             <div className="actions"><Cite data={cite} /></div>
             <PageNav items={nav} cite={<Cite data={cite} icon />} />
-          </section>
+          </div></section>
 
           {/* правая колонка: медиа, описание, (карта / аудио), документы, источники, «Напишите нам», связанные */}
           <div id="rightcol">
