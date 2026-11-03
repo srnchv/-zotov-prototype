@@ -6,7 +6,7 @@ import * as repo from "./repo.js";
 import * as media from "./media.js";
 import * as transcode from "./transcode.js";
 import { notifyFront, revalidateState } from "./revalidate.js";
-import { hideOrig, isPublic, scrub, publicView } from "./publicview.js";
+import { hideOrig, isPublic, scrub, publicView, accessOf } from "./publicview.js";
 import * as query from "./query.js";
 import * as imp from "./import.js";
 import * as users from "./users.js";
@@ -218,7 +218,7 @@ export function createApp() {
     if (!e) return res.status(404).json({ error: "not found" });
     if (await isStaff(req)) return res.json(e);
     if (!isPublic(e) || e.type === "media") return res.status(404).json({ error: "not found" }); // черновики и медиафайлы по id посетителю не отдаём
-    const closed = String((e as any).access || "open") !== "open";
+    const closed = accessOf(e) !== "open";
     const links = e.links.filter(isPublic).filter((l) => !(closed && l.type === "media")).map(hideOrig);
     res.json({ ...(closed ? scrub(e) : e), links });
   }));
@@ -440,7 +440,7 @@ export function createApp() {
     const m = await repo.getEntity(String(req.params.id));
     if (!m || m.type !== "media" || !m.hls) return res.status(404).end();
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
-    const access = String((parent?.access ?? m.access) || "open");
+    const access = accessOf(parent ?? m);
     const staff = await isStaff(req);
     if ((access !== "open" || (parent && !isPublic(parent))) && !staff) return res.status(403).end();
     try {
@@ -468,7 +468,7 @@ export function createApp() {
     if (!m || m.type !== "media") return res.status(404).json({ error: "not found" });
     // доступ «по запросу» / ограниченный — только владельцам токена (личный кабинет появится позже)
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
-    const access = String((parent?.access ?? m.access) || "open");
+    const access = accessOf(parent ?? m);
     const staff = await isStaff(req);
     if (access !== "open" && !staff) return res.status(403).json({ error: "access restricted" });
     if (parent && !isPublic(parent) && !staff) return res.status(404).json({ error: "not found" });
@@ -503,7 +503,7 @@ export function createApp() {
     const m = await repo.getEntity(String(req.params.id));
     if (!m || m.type !== "media") return res.status(404).json({ error: "not found" });
     const parent = m.parent ? await repo.getEntity(String(m.parent)) : null;
-    const access = String((parent?.access ?? m.access) || "open");
+    const access = accessOf(parent ?? m);
     if (!(await isStaff(req))) {
       // посетителю: только видео/аудио/PDF (для плееров), только у опубликованного открытого материала; оригиналы изображений закрыты — есть копии
       if (m.kind === "image" || !m.kind) return res.status(404).json({ error: "not found" });

@@ -357,7 +357,7 @@ async function parse(buf: Buffer) {
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       if (p.type === "place") normalizePlace(p);
       if (p.type === "person") { const f: any = p.fields; for (const k of ["spheres", "cities"]) if (f[k]) f[k] = split(String(f[k])).map((x) => (k === "spheres" ? x.toLowerCase() : x)).filter(Boolean); }
-      const d = get("Описание"); if (d) p.fields.desc = /^<([a-z]+)[\s>]/i.test(d.trim()) ? d : descToHtml(d);
+      const d = get("Описание"); if (d) p.fields.desc = /^<([a-z][a-z0-9]*)[\s>]/i.test(d.trim()) ? d : descToHtml(d);
       const notes = lines(get("Сноски")); if (notes.length) (p.fields as any).notes = notes;
       const srcs = lines(get("Источники")); if (srcs.length) (p.fields as any).sources = srcs;
       const pin = split(get("Похожие")); if (pin.length) (p.fields as any).pinnedTitles = pin;

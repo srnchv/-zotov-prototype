@@ -3,7 +3,7 @@
 import sanitize from "sanitize-html";
 export const toHtml = (v: unknown) => {
   const s = String(v ?? "").trim(); if (!s) return "";
-  if (/^<([a-z]+)[\s>]/i.test(s)) return s;
+  if (/^<([a-z][a-z0-9]*)[\s>]/i.test(s)) return s;
   return s.split(/\n\s*\n/).map((p) => "<p>" + p.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>").join("");
 };
 export const cleanHtml = (html: string) => sanitize(html, {

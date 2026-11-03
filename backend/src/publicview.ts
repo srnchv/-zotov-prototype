@@ -4,8 +4,12 @@ export const hideOrig = (e: any) => { if (e && e.type === "media" && "origKey" i
 export const isPublic = (e: any) => e && !["draft", "moderation"].includes(String(e.status || ""));
 export const FILE_KEYS = ["thumb", "med", "big", "img", "imgBig", "origKey", "embed", "subtitles", "tourPrefix", "url", "hls"];
 export const scrub = (e: any) => { const o = { ...e }; for (const k of FILE_KEYS) delete o[k]; return o; };
+// Уровни доступа («по запросу», «ограниченный») в MVP не действуют (решение: без логики, подпись спрятана) — всё открыто,
+// пока не включено ACCESS_LEVELS=1. accessOf() — единая точка для роутов файлов.
+export const accessLevelsOn = () => process.env.ACCESS_LEVELS === "1";
+export const accessOf = (e: any) => (accessLevelsOn() ? String(e?.access || "open") : "open");
 export const publicView = (entities: any[]) => {
-  const closed = new Set(entities.filter((e) => e.type !== "media" && String(e.access || "open") !== "open").map((e) => e.id));
+  const closed = new Set(accessLevelsOn() ? entities.filter((e) => e.type !== "media" && String(e.access || "open") !== "open").map((e) => e.id) : []);
   const out: any[] = [];
   for (const e of entities) {
     if (!isPublic(e)) continue;

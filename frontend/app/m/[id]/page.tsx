@@ -94,7 +94,7 @@ export default async function EntityPage({ params }: Props) {
   const ent: Entity = db[e.id] || { ...(e as Base), links: (e.links || []).map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
   const media: Entity[] = (e.links || []).filter((x) => x.type === "media");
-  const isOpen = (s(e, "access") || "open") === "open";
+  const isOpen = process.env.ACCESS_LEVELS === "1" ? (s(e, "access") || "open") === "open" : true; // уровни доступа в MVP выключены
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
   const tracks = (m: Entity) => ((m.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m.id}/${t.lang}.vtt` }));
   const metaOf = (m: Entity) => [s(m, "author"), s(m, "year")].filter(Boolean).join(", ");

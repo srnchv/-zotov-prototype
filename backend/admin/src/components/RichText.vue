@@ -18,7 +18,7 @@ const Footnote = Node.create({
   renderHTML({ HTMLAttributes }) { return ["span", mergeAttributes({ class: "fn" }, HTMLAttributes), `[${HTMLAttributes["data-fn"]}]`]; },
 });
 
-const toHtml = (v: string) => { const s = String(v || "").trim(); if (!s) return ""; if (/^<([a-z]+)[\s>]/i.test(s)) return s; return s.split(/\n\s*\n/).map((p) => "<p>" + p.replace(/\n/g, "<br>").replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</p>").join(""); };
+const toHtml = (v: string) => { const s = String(v || "").trim(); if (!s) return ""; if (/^<([a-z][a-z0-9]*)[\s>]/i.test(s)) return s; return s.split(/\n\s*\n/).map((p) => "<p>" + p.replace(/\n/g, "<br>").replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</p>").join(""); };
 
 const editor = useEditor({
   content: toHtml(props.modelValue),
