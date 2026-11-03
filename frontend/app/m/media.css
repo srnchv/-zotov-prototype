@@ -55,7 +55,7 @@
 .mblock.after{padding:0 0 8px}
 
 /* ---- полноэкранная галерея: белый фон; превью слева (десктоп) / снизу (мобайл); инфо-колонка справа; видео — во весь экран с полосой ---- */
-.fs{position:fixed;inset:0;background:#fff;z-index:100;display:grid;grid-template-columns:64px minmax(0,1fr) 317px;grid-template-rows:1fr}
+.fs{position:fixed;inset:0;background:#fff;z-index:1000;isolation:isolate;display:grid;grid-template-columns:64px minmax(0,1fr) 317px;grid-template-rows:1fr}
 .fs:not(.multi){grid-template-columns:12px minmax(0,1fr) 317px}
 .fsthumbs{grid-column:1;padding:12px 12px 12px 12px;display:flex;flex-direction:column;gap:4px;justify-content:center;overflow:auto;scrollbar-width:none}
 .fsthumbs::-webkit-scrollbar{display:none}

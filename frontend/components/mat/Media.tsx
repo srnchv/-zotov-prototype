@@ -3,6 +3,7 @@
 // Стрелки 32 (mix-blend), кнопка «на весь экран», под кадром подпись и автор/год. Полноэкранная галерея: белый фон, превью
 // (колонка слева — десктоп, лента снизу — мобайл), подпись, счётчик «2/132», закрытие крестиком и Esc; видео — на весь экран с полосой плеера.
 import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import AvPlayer, { type Track } from "./AvPlayer";
 export type Slide =
   | { kind: "image"; src: string; big?: string; w?: number; h?: number; caption: string; credit: string; pos?: CSSProperties }
@@ -43,15 +44,14 @@ export default function Media({ slides }: { slides: Slide[] }) {
         </div>
         <div className="mcap"><div>{cur.caption}</div>{cur.credit ? <div className="grey">{cur.credit}</div> : null}</div>
       </div>
-      {full ? (
+      {full ? createPortal(
         <div className={"fs" + (isVideo ? " fsvideo" : "") + (n > 1 ? " multi" : "")} role="dialog" aria-modal="true">
           {!isVideo && n > 1 ? <div className="fsthumbs">{slides.map((s, k) => <button type="button" key={k} className={k === i ? "on" : undefined} style={{ aspectRatio: String(ratio(s)) }} onClick={() => setI(k)} aria-label={`Слайд ${k + 1}`}>{s.kind === "image" ? <img src={s.src} alt="" draggable={false} /> : s.kind === "video" ? <span className="vth">{s.thumb ? <img src={s.thumb} alt="" draggable={false} /> : null}<Play /></span> : <span />}</button>)}</div> : null}
           <div className="fsimg">{frame(cur, true)}</div>
           {!isVideo ? <div className="fsinfo"><div className="fscap"><div>{cur.caption}</div>{cur.credit ? <div className="grey">{cur.credit}</div> : null}{n > 1 ? <div className="grey num">{i + 1}/{n}</div> : null}</div><button type="button" className="fsx" aria-label="Закрыть" onClick={() => setFull(false)}><X /></button></div>
             : <button type="button" className="fsx" aria-label="Закрыть" onClick={() => setFull(false)}><X /></button>}
           {n > 1 ? <><button type="button" className="marr l" aria-label="Предыдущий" onClick={() => go(-1)}><Arr left /></button><button type="button" className="marr r" aria-label="Следующий" onClick={() => go(1)}><Arr /></button></> : null}
-        </div>
-      ) : null}
+        </div>, document.body) : null}
     </>
   );
 }

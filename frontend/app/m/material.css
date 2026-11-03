@@ -87,7 +87,7 @@
 .rel-item:hover .vb{border-color:var(--red)}
 
 /* модальные окна: затемнение grey-1 40 %, белое окно 624, без рамки и крестика */
-.ovl{position:fixed;inset:0;background:rgba(38,38,38,.4);z-index:90;display:flex;align-items:center;justify-content:center;padding:12px}
+.ovl{position:fixed;inset:0;background:rgba(38,38,38,.4);z-index:1000;isolation:isolate;display:flex;align-items:center;justify-content:center;padding:12px}
 .mbox{background:#fff;width:624px;max-width:100%;max-height:calc(100vh - 24px);overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
 .mbox.cite .crow{display:flex;border-top:4px solid var(--grey5);padding-top:8px}
 .mbox.cite .crow .k{width:142px;flex:0 0 142px;color:var(--grey2)}
