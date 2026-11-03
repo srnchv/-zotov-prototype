@@ -401,7 +401,8 @@ export function createApp() {
       if (!req.file || !tmp) return res.status(400).json({ error: "no file" });
       const { entityId } = z.object({ entityId: z.string().optional() }).parse(req.body);
       const kind = media.kindOfMime(req.file.mimetype);
-      if (kind === "image" && req.file.size > media.MEDIA_LIMITS.image) return res.status(413).json({ error: `фото больше ${Math.round(media.MEDIA_LIMITS.image / 1024 / 1024)} МБ — уменьшите перед загрузкой` });
+      if (kind === "file") return res.status(415).json({ error: `файл «${req.file.originalname}» не поддерживается: можно загружать фото (JPG, PNG, WebP), PDF, видео (MP4, MOV, WebM) и аудио (MP3, WAV, M4A); 3D-туры — кнопкой «Добавить тур», субтитры — у видео` });
+      if (kind === "image" && req.file.size > media.MEDIA_LIMITS.image) return res.status(413).json({ error: `фото «${req.file.originalname}» больше ${Math.round(media.MEDIA_LIMITS.image / 1024 / 1024)} МБ — уменьшите перед загрузкой` });
       const m = await media.uploadMedia({
         entityId, filename: req.file.originalname, mime: req.file.mimetype,
         ...(kind === "image" ? { buffer: await fs.promises.readFile(tmp) } : { path: tmp, size: req.file.size }),
@@ -508,6 +509,12 @@ export function createApp() {
   // единый обработчик ошибок (в т.ч. zod)
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err?.name === "ZodError") return res.status(400).json({ error: "validation", issues: err.issues });
+    // лимиты загрузки (multer): человеческое сообщение вместо «internal»
+    if (err?.name === "MulterError") {
+      const mb = (n: number) => Math.round(n / 1024 / 1024);
+      const msg = err.code === "LIMIT_FILE_SIZE" ? `файл больше допустимого: видео, аудио и PDF — до ${mb(media.MEDIA_LIMITS.file)} МБ, фото — до ${mb(media.MEDIA_LIMITS.image)} МБ` : "не удалось принять файл: " + err.message;
+      return res.status(413).json({ error: msg });
+    }
     console.error(err);
     res.status(500).json({ error: "internal" });
   });

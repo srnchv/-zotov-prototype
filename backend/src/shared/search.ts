@@ -1,6 +1,6 @@
 // Логика поиска по ТЗ DEV «Поиск»: строка запроса, 8 категорий фильтров, типология, сортировка, пагинация.
 // Работает над снимком архива (loadArchive). Значения фильтров — из справочников админки (dict-*), не хардкод.
-import { published, linked, spheresOf, funcsOf, funcGroupOf, funcLabel, listOf, type Entity, type Style } from "./core.js";
+import { published, linked, spheresOf, funcsOf, funcGroupOf, funcLabel, listOf, type Entity, type Style, entityYear } from "./core.js";
 
 export type Leaf = { id: string; title: string };
 // группа фильтра: title "" — плоский список; leaf — тип без подтипов (одна строка с чекбоксом на уровне групп)
@@ -18,7 +18,7 @@ export const PER_PAGE = 48;
 
 // типология: ключ в URL → подпись в списке (порядок как в макете)
 export const KINDS: [string, string][] = [["material", "материал"], ["theme", "тема"], ["place", "место"], ["person", "личность"], ["event", "событие"], ["collection", "коллекция"], ["text", "текст"], ["project", "проект Центра"]];
-export const SORTS: [string, string][] = [["rel", "по релевантности"], ["az", "по алфавиту (А–Я)"], ["za", "по алфавиту (Я–А)"]];
+export const SORTS: [string, string][] = [["rel", "по релевантности"], ["az", "по алфавиту (А–Я)"], ["za", "по алфавиту (Я–А)"], ["year", "по году (сначала ранние)"], ["yeard", "по году (сначала поздние)"]];
 const CARD_TYPE: Record<string, string> = { material: "Материал", theme: "Тема", place: "Место", person: "Личность", event: "Событие", collection: "Коллекция", text: "Текст", project: "Проект Центра" };
 
 const s = (e: Entity | undefined, k: string) => String(e?.[k] ?? "").trim();
@@ -162,21 +162,44 @@ export function makeMatchers(db: Record<string, Entity>, b: Built, sel: Partial<
 // ---- строка запроса: название + названия связанных сущностей + типы/подтипы (описания не ищем) ----
 const norm = (v: string) => v.toLowerCase().replace(/ё/g, "е").replace(/[«»"“”„'()[\],.:;!?—–-]+/g, " ").replace(/\s+/g, " ").trim();
 const stem = (w: string) => (w.length > 5 ? w.slice(0, w.length - 2) : w); // грубая основа: «выставки» ≈ «выставка»
-const hits = (words: string[], tok: string) => { const st = stem(tok); return words.some((w) => w.startsWith(st)); };
+// опечатки: слово запроса от 5 букв считается найденным, если его основа отличается от начала слова не больше чем
+// на одну правку (замена, пропуск, лишняя буква, перестановка соседних); от 9 букв — на две. «родченка» → «родченко»
+function editDistance(a: string, b: string, max: number): number {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => { const r = new Array<number>(b.length + 1).fill(0); r[0] = i; return r; });
+  for (let j = 0; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    let rowMin = Infinity;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, d[i - 2][j - 2] + 1); // перестановка соседних букв
+      d[i][j] = v; if (v < rowMin) rowMin = v;
+    }
+    if (rowMin > max) return max + 1;
+  }
+  return d[a.length][b.length];
+}
+const fuzzyMax = (tok: string) => (tok.length >= 9 ? 2 : tok.length >= 5 ? 1 : 0);
+const fuzzyHit = (words: string[], tok: string) => { const max = fuzzyMax(tok); if (!max) return false; const st = stem(tok); return words.some((w) => w.length >= 4 && editDistance(st, w.slice(0, st.length), max) <= max); };
+const hits = (words: string[], tok: string) => { const st = stem(tok); return words.some((w) => w.startsWith(st)) || fuzzyHit(words, tok); };
+const exactHits = (words: string[], tok: string) => { const st = stem(tok); return words.some((w) => w.startsWith(st)); };
 function relevance(db: Record<string, Entity>, e: Entity, q: string, toks: string[], titleOnly = false): number {
   const title = norm(e.title), tw = title.split(" ");
+  const fuzzyPenalty = (words: string[][]) => (toks.every((t) => words.some((ws) => exactHits(ws, t))) ? 0 : 50); // нашли с опечаткой — чуть ниже точных
   if (titleOnly) { // только имя / название
     if (!toks.every((t) => hits(tw, t))) return 0;
-    return title === q ? 1000 : title.startsWith(q) ? 900 : title.includes(q) ? 800 : 600;
+    return (title === q ? 1000 : title.startsWith(q) ? 900 : title.includes(q) ? 800 : 600) - fuzzyPenalty([tw]);
   }
   const own = [title, ...typeSub(e), s(e, "group"), s(e, "colType"), s(e, "srcType"), s(e, "prType")].map(norm).join(" ").split(" ");
   const rel = (e.links || []).map((id) => db[id]).filter((x) => x && published(x) && x.type !== "media").map((x) => norm(x!.title)).join(" ").split(" ");
   if (!toks.every((t) => hits(own, t) || hits(rel, t))) return 0;
   if (title === q) return 1000;
   if (title.includes(q)) return 800;
-  if (toks.every((t) => hits(tw, t))) return 600; // всё совпало в названии
-  if (toks.every((t) => hits(own, t))) return 300; // через тип/подтип
-  return 100; // через связанные сущности
+  const pen = fuzzyPenalty([own, rel]);
+  if (toks.every((t) => hits(tw, t))) return 600 - pen; // всё совпало в названии
+  if (toks.every((t) => hits(own, t))) return 300 - pen; // через тип/подтип
+  return 100 - pen; // через связанные сущности
 }
 
 // ---- карточка выдачи (поля по ТЗ) ----
@@ -228,7 +251,10 @@ export function runSearch(db: Record<string, Entity>, p: Params, cats: Cat[]) {
   const key = (e: Entity) => e.title.replace(/^[\s«»"„“”'(\[]+/, "");
   const az = (a: Entity, b: Entity) => key(a).localeCompare(key(b), "ru");
   const sort = p.sort || "rel"; // по умолчанию релевантность; без запроса она равна у всех — порядок по алфавиту
-  list = [...list].sort((a, b) => (sort === "za" ? az(b.e, a.e) : sort === "rel" ? b.r - a.r || az(a.e, b.e) : az(a.e, b.e)));
+  // по году: без даты — в конце при любом направлении; внутри года — по алфавиту
+  const yr = (e: Entity) => entityYear(e);
+  const byYear = (dir: 1 | -1) => (a: Entity, b: Entity) => { const ya = yr(a), yb = yr(b); if (!ya && !yb) return az(a, b); if (!ya) return 1; if (!yb) return -1; return (ya - yb) * dir || az(a, b); };
+  list = [...list].sort((a, b) => (sort === "za" ? az(b.e, a.e) : sort === "year" ? byYear(1)(a.e, b.e) : sort === "yeard" ? byYear(-1)(a.e, b.e) : sort === "rel" ? b.r - a.r || az(a.e, b.e) : az(a.e, b.e)));
   const per = p.perPage || PER_PAGE;
   const total = list.length, pages = Math.max(1, Math.ceil(total / per));
   const page = Math.min(Math.max(1, p.page), pages);
