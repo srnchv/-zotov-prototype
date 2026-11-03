@@ -197,7 +197,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="msec">
               {docs.map((d) => (
                 <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
-                  <div className="t">{d.title}</div><div>{String(d.format || "").toUpperCase()}.</div>
+                  <div className="t">{s(d, "caption") || d.title}{metaOf(d) ? <span className="grey"> · {metaOf(d)}</span> : null}</div><div>{String(d.format || "").toUpperCase()}.</div>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626" /></svg>
                 </a>
               ))}
