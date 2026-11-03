@@ -83,7 +83,8 @@ export default async function EntityPage({ params }: Props) {
   const cover: { src: string; title: string } | null = coverMedia
     ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
     : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
-  const docs = media.filter((m) => !["image", "tour"].includes(mediaKind(m)));
+  // документы — только то, что не играет в плеере: PDF и прочие файлы; видео и аудио идут в плеер и на скачивание не выводятся
+  const docs = media.filter((m) => !["image", "tour", "video", "audio"].includes(mediaKind(m)));
   const isOpen = (s(e, "access") || "open") === "open";
   // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
