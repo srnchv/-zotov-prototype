@@ -265,4 +265,4 @@ export const unreadReports = async () => Number((await q.get("SELECT count(*) c 
 export const readReport = (id: string) => q.run(`UPDATE reports SET read_at = ${SQL.NOW} WHERE id = ?`, [id]);
 export const deleteReport = async (id: string) => (await q.run("DELETE FROM reports WHERE id = ?", [id])).changes > 0;
 // лимит сообщений с одного IP в сутки (защита от спама)
-export const reportsFromIp = async (ip: string, hours: number) => Number((await q.get(isPg ? "SELECT count(*) c FROM reports WHERE ip = ? AND at > now() - make_interval(hours => ?)" : "SELECT count(*) c FROM reports WHERE ip = ? AND at > datetime('now', '-' || ? || ' hours')", [ip, hours])).c);
+export const reportsFromIp = async (ip: string, hours: number) => Number((await q.get(isPg ? "SELECT count(*) c FROM reports WHERE ip = ? AND at::timestamptz > now() - (? || ' hours')::interval" : "SELECT count(*) c FROM reports WHERE ip = ? AND at > datetime('now', '-' || ? || ' hours')", [ip, hours])).c);
