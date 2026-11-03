@@ -17,7 +17,6 @@ export const S = reactive({
   raw: [] as Entity[],
   db: {} as Record<string, Entity>,
   roles: {} as Record<string, Record<string, string>>,
-  unreadReports: 0, // roles[id][linkedId] — роль связанной сущности на странице id
   audit: null as null | { recent: any[]; summary: Record<string, { edits: number; lastAt: string; lastActor: string }> },
   toasts: [] as { id: number; msg: string }[],
 });
@@ -75,7 +74,6 @@ export async function load() {
     }
     S.roles = roles;
     S.raw = raw; S.db = db; S.apiLive = true; S.loaded = true;
-    if (S.token) fetch(API + "/reports", { headers: { authorization: "Bearer " + S.token } }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) S.unreadReports = j.unread; }).catch(() => {});
   } catch { S.apiLive = false; S.loaded = true; }
 }
 export async function loadAudit(force = false) {

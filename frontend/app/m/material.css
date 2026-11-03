@@ -68,10 +68,6 @@
 .src{display:flex}
 .src .n{width:48px;flex:0 0 48px;font-variant-numeric:tabular-nums;letter-spacing:.141px}
 
-/* «Напишите нам, если нашли несоответствие» — красная ссылка по центру */
-.reportrow{display:flex;justify-content:center;padding:8px 0 12px}
-.report{border:0;background:none;font:inherit;color:var(--red);display:inline-flex;gap:4px;align-items:center;cursor:pointer;letter-spacing:0}
-.report:hover{text-decoration:underline}
 
 /* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, миниатюра h 120 по аспекту) */
 #relmats{padding:12px 0 56px;display:flex;flex-direction:column;gap:24px}
@@ -96,17 +92,6 @@
 .mbox.cite .crow{display:flex;border-top:4px solid var(--grey5);padding-top:8px}
 .mbox.cite .crow .k{width:142px;flex:0 0 142px;color:var(--grey2)}
 .mbox.cite .crow .v{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;user-select:all}
-.mbox.err{gap:24px}
-.mbox.err h4{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;margin:0 0 12px}
-.mbox.err p{font-size:18px;line-height:20px;letter-spacing:-.18px;margin:0}
-.mbox.err textarea{width:100%;height:164px;border:2px solid var(--grey5);padding:12px;font:inherit;font-size:18px;line-height:20px;letter-spacing:-.18px;resize:none;outline:none;color:var(--ink)}
-.mbox.err textarea::placeholder{color:var(--grey3)}
-.mbox.err textarea:focus{border-color:var(--grey2)}
-.mbox.err .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-.mbox.err .send{width:100%;height:32px;border:0;padding:8px;display:flex;gap:4px;align-items:center;justify-content:center;font:inherit;letter-spacing:0;cursor:pointer;background:var(--ink);color:#fff}
-.mbox.err .send span{padding:0 4px}
-.mbox.err .send:disabled{background:var(--grey2);color:var(--grey3);cursor:default}
-.mbox.err .errmsg{color:var(--red)}
 
 /* «Похожее» */
 #similar{padding-top:80px}
@@ -171,6 +156,5 @@
   .mbox{padding:16px}
   .mbox.cite .crow{gap:4px}
   .mbox.cite .crow .k{width:59px;flex-basis:59px}
-  .mbox.err textarea{height:240px}
-  #similar .feat{gap:32px;padding-bottom:96px}
+    #similar .feat{gap:32px;padding-bottom:96px}
 }

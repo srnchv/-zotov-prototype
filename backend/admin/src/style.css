@@ -119,9 +119,3 @@ textarea.inp{min-height:110px;resize:vertical}
 .chip .rolebtn{font-size:11px;color:#8c8c8c;cursor:pointer;border-left:1px solid #ccc;padding-left:6px}
 .chip.role .rolebtn{color:#262626;font-weight:600}
 .chip .rolebtn:hover{color:#c8102e}
-/* сообщения с сайта */
-.rep{border:1px solid var(--line,#ddd);padding:12px 14px;margin-bottom:10px;background:#fff}
-.rep.unread{border-left:4px solid #c8102e}
-.rep .meta{font-size:12px;color:#8c8c8c;display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-.rep .txt{white-space:pre-wrap;font-size:14px;line-height:1.45}
-.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:#c8102e;color:#fff;font-size:11px;line-height:18px;text-align:center;margin-left:6px}

@@ -13,7 +13,6 @@ import AvPlayer from "@/components/mat/AvPlayer";
 import Description from "@/components/mat/Description";
 import PageNav, { type NavItem } from "@/components/mat/PageNav";
 import Cite from "@/components/mat/Cite";
-import Report from "@/components/mat/Report";
 import Related, { type RelCard } from "@/components/mat/Related";
 import { getSite } from "@/lib/site";
 import { abs, descOf } from "@/lib/seo";
@@ -215,8 +214,6 @@ export default async function EntityPage({ params }: Props) {
               <div className="tsm">Источники</div>
               <div className="msec srcs">{sources.map((x, i) => <div className="src" key={i}><div className="n">{String(i + 1).padStart(2, "0")}.</div><div>{x}</div></div>)}</div></> : null}
 
-            <div className="div8" />
-            <Report id={e.id} />
 
             {relCount ? <><div className="div8" id="a-rel" />
               <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
