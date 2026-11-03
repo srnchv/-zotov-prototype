@@ -215,9 +215,9 @@ export default async function EntityPage({ params }: Props) {
               <div className="msec srcs">{sources.map((x, i) => <div className="src" key={i}><div className="n">{String(i + 1).padStart(2, "0")}.</div><div>{x}</div></div>)}</div></> : null}
 
 
-            {relCount ? <><div className="div8" id="a-rel" />
+            {relCount ? <div className="relwrap" id="a-rel"><div className="div8" />
               <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
-              <div id="relmats">{relGroups.map(([t, arr]) => <Related key={t} id={gid(t)} label={headOf(t)} items={arr.map(card)} />)}</div></> : null}
+              <div id="relmats">{relGroups.map(([t, arr]) => <Related key={t} id={gid(t)} label={headOf(t)} items={arr.map(card)} />)}</div></div> : null}
           </div>
         </div>
 

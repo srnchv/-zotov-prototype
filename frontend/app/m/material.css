@@ -70,6 +70,8 @@
 
 
 /* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, миниатюра h 120 по аспекту) */
+/* серая подложка блока связанных — на всю ширину правой колонки (макет SUGGESTS) */
+.relwrap{background:var(--grey5);margin:0 -12px;padding:12px 12px 0;display:flex;flex-direction:column;gap:8px}
 #relmats{padding:12px 0 56px;display:flex;flex-direction:column;gap:24px}
 .relgroup{display:flex;flex-direction:column;gap:8px}
 .relgroup .subhead{display:flex;justify-content:center;gap:4px;padding-top:8px}
@@ -80,7 +82,7 @@
 .rel-item h3{font-family:var(--hf);font-size:24.1px;line-height:24px;font-weight:500;letter-spacing:-.24px;text-transform:uppercase}
 .rel-item .sub{padding-top:2px;font-size:16px;line-height:18px;letter-spacing:-.08px}
 .rel-item .vb{flex:1 1 auto;min-height:12px;border-left:4px solid var(--ink)}
-.rel-item .im{height:120px;flex:0 0 auto;background:var(--ink);overflow:hidden}
+.rel-item .im{height:120px;flex:0 0 auto;background:var(--grey4);overflow:hidden}
 .rel-item .im img{width:100%;height:100%;object-fit:cover;display:block}
 .rel-item:hover{color:var(--red)}
 .rel-item:hover .dv{background:var(--red)}
