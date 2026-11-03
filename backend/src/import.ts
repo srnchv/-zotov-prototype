@@ -10,7 +10,10 @@ type Col = { key: string; label: string; hint: string; req?: boolean; dict?: str
 // общие колонки для всех листов (связи — по названиям, «;» между значениями)
 const COMMON_HEAD: Col[] = [{ key: "title", label: "Название", hint: "обязательно; по названию ищется существующая карточка", req: true }];
 const COMMON_TAIL: Col[] = [
-  { key: "desc", label: "Описание", hint: "текст карточки; абзацы — с новой строки (Alt+Enter)" },
+  { key: "desc", label: "Описание", hint: "текст карточки; абзацы — пустой строкой (Alt+Enter дважды); строка с «## » в начале — заголовок, «- » — список, «1. » — нумерованный; сноска — [1] в тексте" },
+  { key: "notes", label: "Сноски", hint: "тексты сносок по одной в строке: первая строка — [1], вторая — [2]…" },
+  { key: "sources", label: "Источники", hint: "по одному в строке; на сайте нумеруются 01, 02… в этом порядке" },
+  { key: "pinned", label: "Похожие", hint: "названия карточек того же типа через «;» — закрепляются первыми в блоке «Похожее»" },
   { key: "access", label: "Доступ", hint: "открытый / по запросу / ограниченный (пусто = открытый)" },
   { key: "status", label: "Публикация", hint: "опубликовано / черновик (пусто = опубликовано)" },
   { key: "files", label: "Файлы", hint: "имена файлов из папки через «;», как они называются на диске: rodchenko-portret.jpg; lekciya-1.mp4. Подпись к файлу — через «|» после имени: имя | название | автор | год, например rodchenko-portret.jpg | Портрет А. Родченко | Михаил Кауфман | 1924. Первое фото строки станет обложкой" },
@@ -20,12 +23,12 @@ const LINK_COLS: [string, string][] = [["person", "Личности"], ["place",
 // лист → тип карточек; даты везде называются «Период» (смысл — в подсказке); links — какие колонки связей показывать в шаблоне
 // (импорт принимает любые колонки связей на любом листе, это только состав шаблона)
 const SHEETS: { type: string; sheet: string; cols: Col[]; dateKey: string; links: string[] }[] = [
-  { type: "material", sheet: "Материалы", dateKey: "date", links: ["person", "place", "event", "theme", "collection", "project"], cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Период", hint: "год или диапазон: 1927 или 1920–1929" }] },
+  { type: "material", sheet: "Материалы", dateKey: "date", links: ["person", "place", "event", "theme", "collection", "project"], cols: [{ key: "mtype", label: "Тип", hint: "из справочника типов материалов", dict: "mtype" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Период", hint: "год или диапазон: 1927 или 1920–1929" }, { key: "authors", label: "Авторы", hint: "имена через «;» — в шапке карточки; если есть карточка личности, имя станет ссылкой" }] },
   { type: "person", sheet: "Личности", dateKey: "life", links: ["event", "theme", "org", "material"], cols: [{ key: "group", label: "Тип личности", hint: "Деятели эпохи / Исследователи конструктивизма", dict: "group" }, { key: "spheres", label: "Сфера деятельности", hint: "одна или несколько через «;» из справочника: архитектура; дизайн; фотография…" }, { key: "life", label: "Период", hint: "годы жизни: 1891–1956" }, { key: "cities", label: "Город", hint: "города через «;» — где жил и работал (фильтр «Город»)" }] },
   { type: "place", sheet: "Места", dateKey: "date", links: ["place"], cols: [{ key: "fgroup", label: "Тип", hint: "группа функции из справочника: Жильё / Администрация / Культура / Транспорт…" }, { key: "fsubs", label: "Подтип", hint: "функции внутри группы, одна или несколько через «;»: Дом-коммуна; Гостиница" }, { key: "city", label: "Город", hint: "из справочника городов" }, { key: "address", label: "Адрес", hint: "" }, { key: "placeStatus", label: "Состояние здания", hint: "существует / утрачено" }, { key: "okn", label: "Статус ОКН", hint: "одно из: федерального значения / регионального значения / местного значения / выявленный / не является ОКН" }, { key: "date", label: "Период", hint: "год постройки или диапазон" }, { key: "lat", label: "Широта", hint: "55.7563; пусто — определится по адресу при загрузке" }, { key: "lon", label: "Долгота", hint: "37.6010" }, { key: "archs", label: "Архитекторы", hint: "имена через «;» — если есть карточка личности, связь проставится сама; если автор неизвестен — «Неизвестный архитектор» (пустая ячейка = неизвестный)" }, { key: "engs", label: "Инженеры", hint: "имена через «;»" }, { key: "dorgs", label: "Проектные организации", hint: "названия через «;»" }, { key: "customers", label: "Заказчики", hint: "один или несколько через «;»: правительство; ведомство; управление; муниципалитет; кооператив; профсоюз; общественная организация; неустановленный застройщик" }] },
   { type: "event", sheet: "События", dateKey: "date", links: ["person", "place", "theme", "org"], cols: [{ key: "evType", label: "Тип", hint: "из справочника типов событий", dict: "evType" }, { key: "subtype", label: "Подтип", hint: "подтип выбранного типа" }, { key: "date", label: "Период", hint: "1927, 12 марта 1927 или диапазон 1927–1928" }, { key: "city", label: "Город", hint: "из справочника городов; если пусто — подставится из привязанного места" }] },
   { type: "theme", sheet: "Темы", dateKey: "", links: ["person", "place", "event", "project", "collection", "org", "material", "source"], cols: [{ key: "def", label: "Краткое определение", hint: "одна-две фразы" }] },
-  { type: "project", sheet: "Проекты Центра", dateKey: "dates", links: ["person", "place", "event", "theme", "collection", "org", "material", "source"], cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Период", hint: "даты проведения: 12.03–30.06.1927" }, { key: "curators", label: "Кураторы", hint: "" }] },
+  { type: "project", sheet: "Проекты Центра", dateKey: "dates", links: ["person", "place", "event", "theme", "collection", "org", "material", "source"], cols: [{ key: "prType", label: "Тип", hint: "выставочный проект…", dict: "prType" }, { key: "dates", label: "Период", hint: "даты проведения текстом: 12.03–30.06.1927" }, { key: "dateFrom", label: "Дата начала", hint: "2025-09-26 — по ней и дате окончания считается статус (Скоро / Идёт / Завершён)" }, { key: "dateTo", label: "Дата окончания", hint: "2025-10-20" }, { key: "venue", label: "Место проведения", hint: "Центр «Зотов», Хлебозавод №5 — если есть карточка места, станет ссылкой" }, { key: "curators", label: "Кураторы", hint: "имена через «;»" }] },
   { type: "collection", sheet: "Коллекции", dateKey: "period", links: ["person", "place", "event", "theme", "project", "org", "material", "source"], cols: [{ key: "colType", label: "Тип коллекции", hint: "Коллекция Центра «Зотов» / Музеи / Библиотеки / Архивы / Частные собрания", dict: "colType" }, { key: "period", label: "Период", hint: "1920-е" }] },
   { type: "org", sheet: "Организации", dateKey: "period", links: ["person", "place", "event", "theme", "project", "collection", "material", "source"], cols: [{ key: "orgType", label: "Тип", hint: "", dict: "orgType" }, { key: "period", label: "Период", hint: "период деятельности: 1920 — 1930" }] },
   { type: "source", sheet: "Тексты", dateKey: "year", links: ["person", "theme", "collection"], cols: [{ key: "srcType", label: "Тип текста", hint: "Тексты конструктивистов / Тексты о конструктивистах / Каталоги", dict: "srcType" }, { key: "year", label: "Период", hint: "год публикации" }, { key: "author", label: "Автор", hint: "" }, { key: "publisher", label: "Издательство", hint: "необязательно" }, { key: "pubplace", label: "Место издания", hint: "необязательно" }] },
@@ -84,7 +87,8 @@ export async function template(): Promise<Buffer> {
     [""],
     ["1. Каждый лист — один тип карточек. Строка 1 — названия колонок (не менять), строка 2 — подсказки, строка 3 — пример (начинается с «ПРИМЕР», при загрузке пропускается). Свои данные — с 4-й строки."],
     ["2. «Название» обязательно. Если карточка с таким названием и типом уже есть в архиве, она обновится: заполненные ячейки перезапишут поля, пустые ничего не тронут."],
-    ["3. Связи («Личности», «Места», «Темы»…) — названия через «;». Можно ссылаться на карточки архива и на строки этого же файла (на любом листе). Связи двусторонние: достаточно указать с одной стороны."],
+    ["3. Связи («Личности», «Места», «Темы»…) — названия через «;». Можно ссылаться на карточки архива и на строки этого же файла (на любом листе). Связи двусторонние: достаточно указать с одной стороны. Роль связанной карточки — в скобках после названия: Анна Зайцева (Куратор); Иван Петров (Участник) — выводится в её карточке на странице этой записи."],
+    ["   «Описание»: абзацы разделяются пустой строкой; строка, начинающаяся с «## », — заголовок внутри текста; строки с «- » — список, с «1. » — нумерованный список; сноска — номер в квадратных скобках [1], а её текст — в колонке «Сноски» (по одной в строке по порядку). «Источники» — по одному в строке, «Похожие» — названия карточек того же типа через «;»."],
     ["4. Типы и подтипы — из справочников (списки ниже). Новое значение добавится в справочник, в отчёте будет предупреждение."],
     ["5. «Период»: год или диапазон «с–по» (1920–1929). Неточные даты задаются диапазоном: «1920-е» → 1920–1929. У личности — годы жизни, у проекта — даты проведения."],
     ["6. «Файлы» — имена файлов из папки через «;», ровно как они называются на диске: rodchenko-portret.jpg; dom-narkomfina-1930.jpg; lekciya-1.mp4. Расширение и регистр букв можно не соблюдать. Поддерживаются фото (JPG/PNG/WebP/TIFF), видео (MP4/WebM), аудио (MP3/M4A/WAV), документы (PDF). Первое фото строки станет обложкой. Папка выбирается в админке на втором шаге; из неё берутся только файлы, упомянутые в таблице."],
@@ -126,7 +130,27 @@ export async function template(): Promise<Buffer> {
 
 // ---- разбор файла ----
 export type FileSpec = { name: string; caption?: string; author?: string; year?: string };
-type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
+// Описание из таблицы: пустая строка — новый абзац, «## » — заголовок, «- »/«• » — список, «1. » — нумерованный, [n] — сноска
+export function descToHtml(text: string): string {
+  const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (t: string) => esc(t).replace(/\[(\d+)\]/g, '<span class="fn" data-fn="$1">[$1]</span>');
+  const blocks = text.replace(/\r/g, "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  return blocks.map((b) => {
+    const lines = b.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.every((l) => /^([-•*])\s+/.test(l))) return "<ul>" + lines.map((l) => "<li>" + inline(l.replace(/^[-•*]\s+/, "")) + "</li>").join("") + "</ul>";
+    if (lines.every((l) => /^\d+[.)]\s+/.test(l))) return "<ol>" + lines.map((l) => "<li>" + inline(l.replace(/^\d+[.)]\s+/, "")) + "</li>").join("") + "</ol>";
+    if (lines.length === 1 && /^##?\s+/.test(lines[0])) return "<h2>" + inline(lines[0].replace(/^##?\s+/, "")) + "</h2>";
+    const out: string[] = []; let para: string[] = [];
+    const flush = () => { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } };
+    for (const l of lines) { if (/^##?\s+/.test(l)) { flush(); out.push("<h2>" + inline(l.replace(/^##?\s+/, "")) + "</h2>"); } else para.push(l); }
+    flush(); return out.join("");
+  }).join("");
+}
+const lines = (v: string) => String(v || "").replace(/\r/g, "").split("\n").map((x) => x.trim()).filter(Boolean);
+// «Имя (Куратор)» в колонке связей → имя + роль
+const parseRole = (v: string): [string, string] => { const m = v.match(/^(.*?)\s*\(([^()]+)\)\s*$/); return m ? [m[1].trim(), m[2].trim()] : [v, ""]; };
+
+type Parsed = { type: string; sheet: string; row: number; title: string; fields: Record<string, string>; links: Record<string, string[]>; roles?: Record<string, string>; files: FileSpec[]; tags: string[]; access?: string; status?: string; dictKey?: string };
 // «имя | название | автор | год» → спецификация файла
 // «нет фото», «—» и прочие пометки кириллицей — не имена файлов
 // имена файлов — через «;»; если подписей «|» нет, то и через запятую (a.jpg, b.jpg)
@@ -333,10 +357,14 @@ async function parse(buf: Buffer) {
       for (const c of s.cols) { const v = get(c.label); if (v) p.fields[c.key] = v; if (c.dict) p.dictKey = c.key; }
       if (p.type === "place") normalizePlace(p);
       if (p.type === "person") { const f: any = p.fields; for (const k of ["spheres", "cities"]) if (f[k]) f[k] = split(String(f[k])).map((x) => (k === "spheres" ? x.toLowerCase() : x)).filter(Boolean); }
-      const d = get("Описание"); if (d) p.fields.desc = d;
+      const d = get("Описание"); if (d) p.fields.desc = /^<([a-z]+)[\s>]/i.test(d.trim()) ? d : descToHtml(d);
+      const notes = lines(get("Сноски")); if (notes.length) (p.fields as any).notes = notes;
+      const srcs = lines(get("Источники")); if (srcs.length) (p.fields as any).sources = srcs;
+      const pin = split(get("Похожие")); if (pin.length) (p.fields as any).pinnedTitles = pin;
+      if (p.type === "material" && p.fields.authors) (p.fields as any).authors = split(String(p.fields.authors)).join("; ");
       const acc = key(get("Доступ")); if (acc) { if (ACCESS[acc]) p.access = ACCESS[acc]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестный доступ «${get("Доступ")}»`); }
       const st = key(get("Публикация")); if (st) { if (STATUS[st]) p.status = STATUS[st]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестная публикация «${get("Публикация")}»`); }
-      for (const [t, l] of LINK_COLS) { const v = split(get(linkLabel(t, l, s.type))); if (v.length) p.links[t] = v; }
+      for (const [t, l] of LINK_COLS) { const v = split(get(linkLabel(t, l, s.type))); if (v.length) { p.links[t] = []; for (const raw of v) { const [name, role] = parseRole(raw); p.links[t].push(name); if (role) (p.roles ||= {})[t + "|" + key(name)] = role; } } }
       out.push(p);
     }
   }
@@ -421,6 +449,7 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
     const k = p.type + "|" + key(p.title);
     const payload: Record<string, unknown> = { ...p.fields };
     if (p.access) payload.access = p.access;
+    delete payload.pinnedTitles; // закреплённые похожие проставляются после создания всех карточек (нужны id)
     // место без координат — по адресу через геокодер (если настроен); ошибка геокодера карточку не останавливает
     if (p.type === "place" && geocode && !p.fields.lat && p.fields.address) {
       const cur = ids.get(k) ? await repo.getEntity(ids.get(k)!) : null;
@@ -460,7 +489,10 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
     for (const [t, names] of Object.entries(p.links)) for (const n of names) {
       const tid = ids.get(t + "|" + key(n)); if (!tid || tid === id) continue;
       try { await repo.addLink(id, tid); linked++; } catch { /* уже связаны */ }
+      const role = p.roles?.[t + "|" + key(n)]; if (role) { try { await repo.setLinkRole(id, tid, role, tid); } catch {} }
     }
+    const pinT = (p.fields as any).pinnedTitles as string[] | undefined;
+    if (pinT?.length) { const pinned = pinT.map((n) => ids.get(p.type + "|" + key(n))).filter((x): x is string => !!x && x !== id); if (pinned.length) await repo.updateEntity(id, { payload: { pinned } }); }
     for (const tg of p.tags) {
       let tid = tagIds.get(key(tg));
       if (!tid) { tid = (await repo.createEntity({ type: "tag", title: tg })).id; tagIds.set(key(tg), tid); }
