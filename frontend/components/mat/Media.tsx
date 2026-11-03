@@ -2,9 +2,9 @@
 // Медиа-блок страницы сущности (ТЗ, состояния 1–9): одно фото / галерея (фото и видео вместе) / видео / аудио-виджет / 3D-тур.
 // Стрелки 32 (mix-blend), кнопка «на весь экран», под кадром подпись и автор/год. Полноэкранная галерея: белый фон, превью
 // (колонка слева — десктоп, лента снизу — мобайл), подпись, счётчик «2/132», закрытие крестиком и Esc; видео — на весь экран с полосой плеера.
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import AvPlayer, { type Track } from "./AvPlayer";
+import AvPlayer, { type Track, type AvState } from "./AvPlayer";
 export type Slide =
   | { kind: "image"; src: string; big?: string; w?: number; h?: number; caption: string; credit: string; pos?: CSSProperties }
   | { kind: "video"; src: string; mediaId: string; hls?: string; poster?: string; thumb?: string; tracks: Track[]; caption: string; credit: string }
@@ -20,8 +20,9 @@ const ratio = (s: Slide) => (s.kind === "image" && s.w && s.h ? s.w / s.h : 1.5)
 
 export default function Media({ slides }: { slides: Slide[] }) {
   const [i, setI] = useState(0), [full, setFull] = useState(false);
+  const av = useRef<AvState>({ t: 0, playing: false }); // позиция видео — переносится между встроенным и полноэкранным плеером
   const n = slides.length, cur = slides[Math.min(i, n - 1)];
-  const go = useCallback((d: number) => setI((x) => (x + d + n) % n), [n]);
+  const go = useCallback((d: number) => { av.current = { t: 0, playing: false }; setI((x) => (x + d + n) % n); }, [n]);
   useEffect(() => {
     if (!full) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFull(false); if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); };
@@ -33,7 +34,7 @@ export default function Media({ slides }: { slides: Slide[] }) {
   const frame = (s: Slide, big: boolean) =>
     s.kind === "image" ? <img src={big && s.big ? s.big : s.src} alt={s.caption} style={big ? undefined : s.pos} draggable={false} />
     : s.kind === "tour" ? <Tour src={s.src} title={s.caption} />
-    : <AvPlayer key={s.src + (big ? "f" : "")} kind="video" src={s.src} mediaId={s.mediaId} hls={s.hls} poster={s.poster} tracks={s.tracks} title={s.caption} big={big} />;
+    : <AvPlayer key={s.src + (big ? "f" : "")} kind="video" src={s.src} mediaId={s.mediaId} hls={s.hls} poster={s.poster} tracks={s.tracks} title={s.caption} big={big} startAt={{ ...av.current }} onState={(st) => { av.current = st; }} />;
   return (
     <>
       <div className={"mblock" + (isVideo ? " isvideo" : cur.kind === "tour" ? " istour" : "")}>

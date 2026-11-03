@@ -5,7 +5,9 @@
 import { useEffect, useRef, useState } from "react";
 import { API } from "@/lib/api";
 export type Track = { lang: string; label: string; url: string };
-export type AvProps = { kind: "video" | "audio"; src: string; mediaId?: string; hls?: string; poster?: string; tracks?: Track[]; title: string; big?: boolean; onEnded?: () => void; autoPlay?: boolean };
+// startAt / onState — чтобы при переходе в полноэкранный режим и обратно плеер продолжал с того же места
+export type AvState = { t: number; playing: boolean };
+export type AvProps = { kind: "video" | "audio"; src: string; mediaId?: string; hls?: string; poster?: string; tracks?: Track[]; title: string; big?: boolean; onEnded?: () => void; autoPlay?: boolean; startAt?: AvState; onState?: (s: AvState) => void };
 const SPEEDS = [2, 1.5, 1.25, 1, 0.5];
 const fmt = (t: number) => { if (!isFinite(t)) return "00:00"; const m = Math.floor(t / 60), s = Math.floor(t % 60); return (m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(s).padStart(2, "0"); };
 const I = {
@@ -16,8 +18,12 @@ const I = {
   cc: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" stroke="currentColor" strokeWidth="1.5" /><path d="M7 7a1.5 1.5 0 1 0 0 2M11.5 7a1.5 1.5 0 1 0 0 2" stroke="currentColor" strokeWidth="1.5" /></svg>,
   gear: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" strokeWidth="1.5" /></svg>,
 };
-export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [], title, big, onEnded, autoPlay }: AvProps) {
+export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [], title, big, onEnded, autoPlay, startAt, onState }: AvProps) {
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  const start = useRef(startAt); // позиция, с которой продолжить после монтирования
+  const stateRef = useRef(onState); stateRef.current = onState;
+  const resume = () => { const el = ref.current, s = start.current; if (!el || !s) return; start.current = undefined; if (s.t) el.currentTime = s.t; if (s.playing) el.play().catch(() => {}); };
+  const report = () => { const el = ref.current; if (el) stateRef.current?.({ t: el.currentTime, playing: !el.paused }); };
   const [useHls, setUseHls] = useState(!!hls);
   const [realSrc, setRealSrc] = useState(hls ? "" : src);
   const [playing, setPlaying] = useState(false), [t, setT] = useState(0), [dur, setDur] = useState(0);
@@ -43,10 +49,10 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
       if (Hls.isSupported()) {
         h = new Hls({ capLevelToPlayerSize: true, startLevel: -1, maxBufferLength: 30 });
         hlsRef.current = h;
-        h.on(Hls.Events.MANIFEST_PARSED, () => { setLevels([...new Set((h.levels as { height: number }[]).map((l) => l.height))].sort((a, b) => b - a)); if (autoPlay) el.play().catch(() => {}); });
+        h.on(Hls.Events.MANIFEST_PARSED, () => { setLevels([...new Set((h.levels as { height: number }[]).map((l) => l.height))].sort((a, b) => b - a)); if (autoPlay) el.play().catch(() => {}); resume(); });
         h.on(Hls.Events.ERROR, (_e: unknown, d: { fatal: boolean }) => { if (d.fatal) { h.destroy(); h = null; hlsRef.current = null; setLevels([]); setLevel(-1); setUseHls(false); } });
         h.loadSource(hls); h.attachMedia(el);
-      } else if (el.canPlayType("application/vnd.apple.mpegurl")) { el.src = hls; }
+      } else if (el.canPlayType("application/vnd.apple.mpegurl")) { el.src = hls; el.addEventListener("loadedmetadata", resume, { once: true }); }
       else setUseHls(false);
     })();
     return () => { dead = true; h?.destroy(); hlsRef.current = null; };
@@ -58,6 +64,7 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
     if (!realSrc || realSrc === lastSrc.current) return;
     const pos = el.currentTime, wasPlaying = !el.paused;
     lastSrc.current = realSrc; el.src = realSrc; el.load();
+    if (start.current) { el.addEventListener("loadedmetadata", resume, { once: true }); return; }
     if (pos) el.currentTime = pos;
     if (wasPlaying) el.play().catch(() => {});
   }, [realSrc, hls, useHls]);
@@ -67,12 +74,13 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
   useEffect(() => { if (!menu) return; const off = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest(".avm, .avpop")) setMenu(""); }; document.addEventListener("click", off); return () => document.removeEventListener("click", off); }, [menu]);
   const toggle = () => { const el = ref.current; if (!el) return; if (el.paused) el.play().catch(() => {}); else el.pause(); };
   const seek = (e: React.MouseEvent<HTMLDivElement>) => { const el = ref.current; if (!el || !dur) return; const r = e.currentTarget.getBoundingClientRect(); el.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
-  const pickLevel = (h: number) => { setLevel(h); setMenu(""); const H = hlsRef.current; if (H) H.currentLevel = h === -1 ? -1 : H.levels.findIndex((l) => l.height === h); };
+  // ручной выбор качества: currentLevel переключает сразу (буфер сбрасывается), -1 — авто
+  const pickLevel = (h: number) => { setLevel(h); setMenu(""); const H = hlsRef.current; if (!H) return; const idx = h === -1 ? -1 : H.levels.findIndex((l) => l.height === h); (H as any).nextLevel = idx; H.currentLevel = idx; };
   const media = kind === "video"
-    ? <video ref={ref} playsInline preload="metadata" poster={poster} title={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} autoPlay={autoPlay && !hls}
-        onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
+    ? <video ref={ref} playsInline preload="metadata" poster={poster} aria-label={title} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} autoPlay={autoPlay && !hls}
+        onPlay={() => { setPlaying(true); report(); }} onPause={() => { setPlaying(false); report(); }} onTimeUpdate={(e) => { setT(e.currentTarget.currentTime); report(); }} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
         {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</video>
-    : <audio ref={ref} preload="metadata" title={title} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setT(e.currentTarget.currentTime)} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
+    : <audio ref={ref} preload="metadata" aria-label={title} onPlay={() => { setPlaying(true); report(); }} onPause={() => { setPlaying(false); report(); }} onTimeUpdate={(e) => { setT(e.currentTarget.currentTime); report(); }} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
         {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</audio>;
   const bar = (
     <div className={"avbar" + (big ? " big" : "")}>
