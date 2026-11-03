@@ -13,13 +13,14 @@
     "hls.js": "^1.7.4",
     "next": "^15.5.28",
     "pdfjs-dist": "^4.10.38",
-    "plyr": "^3.8.4",
     "react": "19.1.1",
-    "react-dom": "19.1.1"
+    "react-dom": "19.1.1",
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^19.1.0",
+    "@types/sanitize-html": "^2.16.2",
     "typescript": "^5.7.2"
   },
   "engines": {

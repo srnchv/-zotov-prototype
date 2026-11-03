@@ -1,11 +1,99 @@
-/* Встроенные просмотрщики: плеер (Plyr) и читалка PDF. Дизайн — через переменные, под фирменный стиль подгоняется здесь. */
-.player{--plyr-color-main:#F43C3A;--plyr-video-background:#262626;--plyr-font-family:'PT Root UI',system-ui,sans-serif;--plyr-control-radius:0;--plyr-range-thumb-height:12px;--plyr-captions-background:rgba(38,38,38,.85);--plyr-captions-text-color:#fff;--plyr-font-size-captions-large:20px;width:100%}
-.player.video{aspect-ratio:16/9;background:#262626;overflow:hidden}
-.player.video video,.player.video .plyr{width:100%;height:100%}
-.player .plyr{width:100%;background:#262626}
-.player video{display:block;width:100%;height:100%;object-fit:contain}
-.player.audio .plyr{--plyr-audio-controls-background:#ebebeb;--plyr-audio-control-color:#262626;border-radius:0}
-.player .plyr__caption{font-family:'PT Root UI',sans-serif;letter-spacing:.01em}
+/* Медиа-блок страницы сущности по макету «Единый шаблон»: галерея (фото/видео/3D-тур), плеер с полосой 64, полноэкранная галерея,
+   аудио-виджет, карта, читалка PDF. */
+
+/* ---- галерея на странице: кадр 3:2 (видео 16:9), стрелки 32 с mix-blend, кнопка «на весь экран», подпись и автор/год ---- */
+.mblock{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.mframe{position:relative;aspect-ratio:3/2;background:var(--grey5);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mblock.isvideo .mframe{aspect-ratio:auto;background:#d9d9d9;display:block}
+.mblock.istour .mframe{background:var(--ink)}
+.mframe img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
+.mframe.clickable{cursor:zoom-in}
+.mframe .tour{width:100%;height:100%;border:0;display:block;background:var(--ink)}
+.marr{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;background:none;padding:0;cursor:pointer;z-index:3;mix-blend-mode:exclusion}
+.marr.l{left:10px}
+.marr.r{right:10px}
+.mblock.isvideo .marr{top:calc(50% - 32px)}
+.mfull{position:absolute;right:8px;bottom:8px;width:32px;height:32px;border:0;background:var(--ink);padding:8px;cursor:pointer;z-index:3;display:flex;align-items:center;justify-content:center}
+.mblock.isvideo .mfull{top:8px;bottom:auto}
+.mfull:hover{background:var(--red)}
+.mcap{display:flex;flex-direction:column}
+.mblock.closed .mframe .ph{color:var(--grey2)}
+
+/* ---- плеер: кадр 16:9 + полоса 64 grey-1 (play 40, название и таймкод, прогресс 8, кнопки с рамкой 2 white; нажатая — grey-2) ---- */
+.av{width:100%}
+.av.video .avframe{aspect-ratio:16/9;background:#d9d9d9;position:relative;cursor:pointer}
+.av.video video{display:block;width:100%;height:100%;object-fit:contain;background:#262626}
+.av audio{display:none}
+.avbar{height:64px;background:var(--ink);color:#fff;padding:12px;display:flex;gap:12px;align-items:center}
+.avplay{width:40px;height:40px;border-radius:50%;background:#fff;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;padding:0}
+.avplay:hover{background:var(--red)}
+.avprog{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:8px}
+.avtime{display:flex;gap:16px;font-size:14.1px;line-height:16px}
+.avtitle{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avclock{flex:0 0 auto;font-variant-numeric:tabular-nums;text-transform:uppercase}
+.avtrack{position:relative;height:8px;background:var(--grey2);cursor:pointer}
+.avfill{position:absolute;left:0;top:0;bottom:0;background:var(--grey5)}
+.avknob{position:absolute;top:-4px;width:4px;height:16px;background:#fff;border:2px solid var(--ink);box-sizing:content-box;margin-left:-2px;pointer-events:none}
+.avbtns{display:flex;gap:4px;align-items:center;flex:0 0 auto}
+.avm{position:relative}
+.avb{height:32px;min-width:32px;border:2px solid #fff;background:none;color:#fff;padding:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:inherit;font-size:14.1px;line-height:16px;font-variant-numeric:tabular-nums}
+.avb.txt{padding:8px 12px}
+.avb.on,.avb:hover{background:var(--grey2);border-color:var(--grey2)}
+.avb.bare{border:0;padding:0;width:16px;min-width:16px;height:16px;background:none}
+.avpop{position:absolute;left:0;bottom:calc(100% + 8px);background:var(--ink);border:2px solid #fff;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:58px;z-index:5}
+.avpop.right{left:auto;right:0}
+.avpop button{border:0;background:none;color:#fff;font:inherit;font-size:14.1px;line-height:16px;text-align:left;padding:0;cursor:pointer;white-space:nowrap}
+.avpop button + button{border-top:2px solid rgba(255,255,255,.5);padding-top:4px}
+.avpop button.on,.avpop button:hover{color:var(--grey5)}
+.avvol{width:32px;height:128px;background:var(--ink);border:2px solid #fff;padding:8px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end;align-items:center;position:absolute;bottom:0;left:0;z-index:5}
+.vtrack{position:relative;width:8px;flex:1 1 auto;background:var(--grey5);cursor:pointer}
+.vfill{position:absolute;left:0;right:0;bottom:0;background:var(--grey2)}
+.vknob{position:absolute;left:-4px;width:16px;height:4px;background:#f2f2f2;border:2px solid var(--ink);box-sizing:content-box}
+.avbar.big{height:64px}
+/* аудио-виджет: только полоса 64 (состояния 8 и 9) */
+.mblock.audio{margin-bottom:0}
+.mblock.after{padding:0 0 8px}
+
+/* ---- полноэкранная галерея: белый фон; превью слева (десктоп) / снизу (мобайл); инфо-колонка справа; видео — во весь экран с полосой ---- */
+.fs{position:fixed;inset:0;background:#fff;z-index:100;display:grid;grid-template-columns:64px minmax(0,1fr) 317px;grid-template-rows:1fr}
+.fs:not(.multi){grid-template-columns:12px minmax(0,1fr) 317px}
+.fsthumbs{grid-column:1;padding:12px 12px 12px 12px;display:flex;flex-direction:column;gap:4px;justify-content:center;overflow:auto;scrollbar-width:none}
+.fsthumbs::-webkit-scrollbar{display:none}
+.fsthumbs button{width:40px;border:0;padding:0;background:var(--grey5);opacity:.5;cursor:pointer;flex:0 0 auto;overflow:hidden}
+.fsthumbs button.on{opacity:1}
+.fsthumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.fsimg{grid-column:2;display:flex;align-items:center;justify-content:center;padding:12px 0;min-width:0;position:relative}
+.fsimg img{max-width:100%;max-height:calc(100vh - 24px);object-fit:contain;display:block;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.fsinfo{grid-column:3;margin:16px 12px 16px 12px;border-left:4px solid #f2f2f2;padding-left:12px;display:flex;gap:12px;align-items:flex-start}
+.fscap{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:12px}
+.fscap .num{font-variant-numeric:tabular-nums}
+.fsx{width:32px;height:32px;border:0;background:var(--ink);padding:8px;cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.fsx:hover{background:var(--red)}
+.fs .marr{top:50%;mix-blend-mode:difference;z-index:3}
+.fs .marr.l{left:88px}
+.fs .marr.r{right:341px}
+.fs:not(.multi) .marr{display:none}
+/* видео на весь экран: кадр по центру, полоса плеера у нижнего края, крестик сверху справа */
+.fs.fsvideo{display:block}
+.fs.fsvideo .fsimg{position:absolute;inset:0;padding:0;display:block}
+.fs.fsvideo .av{position:absolute;inset:0;display:flex;flex-direction:column}
+.fs.fsvideo .av .avframe{flex:1 1 auto;aspect-ratio:auto;min-height:0}
+.fs.fsvideo .av video{object-fit:cover}
+.fs.fsvideo .fsx{position:absolute;top:16px;right:12px;z-index:4}
+.fs.fsvideo .marr.l{left:12px}
+.fs.fsvideo .marr.r{right:12px}
+
+/* ---- карта места (состояния 4 и 5): окно 3:2, ссылка на раздел «Карта» ---- */
+.mblock.map{position:relative}
+.ymap{position:relative;background:var(--grey5);width:100%;aspect-ratio:3/2;overflow:hidden}
+.ymap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
+.ypin{display:flex;align-items:center;gap:6px;margin:-9px 0 0 -9px;color:var(--ink);text-decoration:none;white-space:nowrap}
+.ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
+.ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.maplink{align-self:flex-start;color:var(--grey2)}
+.maplink:hover{color:var(--red)}
+
+/* ---- читалка PDF ---- */
 .pdf{background:var(--grey5);width:100%}
 .pdf-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--ink);color:#fff;font-size:13px;line-height:16px}
 .pdf-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -17,46 +105,31 @@
 .pdf-page{max-height:720px;overflow:auto;display:flex;justify-content:center;padding:16px}
 .pdf-page canvas{box-shadow:0 2px 12px rgba(0,0,0,.15);background:#fff}
 .pdf-err{padding:40px 16px;color:var(--grey2)}
-@media (max-width:1023px){.pdf-page{max-height:70vh;padding:8px}}
 
-/* галерея на странице сущности (02.10): кадр 3:2, стрелки 36 по бокам, подпись и счётчик «2/18» под кадром */
-.mgal{position:relative;margin-bottom:8px}
-.mgal-view{position:relative;aspect-ratio:3/2;background:var(--grey5);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.mgal-view img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-.mgal-view .player{width:100%;height:100%}
-.mgal-view .player.video{aspect-ratio:auto;height:100%}
-.mgal-view .player.audio{align-self:flex-end}
-.mgal-arr{position:absolute;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;background:#fff;border:0;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
-.mgal-arr.l{left:8px}
-.mgal-arr.r{right:8px}
-.mgal-arr:hover{background:var(--red)}
-.mgal-arr:hover svg path{fill:#fff}
-.mgal-cap{display:flex;justify-content:space-between;gap:12px;padding-top:8px;font-size:14.1px;line-height:16px}
-.mgal-cap small{display:block;font-size:14.1px;line-height:16px;color:var(--grey2)} /* автор, год файла */
-.mgal-cap b{font-weight:500;font-size:14.3px;letter-spacing:.143px;font-variant-numeric:tabular-nums;flex:0 0 48px;text-align:right}
-/* блок медиа после описания: видео 16:9, аудио — тёмная плашка 80 со скруглением 8, PDF-читалка */
-.embed2{display:flex;flex-direction:column;gap:8px;padding:8px 0}
-.player.audio{background:#303030;border-radius:8px;padding:16px;min-height:80px;display:flex;align-items:center;--plyr-audio-controls-background:transparent;--plyr-audio-control-color:#fff;--plyr-audio-control-color-hover:#fff;--plyr-audio-control-background-hover:#F43C3A;--plyr-audio-progress-buffered-background:rgba(255,255,255,.25)}
-.player.audio .plyr{width:100%}
-/* подменю «Связанные материалы» в навигации */
-.navrel{position:relative}
-.navrel .pm{position:absolute;right:0;top:12px;width:16px;height:16px;border:0;background:none;padding:0;cursor:pointer}
-.navrel .tert{margin-top:8px;border-left:4px solid var(--grey4);padding-left:48px;display:flex;flex-direction:column;gap:4px}
-.navrel .tert a{display:flex;gap:4px;border:0;padding:0;height:auto}
-
-/* 3D-тур: эмбед во всё окно галереи (3:2), полный экран — контролами самого тура */
+/* 3D-тур вне галереи */
 .tour{width:100%;height:100%;border:0;display:block;background:var(--ink)}
-.imgbox .tour{aspect-ratio:3/2;height:auto}
 
-/* карта места (Яндекс Карты): окно 3:2 после описания, маркер — красная точка с подписью */
-.ymap{position:relative;background:var(--grey5);width:100%;aspect-ratio:3/2;overflow:hidden}
-.ymap .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--grey2);font-size:14.1px;padding:12px;text-align:center}
-.ypin{display:flex;align-items:center;gap:6px;margin:-9px 0 0 -9px;color:var(--ink);text-decoration:none;white-space:nowrap}
-.ypin i{width:18px;height:18px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,.25);flex:0 0 auto}
-.ypin b{font-size:14.1px;line-height:16px;font-weight:700;background:#fff;padding:3px 8px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
-
-/* защита от сохранения: картинка не ловит мышь — правый клик и перетаскивание попадают на контейнер, где нет «Сохранить изображение».
-   От скриншота это не спасает (и ничто не спасёт), но на сайте и так только копии ≤1600 с водяным знаком по настройке */
-.embed .imgbox img,.mgal-view img,.embed2 img{pointer-events:none;user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
-.embed .imgbox,.mgal-view{-webkit-touch-callout:none}
-.embed video{pointer-events:auto}
+@media (max-width:1023px){
+  .pdf-page{max-height:70vh;padding:8px}
+  .fs{grid-template-columns:64px minmax(0,1fr) 260px}
+  .fs .marr.r{right:284px}
+}
+@media (max-width:599px){
+  .marr.l{left:8px}
+  .marr.r{right:12px}
+  .mfull{right:8px;bottom:8px}
+  .avbar{height:auto;flex-wrap:wrap;gap:8px 12px}
+  .avbtns .avb.txt{padding:8px}
+  /* фуллскрин на телефоне: подпись сверху, лента превью снизу, кадр по центру */
+  .fs{display:flex;flex-direction:column;padding:12px}
+  .fs:not(.multi){display:flex}
+  .fsinfo{order:0;margin:0 0 12px;border-left:0;border-bottom:4px solid #f2f2f2;padding:0 0 12px}
+  .fsimg{order:1;flex:1 1 auto;padding:0;min-height:0}
+  .fsimg img{max-height:100%}
+  .fsthumbs{order:2;flex-direction:row;align-items:flex-end;justify-content:flex-start;height:40px;padding:0;margin-top:12px;overflow-x:auto}
+  .fsthumbs button{height:100%;width:auto}
+  .fs .marr.l{left:20px}
+  .fs .marr.r{right:20px}
+  .fs.fsvideo{display:block;padding:0}
+  .fs.fsvideo .fsx{top:12px;right:12px}
+}

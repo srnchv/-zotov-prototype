@@ -1,47 +1,82 @@
-/* Страница сущности — по макетам Figma «материал»: desktop 1920 (колонки 864 + 876), desktop-1280 (544 + 556),
-   tablet 768 и mobile 360 одной колонкой. Каркас, леттеринг, карточки «Похожего» и футер — в globals.css. */
-#rest.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.141px;--ind:144px}
+/* Страница сущности — единый шаблон (Figma DEV 546:39648, ТЗ 709:55622): desktop 1920 (колонки 864 + 876), desktop-1280 (544 + 556),
+   tablet 768 и mobile 360 одной колонкой. Каркас, леттеринг, карточки «Похожего» и футер — в globals.css. Медиа и плеер — media.css. */
+#rest.mat{font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:0;--ind:144px}
 #matgrid{display:grid;grid-template-columns:minmax(0,864fr) minmax(0,876fr);align-items:start}
 
-/* левая колонка: липкая, высотой в окно; паспорт сверху, навигация и «Сохранить» прижаты к низу */
-#cover{position:sticky;top:0;height:100vh;min-height:720px;background:#fff;padding:12px;display:flex;flex-direction:column}
+/* левая колонка: липкая, высотой в окно; шапка сверху, «Цитировать» и навигация прижаты к низу */
+#cover{position:sticky;top:0;height:100vh;min-height:640px;background:#fff;padding:12px;display:flex;flex-direction:column}
 #cover .top{display:flex;flex-direction:column;gap:8px}
 #cover .crumbs{display:flex;gap:4px;align-items:center}
-#cover h1{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase}
+#cover .crumbs a:hover{color:var(--red)}
+#cover h1{font-family:var(--hf);font-size:50px;line-height:48px;letter-spacing:-1.5px;font-weight:500;text-transform:uppercase;overflow-wrap:anywhere}
 #cover .info .row{display:flex}
 #cover .info .row .h{width:142px;color:var(--grey2);flex:0 0 auto}
-#cover .bottom{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding-top:24px}
-#secmenu{position:absolute;right:0;bottom:12px;width:max(276px,calc(33.33% - 4px));display:flex;flex-direction:column;gap:8px;border-bottom:4px solid var(--grey5);padding-bottom:8px}
-#secmenu a{display:flex;gap:4px;align-items:flex-start;border-top:4px solid var(--grey5);padding-top:12px;height:28px;cursor:pointer}
-#secmenu a:hover{color:var(--red)}
-#secmenu .num{color:var(--grey2)}
-#secmenu .sp{flex:1 1 auto}
-#saveBtn{position:absolute;left:12px;bottom:12px;height:40px;background:var(--grey5);display:flex;gap:4px;align-items:center;justify-content:center;padding:12px;cursor:pointer;border:0;font:inherit;color:inherit}
-#saveBtn span{padding:0 4px}
-#saveBtn:hover{color:var(--red)}
+#cover .info .row .v{flex:1 1 auto;min-width:0}
+#cover .info a{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+#cover .info a:hover{color:var(--red)}
+#cover .actions{position:absolute;left:12px;bottom:12px}
+.abtn{height:40px;background:var(--grey5);display:inline-flex;gap:4px;align-items:center;justify-content:center;padding:12px;cursor:pointer;border:0;font:inherit;color:inherit;letter-spacing:0}
+.abtn span{padding:0 4px}
+.abtn.ico{width:32px;height:32px;padding:8px}
+.abtn:hover{color:var(--red)}
+
+/* навигация по странице — десктоп: список 270 (1280: 210) справа внизу; активный — серый фон и жирный */
+.pnav{position:absolute;right:12px;bottom:12px;width:max(210px,calc(33.33% - 8px));display:flex;flex-direction:column;gap:8px}
+.pnav .pn{position:relative;border-top:4px solid var(--grey5);padding-top:12px}
+.pnav .pn>a{display:flex;gap:4px;align-items:flex-start;min-height:16px;cursor:pointer;padding-right:20px}
+.pnav .pn.on>a{background:var(--grey5);font-weight:700;margin:-12px -4px 0;padding:12px 4px 0;height:28px}
+.pnav .pn>a:hover{color:var(--red)}
+.pnav .num{color:var(--grey2);font-variant-numeric:tabular-nums}
+.pnav .pm{position:absolute;right:0;top:12px;width:16px;height:16px;border:0;background:none;padding:0;cursor:pointer;color:var(--ink)}
+.pnav .pm:hover{color:var(--red)}
+.pnav .tert{margin-top:8px;border-left:4px solid var(--grey5);padding-left:48px;display:flex;flex-direction:column;gap:4px}
+.pnav .tert a{display:flex;gap:4px;white-space:nowrap}
+.pnav .tert a:hover{color:var(--red)}
+.pnav .end{height:4px;background:var(--grey5)}
+.pbar{display:none}
 
 /* правая колонка */
 #rightcol{background:#fff;padding:12px 12px 0;display:flex;flex-direction:column;gap:8px;min-width:0}
-.embed .player,.embed .pdf{margin-bottom:8px}
-.embed .imgbox{background:var(--grey5);aspect-ratio:3/2;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden}
-.embed .imgbox img{max-height:100%;max-width:100%;object-fit:contain}
-.embed .ph{color:var(--grey2)}
 .msec{border-left:4px solid var(--ink);padding:0 0 24px var(--ind)}
-.msec .para{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px;white-space:pre-line}
-.msec .para + .para{margin-top:20px;text-indent:48px}
-.msec .empty{color:var(--grey2);font-size:18px;line-height:20px}
-.doc{background:var(--grey4);display:flex;gap:8px;padding:8px;cursor:pointer;color:inherit}
-.doc:hover{color:var(--red)}
-.doc .t{flex:1 1 auto}
-.msec .doc + .doc{margin-top:4px}
-.src{display:flex}
-.src .n{width:48px;flex:0 0 48px}
+/* описание: HTML из админки — абзацы 18/20, заголовок Algorytm 20, списки с отступом 48, сноски [n] в тексте */
+.desc{position:relative;border-left:4px solid var(--ink);padding:0 0 24px var(--ind)}
+.rich{font-size:18px;line-height:20px;letter-spacing:-.18px;padding-right:12px;display:flex;flex-direction:column;gap:20px}
+.rich p,.rich h2,.rich h3,.rich ul,.rich ol{margin:0}
+.rich h2,.rich h3{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;letter-spacing:0}
+.rich ul,.rich ol{display:flex;flex-direction:column;gap:4px;padding-left:48px;list-style:none}
+.rich ol{counter-reset:li}
+.rich ol li{counter-increment:li;position:relative}
+.rich ol li::before{content:"0" counter(li) ".";position:absolute;left:-48px;font-variant-numeric:tabular-nums}
+.rich ol li:nth-child(n+10)::before{content:counter(li) "."}
+.rich ul li{position:relative}
+.rich ul li::before{content:"";position:absolute;left:-19px;top:6.5px;width:7px;height:7px;background:var(--ink)}
+.rich a{text-decoration:underline}
+.rich .fn{cursor:pointer;font-feature-settings:"cpsp","case"}
+.rich .fn:hover{color:var(--red)}
+.fnpop{position:absolute;z-index:5;width:287px;background:#fff;border:2px solid var(--ink);padding:8px;font-size:12px;line-height:14px;letter-spacing:.12px;transform:translateY(-100%)}
+.cut{margin-top:20px;width:calc(100% - 12px);border:0;border-top:4px solid var(--grey5);padding:12px 0 0;height:28px;background:none;font:inherit;color:inherit;letter-spacing:0;display:flex;gap:8px;align-items:center;justify-content:center;cursor:pointer}
+.cut:hover{color:var(--red)}
+.cut.more{margin-top:0;width:100%}
 
-/* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, фото 120×120 справа) */
-#relmats{padding:12px 0}
-#relmats .subhead{display:flex;justify-content:center;gap:4px;padding:12px 0 8px}
-#relmats>div{display:flex;flex-direction:column;gap:8px}
-#relmats>div+div{margin-top:16px}
+/* документы и источники */
+.msec.docs{display:flex;flex-direction:column;gap:4px}
+.doc{background:var(--grey5);display:flex;gap:8px;padding:8px;cursor:pointer;color:inherit;align-items:center;margin-right:12px}
+.doc:hover{color:var(--red)}
+.doc .t{flex:1 1 auto;min-width:0}
+.doc svg{flex:0 0 auto}
+.pdfwrap{margin:8px 12px 0 0}
+.src{display:flex}
+.src .n{width:48px;flex:0 0 48px;font-variant-numeric:tabular-nums;letter-spacing:.141px}
+
+/* «Напишите нам, если нашли несоответствие» — красная ссылка по центру */
+.reportrow{display:flex;justify-content:center;padding:8px 0 12px}
+.report{border:0;background:none;font:inherit;color:var(--red);display:inline-flex;gap:4px;align-items:center;cursor:pointer;letter-spacing:0}
+.report:hover{text-decoration:underline}
+
+/* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, миниатюра h 120 по аспекту) */
+#relmats{padding:12px 0 56px;display:flex;flex-direction:column;gap:24px}
+.relgroup{display:flex;flex-direction:column;gap:8px}
+.relgroup .subhead{display:flex;justify-content:center;gap:4px;padding-top:8px}
 .rel-item{display:flex;flex-direction:column;gap:8px;cursor:pointer}
 .rel-item .dv{height:8px;background:var(--ink)}
 .rel-item .row{display:flex;gap:12px;min-height:120px}
@@ -49,42 +84,92 @@
 .rel-item h3{font-family:var(--hf);font-size:24.1px;line-height:24px;font-weight:500;letter-spacing:-.24px;text-transform:uppercase}
 .rel-item .sub{padding-top:2px;font-size:16px;line-height:18px;letter-spacing:-.08px}
 .rel-item .vb{flex:1 1 auto;min-height:12px;border-left:4px solid var(--ink)}
-.rel-item .im{width:120px;height:120px;flex:0 0 auto;background:var(--grey5);overflow:hidden}
-.rel-item .im img{width:100%;height:100%;object-fit:cover}
-.rel-item.noimg .row{min-height:0}
-.rel-item.noimg .vb{min-height:12px}
-.rel-item:hover{color:var(--red)} /* ховер — вся карточка */
+.rel-item .im{height:120px;flex:0 0 auto;background:var(--ink);overflow:hidden}
+.rel-item .im img{width:100%;height:100%;object-fit:cover;display:block}
+.rel-item:hover{color:var(--red)}
 .rel-item:hover .dv{background:var(--red)}
 .rel-item:hover .vb{border-color:var(--red)}
+
+/* модальные окна: затемнение grey-1 40 %, белое окно 624, без рамки и крестика */
+.ovl{position:fixed;inset:0;background:rgba(38,38,38,.4);z-index:90;display:flex;align-items:center;justify-content:center;padding:12px}
+.mbox{background:#fff;width:624px;max-width:100%;max-height:calc(100vh - 24px);overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
+.mbox.cite .crow{display:flex;border-top:4px solid var(--grey5);padding-top:8px}
+.mbox.cite .crow .k{width:142px;flex:0 0 142px;color:var(--grey2)}
+.mbox.cite .crow .v{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;user-select:all}
+.mbox.err{gap:24px}
+.mbox.err h4{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;margin:0 0 12px}
+.mbox.err p{font-size:18px;line-height:20px;letter-spacing:-.18px;margin:0}
+.mbox.err textarea{width:100%;height:164px;border:2px solid var(--grey5);padding:12px;font:inherit;font-size:18px;line-height:20px;letter-spacing:-.18px;resize:none;outline:none;color:var(--ink)}
+.mbox.err textarea::placeholder{color:var(--grey3)}
+.mbox.err textarea:focus{border-color:var(--grey2)}
+.mbox.err .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.mbox.err .send{width:100%;height:32px;border:0;padding:8px;display:flex;gap:4px;align-items:center;justify-content:center;font:inherit;letter-spacing:0;cursor:pointer;background:var(--ink);color:#fff}
+.mbox.err .send span{padding:0 4px}
+.mbox.err .send:disabled{background:var(--grey2);color:var(--grey3);cursor:default}
+.mbox.err .errmsg{color:var(--red)}
 
 /* «Похожее» */
 #similar{padding-top:80px}
 #similar .feat{padding-bottom:144px}
 
-/* ==== desktop-1280 (1024–1599): отступ описания 48 ==== */
+/* ==== desktop-1280 (1024–1599): заголовок H2, отступ описания 72, навигация 210 ==== */
 @media (max-width:1599px){
-  #rest.mat{--ind:48px}
-  #similar .feat{padding-bottom:144px}
+  #rest.mat{--ind:72px}
+  #cover{min-height:560px}
+  #cover h1{font-size:37px;line-height:36px;letter-spacing:-.74px}
+  .pnav{width:210px}
+  .pnav .tert{padding-left:24px}
 }
 
-/* ==== планшет (600–1023): одна колонка, шапка с «Меню», без навигации по странице ==== */
+/* ==== планшет (600–1023): одна колонка, шапка по центру, навигация — плашка внизу экрана ==== */
 @media (max-width:1023px){
   #rest.mat{--ind:144px;padding-top:110px}
   #matgrid{grid-template-columns:1fr}
-  #cover{position:static;height:auto;min-height:0;padding:12px 12px 32px;gap:24px}
-  #secmenu{display:none}
-  #saveBtn{position:static;align-self:flex-start}
-  #similar{padding-top:80px}
+  #cover{position:static;height:auto;min-height:0;padding:96px 12px 0;gap:120px}
+  #cover .top{align-items:center;text-align:center}
+  #cover .top .div8{display:none}
+  #cover .top .info{align-self:stretch;text-align:left}
+  #cover h1{font-size:37px;line-height:36px;letter-spacing:-.74px}
+  #cover .actions,.pnav{display:none}
+  #rightcol{padding-bottom:0}
+  .pbar{position:fixed;left:8px;right:8px;bottom:8px;z-index:60;display:flex;align-items:center;gap:48px;background:#f2f2f2;padding:8px 8px 8px 8px}
+  .pbar-items{flex:1 1 auto;display:flex;justify-content:space-between;gap:8px}
+  .pbar-items a{border-left:4px solid var(--ink);padding:0 8px;min-height:32px;display:flex;align-items:center;max-width:120px}
+  .pbar-items a.on{border-color:var(--grey2);color:var(--grey2);font-weight:700}
+  .pbar-cur{display:none}
+  .pbar-cite{flex:0 0 auto}
+  .fnpop{width:260px}
   #similar .feat{padding-bottom:144px}
 }
 
-/* ==== мобайл (<600): заголовок 37, отступ описания 12, карточки связанных 96 с фото 80 ==== */
+/* ==== мобайл (<600): отступ описания 12, карточки связанных 112 с миниатюрой 96, плашка со свёрнутой навигацией ==== */
 @media (max-width:599px){
   #rest.mat{--ind:12px}
-  #cover h1{font-size:37px;line-height:36px;letter-spacing:-1.11px}
-  .rel-item .row{min-height:80px}
+  #cover{padding-top:48px;gap:64px}
+  #cover .info .row .h{width:87px}
+  #rest.mat,#cover .info{letter-spacing:.141px}
+  .rich{padding-right:0}
+  .rich ol li::before{left:-40px}
+  .doc{align-items:flex-start;margin-right:0}
+  .src{min-height:16px}
+  .fnpop{width:calc(100vw - 48px);max-width:287px}
+  .rel-item .row{min-height:96px;align-items:flex-start}
   .rel-item h3{font-size:20px;line-height:20px;letter-spacing:0}
-  .rel-item .im{width:80px;height:80px;align-self:center}
-  .rel-item .vb{flex:0 0 auto;height:36px}
+  .rel-item .im{height:96px;align-self:center}
+  .rel-item .vb{flex:0 0 auto;height:32px}
+  .pbar{gap:8px;justify-content:space-between}
+  .pbar-items{display:none}
+  .pbar-cur{display:block;position:relative}
+  .curbtn{height:32px;background:var(--grey5);border:0;padding:8px;display:flex;gap:4px;align-items:center;font:inherit;letter-spacing:0;cursor:pointer;color:inherit}
+  .curbtn span{padding:0 4px}
+  .pbar-list{position:absolute;left:0;bottom:calc(100% + 12px);width:166px;background:#f2f2f2;padding:8px;display:flex;flex-direction:column;gap:8px}
+  .pbar-list a{border-top:4px solid var(--ink);padding-top:12px;height:28px;display:block}
+  .pbar-list a.on{border-color:var(--grey2);color:var(--grey2);font-weight:700}
+  .pbar-list a.on + a{border-color:var(--grey2)}
+  .pbar-list .end{height:4px;background:var(--ink)}
+  .mbox{padding:16px}
+  .mbox.cite .crow{gap:4px}
+  .mbox.cite .crow .k{width:59px;flex-basis:59px}
+  .mbox.err textarea{height:240px}
   #similar .feat{gap:32px;padding-bottom:96px}
 }

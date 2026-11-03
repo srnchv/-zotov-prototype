@@ -16,6 +16,8 @@ export const S = reactive({
   loaded: false,
   raw: [] as Entity[],
   db: {} as Record<string, Entity>,
+  roles: {} as Record<string, Record<string, string>>,
+  unreadReports: 0, // roles[id][linkedId] — роль связанной сущности на странице id
   audit: null as null | { recent: any[]; summary: Record<string, { edits: number; lastAt: string; lastActor: string }> },
   toasts: [] as { id: number; msg: string }[],
 });
@@ -65,8 +67,15 @@ export async function load() {
     const raw: Entity[] = entities.map((e: any) => ({ ...e, links: [] }));
     const db: Record<string, Entity> = {};
     raw.forEach((o) => (db[o.id] = o));
-    for (const [a, b] of links) if (db[a] && db[b]) { db[a].links.push(b); db[b].links.push(a); }
+    // связь [a, b] или [a, b, роль, roleOf]: роль относится к сущности roleOf и показывается на странице другой
+    const roles: Record<string, Record<string, string>> = {};
+    for (const [a, b, role, roleOf] of links as [string, string, string?, string?][]) if (db[a] && db[b]) {
+      db[a].links.push(b); db[b].links.push(a);
+      if (role && roleOf) { const other = roleOf === a ? b : a; (roles[other] ||= {})[roleOf] = role; }
+    }
+    S.roles = roles;
     S.raw = raw; S.db = db; S.apiLive = true; S.loaded = true;
+    if (S.token) fetch(API + "/reports", { headers: { authorization: "Bearer " + S.token } }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) S.unreadReports = j.unread; }).catch(() => {});
   } catch { S.apiLive = false; S.loaded = true; }
 }
 export async function loadAudit(force = false) {
@@ -101,6 +110,7 @@ export const DICTDEF = (): DictDef[] => [
   { key: "author", label: "Авторы — группы", base: () => ["Архитекторы", "Инженеры", "Проектные организации"] },
   { key: "sub:author", label: "Авторы", base: () => [...new Set(["Архитекторы › Неизвестный архитектор", ...all("place").flatMap((o) => (o.authors || []) as string[]).filter((v) => v.includes(" › "))])] },
   { key: "customer", label: "Заказчики", base: () => [...new Set(["правительство", "ведомство", "управление", "муниципалитет", "кооператив", "профсоюз", "общественная организация", "неустановленный застройщик", ...all("place").flatMap((o) => (o.customers || []) as string[])])] },
+  { key: "role", label: "Роли в связях", base: () => [...new Set(["Автор", "Куратор", "Участник", "Докладчик", "Организатор", "Партнёр", "Заказчик", "Владелец", "Место проведения", ...Object.values(S.roles).flatMap((m) => Object.values(m))])] },
   { key: "okn", label: "Статус ОКН", base: () => [...new Set(["федерального значения", "регионального значения", "местного значения", "выявленный", "не является ОКН", ...all("place").map((o) => String(o.okn || "").trim()).filter(Boolean)])] },
   { key: "city", label: "Города", base: () => [...new Set([...all("place").map((o) => String(o.city || "").trim()), ...all("event").map((o) => String(o.city || "").trim()), ...all("person").flatMap((o) => (o.cities as string[]) || [])].filter(Boolean))].sort((a, b) => a.localeCompare(b, "ru")) },
   ...Object.entries({ mtype: "материалов", evType: "событий", group: "личностей (роли)", colType: "коллекций", orgType: "организаций", prType: "проектов Центра", srcType: "источников" }).map(([tk, l]) => ({

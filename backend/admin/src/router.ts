@@ -14,6 +14,7 @@ export const router = createRouter({
     { path: "/import", component: () => import("./views/Import.vue") },
     { path: "/home", component: () => import("./views/Home.vue") },
     { path: "/site", component: () => import("./views/Site.vue") },
+    { path: "/reports", component: () => import("./views/Reports.vue") },
     { path: "/stats", component: () => import("./views/Stats.vue"), meta: { admin: true } },
     { path: "/users", component: () => import("./views/Users.vue"), meta: { admin: true } },
     { path: "/:rest(.*)", redirect: "/dash" },

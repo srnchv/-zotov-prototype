@@ -46,9 +46,10 @@ export async function listEntities(opts: {
   return { total, items: rows.map(rowToEntity) };
 }
 
+// связанные сущности + роль связи, если роль относится к связанной стороне (role_of = её id)
 const linkedOf = (id: string) =>
   q.all(
-    `SELECT e.* FROM links l JOIN entities e ON e.id = CASE WHEN l.a = ? THEN l.b ELSE l.a END
+    `SELECT e.*, l.role AS link_role, l.role_of AS link_role_of FROM links l JOIN entities e ON e.id = CASE WHEN l.a = ? THEN l.b ELSE l.a END
      WHERE l.a = ? OR l.b = ?`,
     [id, id, id],
   );
@@ -56,7 +57,7 @@ const linkedOf = (id: string) =>
 export async function getEntity(id: string): Promise<(Entity & { links: Entity[] }) | null> {
   const r = await q.get("SELECT * FROM entities WHERE id = ?", [id]);
   if (!r) return null;
-  const linked = (await linkedOf(id)).map(rowToEntity);
+  const linked = (await linkedOf(id)).map((x: any) => { const e = rowToEntity(x); const role = x.link_role && x.link_role_of === e.id ? String(x.link_role) : ""; return role ? { ...e, linkRole: role } : e; }); // linkRole — не путать с полем role у личности
   return { ...rowToEntity(r), links: linked };
 }
 
@@ -94,6 +95,12 @@ export async function addLink(x: string, y: string) {
   if (x === y) throw new Error("self-link");
   const [a, b] = canonical(x, y);
   await q.run(SQL.LINK_INSERT, [a, b]);
+}
+
+// роль у связи: подпись относится к сущности roleOf (одной из пары); пустая роль — снять
+export async function setLinkRole(x: string, y: string, role: string, roleOf: string) {
+  const [a, b] = canonical(x, y);
+  return (await q.run("UPDATE links SET role = ?, role_of = ? WHERE a = ? AND b = ?", [role, role ? roleOf : "", a, b])).changes > 0;
 }
 
 export async function removeLink(x: string, y: string) {
@@ -171,7 +178,8 @@ export async function dicts() {
 // полный экспорт для клик-прототипа: все сущности + пары связей
 export async function exportAll() {
   const entities = (await q.all("SELECT * FROM entities")).map(rowToEntity);
-  const links = (await q.all("SELECT a, b FROM links")).map((x: any) => [x.a, x.b]);
+  // пара + роль: [a, b] или [a, b, role, roleOf] — роль относится к сущности roleOf
+  const links = (await q.all("SELECT a, b, role, role_of FROM links")).map((x: any) => (x.role ? [x.a, x.b, x.role, x.role_of] : [x.a, x.b]));
   return { entities, links };
 }
 
@@ -243,3 +251,18 @@ export async function stats() {
   const links = Number((await q.get("SELECT count(*) c FROM links")).c);
   return { byType: Object.fromEntries(rows.map((r: any) => [r.type, Number(r.c)])), links };
 }
+
+// ---- Сообщения с сайта («Напишите нам, если нашли несоответствие») ----
+export type Report = { id: string; entity_id: string; title: string; url: string; text: string; ip: string; at: string; read_at: string | null; sent: number };
+export async function addReport(r: { entityId: string; title: string; url: string; text: string; ip: string }) {
+  const id = randomUUID().slice(0, 10);
+  await q.run("INSERT INTO reports (id, entity_id, title, url, text, ip) VALUES (?,?,?,?,?,?)", [id, r.entityId, r.title, r.url, r.text, r.ip]);
+  return id;
+}
+export const markReportSent = (id: string) => q.run("UPDATE reports SET sent = 1 WHERE id = ?", [id]);
+export const listReports = async (): Promise<Report[]> => (await q.all("SELECT * FROM reports ORDER BY at DESC LIMIT 500")) as Report[];
+export const unreadReports = async () => Number((await q.get("SELECT count(*) c FROM reports WHERE read_at IS NULL")).c);
+export const readReport = (id: string) => q.run(`UPDATE reports SET read_at = ${SQL.NOW} WHERE id = ?`, [id]);
+export const deleteReport = async (id: string) => (await q.run("DELETE FROM reports WHERE id = ?", [id])).changes > 0;
+// лимит сообщений с одного IP в сутки (защита от спама)
+export const reportsFromIp = async (ip: string, hours: number) => Number((await q.get(isPg ? "SELECT count(*) c FROM reports WHERE ip = ? AND at > now() - make_interval(hours => ?)" : "SELECT count(*) c FROM reports WHERE ip = ? AND at > datetime('now', '-' || ? || ' hours')", [ip, hours])).c);

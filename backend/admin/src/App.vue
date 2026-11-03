@@ -8,7 +8,7 @@ import { ROLE_LABEL } from "./lib/model";
 import { JOB } from "./lib/tourJob";
 const route = useRoute();
 const TABS = computed(() => [
-  ["/dash", "Дашборд"], ["/entities", "Сущности"], ["/dict", "Справочники"], ["/media", "Медиатека"], ["/import", "Импорт"], ["/home", "Главная страница"], ["/site", "Тексты сайта"],
+  ["/dash", "Дашборд"], ["/entities", "Сущности"], ["/dict", "Справочники"], ["/media", "Медиатека"], ["/import", "Импорт"], ["/home", "Главная страница"], ["/site", "Тексты сайта"], ["/reports", "Сообщения"],
   ...(isAdmin.value ? [["/stats", "Статистика"], ["/users", "Пользователи"]] : []),
 ]);
 onMounted(() => { if (logged.value) load(); window.addEventListener("beforeunload", (e) => { if (JOB.cur?.running) { e.preventDefault(); e.returnValue = ""; } }); });
@@ -30,7 +30,7 @@ const out = () => { logout(); location.href = "/admin/login"; };
       <div v-if="S.apiLive === false" class="admbar err">Стенд недоступен — данные не загрузились, изменения не сохранятся.</div>
       <div class="cab">
         <aside class="side">
-          <router-link v-for="[p, l] in TABS" :key="p" :to="p" :class="{ active: route.path === p || (p === '/entities' && /^\/(edit|new)/.test(route.path)) }">{{ l }}</router-link>
+          <router-link v-for="[p, l] in TABS" :key="p" :to="p" :class="{ active: route.path === p || (p === '/entities' && /^\/(edit|new)/.test(route.path)) }">{{ l }}<span v-if="p === '/reports' && S.unreadReports" class="badge">{{ S.unreadReports }}</span></router-link>
           <a :href="SITE" target="_blank" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;font-size:13px">← На публичный сайт</a>
         </aside>
         <div><router-view /></div>

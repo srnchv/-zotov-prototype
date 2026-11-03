@@ -3,7 +3,7 @@
 // Все страницы рендерятся на сервере (SSR) — карточки индексируются поисковиками.
 export type Style = Record<string, string | number>; // стиль с CSS-переменными кадра (на фронте кладётся в style={})
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
-export type Entity = Base & { links?: string[] };
+export type Entity = Base & { links?: string[]; roles?: Record<string, string> }; // roles[linkedId] — роль связанной сущности на странице этой
 export type EntityFull = Base & { links: Entity[] };
 
 export const TYPES: Record<string, { l: string; pl: string }> = {
@@ -93,3 +93,29 @@ export const coordsOf = (e: Entity): [number, number] | null => {
   const lat = parseFloat(String(e.lat ?? "").replace(",", ".")), lon = parseFloat(String(e.lon ?? "").replace(",", "."));
   return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
 };
+
+// статус проекта Центра по датам (ТЗ «Единый шаблон»): Скоро / Идёт / Завершён; без дат — пусто
+export const projectStatus = (o: Record<string, unknown>, now = new Date()) => {
+  const d = (v: unknown) => { const s = String(v || "").trim(); return s ? new Date(s + (s.length === 10 ? "T00:00:00" : "")) : null; };
+  const from = d(o.dateFrom), to = d(o.dateTo);
+  if (!from && !to) return "";
+  if (from && now < from) return "Скоро";
+  if (to && now > new Date(to.getTime() + 86400000)) return "Завершён";
+  return "Идёт";
+};
+// «26.09.25 — 20.10.25» из дат начала/окончания (макет Проекта центра)
+export const projectDates = (o: Record<string, unknown>) => {
+  const f = (v: unknown) => { const m = String(v || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1].slice(2)}` : ""; };
+  const a = f(o.dateFrom), b = f(o.dateTo);
+  return a && b ? `${a} — ${b}` : a || b || String(o.dates || "");
+};
+// имена через «;» → личности архива по точному названию или по фамилии (первое слово имени совпадает с фамилией в карточке)
+export const namesOf = (v: unknown) => String(v ?? "").split(/[;\n]/).map((x) => x.trim().replace(/^[^›]+›\s*/, "")).filter(Boolean);
+export function findByName(db: Record<string, Entity>, type: string, name: string): Entity | undefined {
+  const n = name.toLowerCase().replace(/ё/g, "е").trim(); if (!n) return undefined;
+  const all = Object.values(db).filter((e) => e.type === type && published(e));
+  const exact = all.find((e) => e.title.toLowerCase().replace(/ё/g, "е") === n); if (exact) return exact;
+  const parts = n.split(/\s+/), sur = parts.length > 1 ? parts[parts.length - 1] : parts[0]; // «Александр Родченко» / «Родченко А. М.»
+  const cand = all.filter((e) => e.title.toLowerCase().replace(/ё/g, "е").split(/\s+/).includes(sur));
+  return cand.length === 1 ? cand[0] : undefined;
+}

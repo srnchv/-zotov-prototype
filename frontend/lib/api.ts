@@ -5,10 +5,11 @@ import type { Cat } from "./search";
 // loadArchive — снимок архива с бэкенда (сущности + связи), строим индекс по id
 // Полный снимок архива: сущности + связи. Для главной и связанных блоков.
 export async function loadArchive() {
-  const { entities, links } = await get<{ entities: Entity[]; links: [string, string][] }>("/export");
+  const { entities, links } = await get<{ entities: Entity[]; links: [string, string, string?, string?][] }>("/export");
   const db: Record<string, Entity> = {};
   for (const e of entities) db[e.id] = { ...e, links: [] };
-  for (const [a, b] of links) { if (db[a] && db[b]) { db[a].links!.push(b); db[b].links!.push(a); } }
+  // [a, b] или [a, b, роль, roleOf]: роль относится к сущности roleOf и выводится в её карточке на странице другой стороны
+  for (const [a, b, role, roleOf] of links) { if (db[a] && db[b]) { db[a].links!.push(b); db[b].links!.push(a); if (role && roleOf) { const other = roleOf === a ? b : a; ((db[other].roles ||= {}) as Record<string, string>)[roleOf] = role; } } }
   return db;
 }
 

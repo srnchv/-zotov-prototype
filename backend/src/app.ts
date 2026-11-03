@@ -8,6 +8,7 @@ import * as transcode from "./transcode.js";
 import { notifyFront, revalidateState } from "./revalidate.js";
 import { hideOrig, isPublic, scrub, publicView } from "./publicview.js";
 import * as query from "./query.js";
+import { sendMail, mailConfigured } from "./mail.js";
 import * as imp from "./import.js";
 import * as users from "./users.js";
 import path from "node:path";
@@ -30,7 +31,7 @@ export function createApp() {
   // после любой записи (кроме счётчиков просмотров и входа) — сброс кэша страниц сайта
   app.use("/api", (req, res, next) => {
     if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
-    if (/^\/(entities\/[^/]+\/view|hit|login|geo|users|import\/(preview|inspect)|transcode\/status)/.test(req.path)) return next();
+    if (/^\/(entities\/[^/]+\/view|hit|login|geo|users|import\/(preview|inspect)|transcode\/status|reports?(\/|$))/.test(req.path)) return next();
     res.on("finish", () => { if (res.statusCode < 400) { query.invalidate(); notifyFront(); } });
     next();
   });
@@ -181,6 +182,26 @@ export function createApp() {
   app.get("/api/q/search", ah(async (req, res) => { qCache(res); res.json(await query.search(req.query as any, ["person", "text"].includes(String(req.query.section)) ? (String(req.query.section) as "person" | "text") : undefined)); }));
   app.get("/api/q/chrono", ah(async (req, res) => { qCache(res); res.json(await query.chrono(req.query as any)); }));
   app.get("/api/q/map", ah(async (req, res) => { qCache(res); res.json(await query.map(req.query as any)); }));
+  // «Напишите нам, если нашли несоответствие»: без входа; защита — скрытое поле-ловушка (website), лимит в минуту и в сутки с IP.
+  // Сообщение сохраняется в базе и, если настроена почта (см. mail.ts), уходит письмом на адрес из текстов сайта.
+  app.post("/api/report", limit(5), ah(async (req, res) => {
+    const b = z.object({ id: z.string().max(80).optional(), text: z.string().min(5).max(4000), website: z.string().max(200).optional() }).parse(req.body);
+    if (b.website) return res.status(201).json({ ok: true }); // бот заполнил ловушку — делаем вид, что приняли
+    const ip = String(req.ip || "");
+    if ((await repo.reportsFromIp(ip, 24)) >= 20) return res.status(429).json({ error: "слишком много сообщений, попробуйте позже" });
+    const e = b.id ? await repo.getEntity(b.id) : null;
+    const title = e?.title || "", url = e ? `${process.env.SITE_URL || process.env.FRONT_URL || ""}/m/${e.id}` : "";
+    const id = await repo.addReport({ entityId: e?.id || "", title, url, text: b.text.trim(), ip });
+    const site = await repo.getEntity("site");
+    const to = String(site?.reportEmail || process.env.REPORT_EMAIL || "");
+    try {
+      if (await sendMail(to, `Архив: сообщение об ошибке${title ? " — " + title : ""}`, `${b.text.trim()}\n\n${title ? "Карточка: " + title + "\n" : ""}${url ? "Ссылка: " + url + "\n" : ""}`)) await repo.markReportSent(id);
+    } catch (err: any) { console.error("report mail failed:", err?.message || err); }
+    res.status(201).json({ ok: true });
+  }));
+  app.get("/api/reports", auth, ah(async (_req, res) => res.json({ items: await repo.listReports(), unread: await repo.unreadReports(), mail: mailConfigured() })));
+  app.post("/api/reports/:id/read", auth, ah(async (req, res) => { await repo.readReport(String(req.params.id)); res.json({ ok: true }); }));
+  app.delete("/api/reports/:id", adminOnly, ah(async (req, res) => { if (!(await repo.deleteReport(String(req.params.id)))) return res.status(404).json({ error: "not found" }); res.status(204).end(); }));
   app.get("/api/stats", ah(async (_req, res) => res.json(await repo.stats())));
   app.get("/api/dicts", ah(async (_req, res) => res.json(await repo.dicts())));
   const isStaff = async (req: express.Request) => !!(await whoIs(req));
@@ -257,13 +278,21 @@ export function createApp() {
   }));
 
   app.post("/api/entities/:id/links", auth, ah(async (req, res) => {
-    const { targetId } = z.object({ targetId: z.string() }).parse(req.body);
+    const { targetId, role } = z.object({ targetId: z.string(), role: z.string().max(80).optional() }).parse(req.body);
     const e = await repo.getEntity(String(req.params.id));
     if (!e || !(await repo.getEntity(targetId)))
       return res.status(404).json({ error: "entity not found" });
     await repo.addLink(String(req.params.id), targetId);
+    if (role) await repo.setLinkRole(String(req.params.id), targetId, role.trim(), targetId); // роль относится к связанной сущности
     await repo.logAct("link", e.id, e.title, actor(req));
     res.status(201).json(await repo.getEntity(String(req.params.id)));
+  }));
+
+  // роль связанной сущности (Куратор, Участник, Заказчик…) — выводится в карточке связанного на странице :id
+  app.patch("/api/entities/:id/links/:targetId", auth, ah(async (req, res) => {
+    const { role } = z.object({ role: z.string().max(80) }).parse(req.body);
+    if (!(await repo.setLinkRole(String(req.params.id), String(req.params.targetId), role.trim(), String(req.params.targetId)))) return res.status(404).json({ error: "link not found" });
+    res.json(await repo.getEntity(String(req.params.id)));
   }));
 
   app.delete("/api/entities/:id/links/:targetId", auth, ah(async (req, res) => {

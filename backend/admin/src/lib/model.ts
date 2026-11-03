@@ -38,11 +38,22 @@ export const SPECIFIC: Record<string, [string, string, string?][]> = {
   place: [["functions", "Тип и функции", "multi:func"], ["city", "Город", "dict:city"], ["address", "Адрес"], ["placeStatus", "Состояние здания", "select:Существует|Утрачено"], ["okn", "Статус ОКН", "dictsel:okn"], ["authors", "Авторы", "multi:author"], ["customers", "Заказчики", "multi:customer"]],
   person: [["spheres", "Сфера деятельности", "multi:sphere"], ["cities", "Города", "multi:city"]], // сферы — из справочника; города — где жил и работал (фильтр «Город»)
   event: [["city", "Город", "dict:city"]], // для фильтра «Город» в хронографе; подставляется из привязанного места
-  project: [["curators", "Кураторы"]],
+  project: [["curators", "Кураторы", "имена через «;» — если есть карточка личности, имя станет ссылкой"], ["venue", "Место проведения", "например: Центр «Зотов», Хлебозавод №5 — если есть карточка места, станет ссылкой"], ["dateFrom", "Дата начала", "date"], ["dateTo", "Дата окончания", "date"]],
   source: [["author", "Автор"], ["publisher", "Издательство"], ["pubplace", "Место издания"]],
   theme: [["def", "Краткое определение"]],
+  material: [["authors", "Авторы", "имена через «;» — если есть карточка личности, имя станет ссылкой"]],
 };
-export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "okn", "functions", "authors", "customers", "spheres", "cities", "mtype", "subtype", "date", "desc", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "author", "publisher", "pubplace", "def"];
+// статус проекта по датам (ТЗ: Скоро / Идёт / Завершён); без дат — пусто
+export const projectStatus = (o: { dateFrom?: unknown; dateTo?: unknown }) => {
+  const d = (v: unknown) => { const s = String(v || "").trim(); return s ? new Date(s + (s.length === 10 ? "T00:00:00" : "")) : null; };
+  const from = d(o.dateFrom), to = d(o.dateTo), now = new Date();
+  if (!from && !to) return "";
+  if (from && now < from) return "Скоро";
+  if (to && now > new Date(to.getTime() + 86400000)) return "Завершён";
+  return "Идёт";
+};
+export const PAYLOAD_KEYS = ["lat", "lon", "placeStatus", "okn", "functions", "authors", "customers", "spheres", "cities", "mtype", "subtype", "date", "desc", "notes", "sources", "pinned", "evType", "placeType", "srcType", "group", "role", "city", "address", "colType", "orgType", "prType", "themeType", "life", "dates", "period", "year", "curators", "venue", "dateFrom", "dateTo", "cardCover", "author", "publisher", "pubplace", "def"];
+export const LIST_KEYS = ["notes", "sources", "pinned", "functions", "authors", "customers", "spheres", "cities"]; // массивы в payload
 // источник: текстовый материал (полная карточка) или библиографическая запись (короткая)
 export const SRCKIND: Record<string, string> = { text: "Текстовый материал", record: "Библиографическая запись" };
 export const isRecord = (o: { type: string; srcKind?: string }) => o.type === "source" && o.srcKind === "record";
@@ -96,5 +107,6 @@ export const SITE_DEF: [string, [string, string, string, boolean?][]][] = [
   ["Ссылки", [["centerUrl", "Сайт Центра «Зотов» (ссылка «Зотов Центр»)", "https://zotov.center"], ["privacyUrl", "Политика конфиденциальности (ссылка)", ""], ["personalUrl", "Обработка персональных данных (ссылка)", ""], ["offerUrl", "Публичная оферта (ссылка)", ""], ["copyright", "Копирайт в футере", "© Центр Зотов, 2022–2026"]]],
   ["Соцсети", [["vk", "ВКонтакте (ссылка)", ""], ["tg", "Telegram (ссылка)", ""], ["yt", "YouTube (ссылка)", ""], ["dzen", "Дзен (ссылка)", ""]]],
   ["Описания разделов", [["catDesc_theme", "Темы — описание раздела (для поисковиков и превью ссылок)", "", true], ["catDesc_project", "Проекты Центра — описание раздела", "", true], ["catDesc_person", "Личности — описание раздела", "", true], ["catDesc_collection", "Коллекции — описание раздела", "", true], ["catDesc_text", "Тексты — описание раздела", "", true], ["catDesc_search", "Поиск — описание страницы", "", true], ["catDesc_chrono", "Хронограф — описание страницы", "", true], ["catDesc_map", "Карта — описание страницы", "", true]]],
+  ["Сообщения с сайта", [["reportEmail", "Почта, на которую уходят сообщения «Напишите нам, если нашли несоответствие» (раздел «Сообщения» хранит их в любом случае)", ""]]],
   ["SEO", [["seoTitle", "Заголовок сайта по умолчанию (вкладка браузера, главная)", "ЗОТОВ — Архив"], ["seoDesc", "Описание сайта по умолчанию — до 160 знаков; главная и страницы без своего описания", "Цифровой архив Центра «Зотов»: материалы, личности, события, места и проекты, объединённые в единую систему связей", true], ["gscCode", "Google Search Console — код подтверждения (содержимое content из мета-тега google-site-verification)", ""], ["ywCode", "Яндекс Вебмастер — код подтверждения (content из мета-тега yandex-verification)", ""], ["metrikaId", "Яндекс Метрика — номер счётчика (только цифры)", ""]]],
 ];

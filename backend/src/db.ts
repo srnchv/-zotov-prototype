@@ -51,6 +51,19 @@ CREATE TABLE IF NOT EXISTS links (
 );
 CREATE INDEX IF NOT EXISTS idx_links_b ON links(b);
 
+-- Сообщения «Напишите нам, если нашли несоответствие» с публичных страниц
+CREATE TABLE IF NOT EXISTS reports (
+  id        TEXT PRIMARY KEY,
+  entity_id TEXT NOT NULL DEFAULT '',
+  title     TEXT NOT NULL DEFAULT '',
+  url       TEXT NOT NULL DEFAULT '',
+  text      TEXT NOT NULL,
+  ip        TEXT NOT NULL DEFAULT '',
+  at        TEXT NOT NULL DEFAULT (${SQL.NOW}),
+  read_at   TEXT,
+  sent      INTEGER NOT NULL DEFAULT 0
+);
+
 -- Журнал действий редакторов: кто и что создал/изменил/удалил
 CREATE TABLE IF NOT EXISTS audit (
   entity_id    TEXT NOT NULL,
@@ -115,6 +128,9 @@ if (isPg) {
     GENERATED ALWAYS AS (to_tsvector('russian', coalesce(title,'') || ' ' || coalesce(payload,''))) STORED`);
   await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_tsv ON entities USING GIN (tsv)");
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS sess_ver INTEGER NOT NULL DEFAULT 1"); // версия сессии: смена роли/пароля/статуса гасит старые токены
+  // роль у связи (Куратор, Участник…): role — подпись, role_of — id той сущности из пары, к которой она относится
+  await pool.query("ALTER TABLE links ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT ''");
+  await pool.query("ALTER TABLE links ADD COLUMN IF NOT EXISTS role_of TEXT NOT NULL DEFAULT ''");
   if (trgmAvailable)
     await pool.query("CREATE INDEX IF NOT EXISTS idx_entities_title_trgm ON entities USING GIN (lower(title) gin_trgm_ops)");
   console.log("БД: PostgreSQL (managed), FTS готов" + (trgmAvailable ? " + trgm" : ""));
@@ -126,6 +142,7 @@ if (isPg) {
   try { db.exec("PRAGMA journal_mode=WAL"); } catch { /* WAL недоступен на некоторых FS — ок */ }
   db.exec(SCHEMA);
   try { db.exec("ALTER TABLE users ADD COLUMN sess_ver INTEGER NOT NULL DEFAULT 1"); } catch { /* колонка уже есть */ }
+  try { db.exec("ALTER TABLE links ADD COLUMN role TEXT NOT NULL DEFAULT ''"); db.exec("ALTER TABLE links ADD COLUMN role_of TEXT NOT NULL DEFAULT ''"); } catch { /* колонки уже есть */ }
   db.function("lc", { deterministic: true }, (v: unknown) => String(v ?? "").toLowerCase());
   q = {
     all: async (sql, args = []) => db.prepare(sql).all(...(args as any[])),

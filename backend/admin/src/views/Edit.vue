@@ -6,8 +6,9 @@ import { ask, askInput } from "../lib/dialog";
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { S, SITE, api, load, loadAudit, toast, canEdit, dictValues, subOptions, uploadFile, UPLOAD, fmtMb, homeCheck, collHighlights } from "../lib/store";
-import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIFIC, PAYLOAD_KEYS, SRCKIND, isRecord, ACCESS, ACTL, REL_ORDER, REL_HEAD, MEDIA_FLOORS, HOME_TYPES, HOME_KEY, kindOf, fmtAt, fmtSize, type Entity } from "../lib/model";
+import { TYPES, TYPEKEY, NO_TYPE, SUBKEY, TYPELABEL, SUBLABEL, DATEKEY, DATELABEL, SPECIFIC, PAYLOAD_KEYS, LIST_KEYS, SRCKIND, isRecord, ACCESS, ACTL, REL_ORDER, REL_HEAD, MEDIA_FLOORS, HOME_TYPES, HOME_KEY, projectStatus, kindOf, fmtAt, fmtSize, type Entity } from "../lib/model";
 import Picker from "../components/Picker.vue";
+import RichText from "../components/RichText.vue";
 import Modal from "../components/Modal.vue";
 import CollItems from "../components/CollItems.vue";
 import CropModal, { type Frames } from "../components/CropModal.vue";
@@ -23,7 +24,8 @@ const f = reactive<Record<string, any>>({});
 const home = reactive({ on: false, featured: false, items: null as null | Record<string, any> });
 function fill() {
   const e = o.value; if (!e) return;
-  f.title = e.title; PAYLOAD_KEYS.forEach((k) => (f[k] = e[k] ?? ""));
+  f.title = e.title; PAYLOAD_KEYS.forEach((k) => (f[k] = LIST_KEYS.includes(k) ? [...((e[k] as string[]) || [])] : (e[k] ?? "")));
+  f.sourcesText = ((e.sources as string[]) || []).join("\n");
   home.on = !!e[HOME_KEY(e.type)]; home.featured = !!e.featured;
 }
 watch(o, fill, { immediate: true });
@@ -38,7 +40,19 @@ const files = computed(() => (o.value?.links || []).map((id) => S.db[id]).filter
 const isCover = (m: Entity) => (o.value.cover ? o.value.cover === m.id : !!m.thumb && o.value.img === m.thumb);
 const sum = computed(() => S.audit?.summary?.[props.id]);
 const hist = computed(() => (S.audit?.recent || []).filter((a) => a.entity_id === props.id).slice(0, 5));
-const picker = ref<null | "link" | "media" | "tag">(null);
+const picker = ref<null | "link" | "media" | "tag" | "pinned" | "cardCover">(null);
+// роль связанной сущности на этой странице (Куратор, Участник…) — хранится у связи, показывается в карточке связанного на сайте
+const roleOf = (tid: string) => S.roles[props.id]?.[tid] || "";
+async function setRole(tid: string, role: string) {
+  try { await api(`/entities/${props.id}/links/${tid}`, { method: "PATCH", body: JSON.stringify({ role }) }); await load(); toast(role ? "Роль сохранена" : "Роль снята"); } catch (e: any) { toast("Ошибка: " + e.message); }
+}
+const roleEdit = ref("");
+// закреплённые похожие — карточки того же типа, идут первыми в блоке «Похожее»
+const pinned = computed(() => ((f.pinned as string[]) || []).map((id) => S.db[id]).filter(Boolean));
+const pinPool = computed(() => S.raw.filter((x) => x.type === o.value?.type && x.id !== props.id && !(f.pinned || []).includes(x.id)));
+const pin = (x: Entity) => { f.pinned = [...(f.pinned || []), x.id]; };
+const unpin = (id: string) => { f.pinned = (f.pinned || []).filter((x: string) => x !== id); };
+const cardCoverOf = computed(() => (f.cardCover ? S.db[f.cardCover] : null));
 const ACCESS_UI = false; // уровни доступа — вместе с личным кабинетом
 const crop = ref<Entity | null>(null), tour = ref(false), uplStatus = ref("");
 // адаптивное видео: статус кодирования из карточки медиафайла (обновляется опросом, пока идёт)
@@ -58,7 +72,9 @@ async function save() {
   const chk = HOME_TYPES.includes(e.type) ? homeCheck(draft) : { errors: [], warnings: [] };
   if (chk.errors.length) { toast(chk.errors[0]); return; }
   const payload: Record<string, any> = {};
+  f.sources = String(f.sourcesText || "").split("\n").map((x: string) => x.trim()).filter(Boolean); // источники — по строке на запись, порядок = порядок строк
   PAYLOAD_KEYS.forEach((k) => (payload[k] = Array.isArray(f[k]) ? f[k] : (f[k] ?? "")));
+  if (e.type === "project") { if (payload.dateFrom && payload.dateTo && payload.dateFrom > payload.dateTo) { toast("Дата окончания раньше даты начала"); return; } }
   if (HOME_TYPES.includes(e.type)) Object.assign(payload, draft, { id: undefined });
   delete payload.id;
   try {
@@ -169,13 +185,24 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
             <div v-else class="chips"><span v-for="v in dictValues(ph.slice(6))" :key="v" class="fchip" :class="{ on: (f[k] || []).includes(v) }" @click="toggleMulti(k, v)">{{ v }}</span></div>
             <div v-if="!dictValues(ph.slice(6)).length" class="muted" style="font-size:12px">Справочник пуст — заполните его в разделе «Справочники».</div>
           </template>
+          <input v-else-if="ph === 'date'" class="inp" type="date" v-model="f[k]">
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
         <template v-if="o.type === 'place'">
           <div style="display:flex;gap:12px"><div class="field" style="flex:1"><label>Широта</label><input class="inp" v-model="f.lat" placeholder="55.7558"></div><div class="field" style="flex:1"><label>Долгота</label><input class="inp" v-model="f.lon" placeholder="37.6176"></div></div>
           <GeoPick :lat="f.lat" :lon="f.lon" :address="[f.city, f.address].filter(Boolean).join(', ')" @update="(a, b) => { f.lat = a; f.lon = b; }" />
           <div class="muted" style="font-size:12px;margin-top:-6px">Координаты сохраняются кнопкой «Сохранить» вместе с остальными полями. Место без координат на карту не попадает.</div>
         </template>
-        <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
+        <div class="field" v-if="!rec"><label>Описание <span class="muted">— заголовки, списки и сноски; на сайте длиннее 2000 знаков сворачивается</span></label>
+          <RichText v-model="f.desc" v-model:notes="f.notes" :disabled="!canEdit" /></div>
+        <div class="field" v-if="!rec"><label>Источники <span class="muted">— по одной записи в строке, на сайте нумеруются 01, 02… в этом порядке</span></label>
+          <textarea class="inp" style="min-height:72px" v-model="f.sourcesText" placeholder="Хан-Магомедов С. О. Архитектура советского авангарда. М., 1996&#10;РГАЛИ. Ф. 2852. Оп. 1. Д. 14"></textarea></div>
+        <div class="field" v-if="!rec && o.type !== 'media'"><label>Закреплённые похожие <span class="muted">— карточки того же типа, идут первыми в блоке «Похожее»; остальное подбирается само по общим связям</span></label>
+          <div class="chips"><span v-for="x in pinned" :key="x.id" class="chip"><router-link :to="'/edit/' + x.id">{{ x.title }}</router-link><span v-if="canEdit" class="x" @click="unpin(x.id)">✕</span></span><span v-if="canEdit" class="chip add" @click="picker = 'pinned'">＋ закрепить</span></div></div>
+        <template v-if="o.type === 'project'">
+          <div class="field"><label>Статус <span class="muted">— считается по датам начала и окончания</span></label><input class="inp" :value="projectStatus(f) || '— задайте даты —'" disabled></div>
+          <div class="field"><label>Обложка карточки <span class="muted">— необязательно: если у проекта нет фото (только 3D-тур), картинка для карточек в списках</span></label>
+            <div class="chips"><span v-if="cardCoverOf" class="chip"><router-link :to="'/edit/' + cardCoverOf.id">{{ cardCoverOf.title }}</router-link><span v-if="canEdit" class="x" @click="f.cardCover = ''">✕</span></span><span v-if="canEdit && !cardCoverOf" class="chip add" @click="picker = 'cardCover'">＋ выбрать из медиатеки</span></div></div>
+        </template>
 
         <template v-if="HOME_TYPES.includes(o.type)">
           <h3>Главная страница</h3>
@@ -188,7 +215,10 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
         <h3>Связи <span class="muted" style="font-size:13px;font-weight:400;letter-spacing:0;text-transform:none">— двусторонние: появятся на карточках обеих сущностей</span></h3>
         <div v-for="t in REL_ORDER.filter(t => t !== 'tag' && byType[t]?.length)" :key="t" style="margin-bottom:12px">
           <div class="kicker" style="margin-bottom:6px">{{ REL_HEAD[t] }}</div>
-          <div class="chips"><span v-for="x in byType[t]" :key="x.id" class="chip"><router-link :to="'/edit/' + x.id">{{ x.title }}</router-link><span v-if="canEdit" class="x" @click="unlink(x.id)">✕</span></span></div>
+          <div class="chips"><span v-for="x in byType[t]" :key="x.id" class="chip" :class="{ role: roleOf(x.id) }"><router-link :to="'/edit/' + x.id">{{ x.title }}</router-link>
+            <template v-if="t !== 'source' && t !== 'media'"><span v-if="roleEdit !== x.id" class="rolebtn" :title="roleOf(x.id) ? 'Роль: ' + roleOf(x.id) + ' — изменить' : 'Задать роль (Куратор, Участник…)'" @click="canEdit && (roleEdit = x.id)">{{ roleOf(x.id) || '· роль' }}</span>
+            <select v-else class="sel inline" style="font-size:11px;padding:2px 4px" :value="roleOf(x.id)" @change="setRole(x.id, ($event.target as HTMLSelectElement).value); roleEdit = ''" @blur="roleEdit = ''"><option value="">— без роли —</option><option v-for="r in dictValues('role')" :key="r" :value="r">{{ r }}</option></select></template>
+            <span v-if="canEdit" class="x" @click="unlink(x.id)">✕</span></span></div>
         </div>
         <div v-if="!Object.keys(byType).filter(t => t !== 'tag').length" class="muted">Связей пока нет.</div>
         <div v-if="canEdit" style="margin-top:6px"><span class="chip add" @click="picker = 'link'">＋ добавить связь</span></div>
@@ -267,6 +297,8 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
 
     <Picker v-if="picker === 'link'" title="Добавить связь" :items="pool" typed @pick="link($event); picker = null" @close="picker = null" />
     <Picker v-if="picker === 'media'" title="Файл из медиатеки" :items="pool" :sub="(m) => String(m.format || kindOf(m))" @pick="link($event); picker = null" @close="picker = null" />
+    <Picker v-if="picker === 'pinned'" title="Закрепить похожее" :items="pinPool" @pick="pin($event); picker = null" @close="picker = null" />
+    <Picker v-if="picker === 'cardCover'" title="Обложка карточки — фото из медиатеки" :items="S.raw.filter(m => m.type === 'media' && kindOf(m) === 'image')" :sub="(m) => String(m.format || '')" @pick="f.cardCover = $event.id; picker = null" @close="picker = null" />
     <Modal v-if="picker === 'tag'" title="Добавить тег" @close="picker = null">
       <div class="muted" style="font-size:12px;margin:8px 0 4px">Теги служебные: помогают поиску, на сайте не выводятся.</div>
       <input class="secsearch" placeholder="Найти тег или ввести новый…" v-model="newTag" @keydown.enter="createTag">

@@ -1,27 +1,32 @@
 import "../material.css";
 import "../media.css";
-import Player from "@/components/Player";
-import PdfReader from "@/components/PdfReader";
-import MediaGallery, { Tour, type MSlide } from "@/components/MediaGallery";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import MobileMenu from "@/components/MobileMenu";
 import { Lettering } from "@/components/Lettering";
 import Footer from "@/components/Footer";
-import { getSite } from "@/lib/site";
 import ViewPing from "@/components/ViewPing";
-import ScrollTo from "@/components/ScrollTo";
-import NavRel from "@/components/NavRel";
-import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, mediaPos, published, TYPES, getConfig, coordsOf, type Entity } from "@/lib/api";
 import YMap from "@/components/YMap";
+import PdfReader from "@/components/PdfReader";
+import Media, { type Slide } from "@/components/mat/Media";
+import AvPlayer from "@/components/mat/AvPlayer";
+import Description from "@/components/mat/Description";
+import PageNav, { type NavItem } from "@/components/mat/PageNav";
+import Cite from "@/components/mat/Cite";
+import Report from "@/components/mat/Report";
+import Related, { type RelCard } from "@/components/mat/Related";
+import { getSite } from "@/lib/site";
 import { abs, descOf } from "@/lib/seo";
-import { spheresOf, funcLabel, funcGroupOf, listOf } from "@/lib/api";
+import { toHtml, cleanHtml, cutHtml, textLength } from "@/lib/html";
+import { API, getEntity, loadArchive, linked, mediaKind, imgPos, imgOf, mediaPos, published, TYPES, getConfig, coordsOf, spheresOf, funcLabel, funcGroupOf, listOf, projectStatus, projectDates, namesOf, findByName, type Entity } from "@/lib/api";
+import type { ReactNode } from "react";
 type Base = { id: string; type: string; title: string; status: string; [k: string]: unknown };
 
 export async function generateStaticParams() { return []; } // карточки собираются по первому запросу и живут в кэше до правки в админке
 export const revalidate = 3600; // страница из кэша; сброс — из админки при сохранении (/api/revalidate), страховка — раз в час
-const SAVE_ENABLED = false; // появится вместе с личным кабинетом
 type Props = { params: Promise<{ id: string }> };
+
+const s = (e: { [k: string]: unknown }, k: string) => String(e[k] ?? "");
 
 // Свои title / description / canonical / картинка превью у каждой карточки
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -30,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!e || e.type === "dict" || e.type === "tag" || ["draft", "moderation"].includes(String(e.status || ""))) return { title: "Не найдено", robots: { index: false } };
   const kind = TYPES[e.type]?.l || "";
   const sub = [kind, s(e, "mtype") || s(e, "evType") || funcLabel(e) || s(e, "group") || spheresOf(e).join(", "), s(e, "date") || s(e, "dates") || s(e, "life") || s(e, "period")].filter(Boolean).join(", ");
-  const description = s(e, "seoDesc") || descOf(s(e, "desc"), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
+  const description = s(e, "seoDesc") || descOf(toHtml(s(e, "desc")).replace(/<[^>]+>/g, " "), `${e.title}${sub ? " — " + sub : ""}. Архив Центра «Зотов».`);
   const img = imgOf(db, { ...e, links: e.links.map((l) => l.id) } as unknown as Entity, true);
   const url = abs(`/m/${encodeURIComponent(e.id)}`);
   return {
@@ -41,36 +46,47 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const s = (e: { [k: string]: unknown }, k: string) => String(e[k] ?? "");
-const REL_ORDER = ["theme", "person", "event", "place", "project", "collection", "org", "source", "material"];
-const REL_HEAD: Record<string, string> = { theme: "Темы", person: "Личности", event: "События", place: "Места", project: "Проекты Центра", collection: "Коллекции", org: "Организации", source: "Источники", material: "Материалы" };
-const ACCESS: Record<string, string> = { open: "Открытый доступ", request: "По запросу · просмотр", restricted: "Ограниченный доступ" };
-
+// ---- связанные: порядок групп и подписи по ТЗ; «Тексты» — после материалов (в таблице ТЗ не перечислены, но связь есть)
+const REL_ORDER = ["material", "source", "theme", "person", "event", "place", "project", "collection", "org"];
+const REL_HEAD: Record<string, string> = { material: "Материалы", source: "Тексты", theme: "Темы", person: "Личности", event: "События", place: "Места", project: "Проекты центра", collection: "Коллекции", org: "Организации" };
+const nMat = (db: Record<string, Entity>, x: Entity) => { const n = linked(db, x, "material").length; return `${n} ${n % 10 === 1 && n % 100 !== 11 ? "материал" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "материала" : "материалов"}`; };
 // подпись под карточкой в связанных — по типу сущности
 const meta = (x: Entity, db: Record<string, Entity>) => {
   if (x.type === "person") return s(x, "life") || spheresOf(x).join(", ");
   if (x.type === "event") return s(x, "date");
   if (x.type === "place") return [s(x, "city"), s(x, "date")].filter(Boolean).join(", ");
-  if (x.type === "project") return s(x, "dates");
-  if (x.type === "theme" || x.type === "collection") return `${linked(db, x, "material").length} материалов`;
+  if (x.type === "project") return projectDates(x) || s(x, "dates");
+  if (x.type === "theme" || x.type === "collection") return nMat(db, x);
   if (x.type === "material") return [s(x, "mtype"), s(x, "date")].filter(Boolean).join(", ");
+  if (x.type === "source") return [s(x, "author"), s(x, "year")].filter(Boolean).join(", ");
   return s(x, "date") || s(x, "year") || s(x, "period");
 };
+// пропорция миниатюры в карточке связанного: личности 3:4, темы/коллекции/организации 1:1, остальное 3:2
+const aspectOf = (t: string) => (t === "person" ? 3 / 4 : ["theme", "collection", "org"].includes(t) ? 1 : 3 / 2);
 
-// метабокс: строки подписей по типу сущности (принцип «единый шаблон, различия данными»)
-function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): [string, string][] {
+// ---- поля шапки по таблице ТЗ «Сущности»; значение-сущность кликабельно
+type Row = [string, ReactNode];
+const link = (x?: Entity, text?: string) => (x ? <a key={x.id} href={`/m/${x.id}`}>{text || x.title}</a> : text || "");
+const names = (db: Record<string, Entity>, v: unknown, type = "person") => namesOf(v).map((n, i) => <span key={i}>{i ? ", " : ""}{link(findByName(db, type, n), n)}</span>);
+const group = (e: Entity, g: string) => listOf(e, "authors").filter((v) => v.startsWith(g + " › ")).map((v) => v.split(" › ")[1]);
+function infoRows(e: Entity, db: Record<string, Entity>, coll?: Entity): Row[] {
   const t = TYPES[e.type]?.l || e.type;
+  const collRow: Row = ["Коллекция", coll ? link(coll) : ""];
   switch (e.type) {
-    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", linked(db, e, "person").map((p) => p.title).join(", ")], ["Дата/период", s(e, "date")], ["Коллекция", coll ? [coll.title, s(coll, "colType")].filter(Boolean).join(", ") : ""]];
-    case "person": return [["Тип", `${t}, ${s(e, "group") || "—"}`], ["Сфера деятельности", spheresOf(e).join(", ") || "—"], ["Города", listOf(e, "cities").join(", ") || "—"], ["Годы жизни", s(e, "life") || "—"], ["Коллекция", coll ? `${coll.title}, ${s(coll, "colType")}` : "—"]];
-    case "event": return [["Тип, подтип", `${t}, ${s(e, "evType") || "—"}`], ["Участники", linked(db, e, "person").map((p) => p.title).join(", ") || "—"], ["Дата", s(e, "date") || "—"], ["Место", linked(db, e, "place").map((p) => p.title).join(", ") || "—"]];
-    case "place": return [["Тип, функции", `${funcGroupOf(e) || "—"}${funcLabel(e) ? ", " + funcLabel(e) : ""}`], ["Адрес", s(e, "address") || s(e, "city") || "—"], ["Дата/период", s(e, "date") || "—"], ["Состояние", s(e, "placeStatus") || "—"]];
-    case "project": return [["Тип, подтип", s(e, "prType") || t], ["Кураторы", s(e, "curators") || "—"], ["Даты проведения", s(e, "dates") || "—"], ["Площадка", linked(db, e, "place").map((p) => p.title).join(", ") || "—"]];
-    case "collection": return [["Тип, подтип", `${t}, ${s(e, "colType") || "—"}`], ["Период", s(e, "period") || "—"], ["Состав", `${linked(db, e, "material").length} материалов`], ["Хранение", "Центр «Зотов», Москва"]];
-    case "org": return [["Тип, подтип", `${t}, ${s(e, "orgType") || "—"}`], ["Период", s(e, "period") || "—"], ["Адрес", linked(db, e, "place").map((p) => p.title).join(", ") || "—"], ["Связано в архиве", `${(e.links || []).length} объектов`]];
-    default: return [["Тип", t], ["Дата/период", s(e, "date") || s(e, "year") || "—"]];
+    case "material": return [["Тип, подтип", [s(e, "mtype"), s(e, "subtype")].filter(Boolean).join(", ")], ["Авторы", names(db, e.authors)], ["Период", s(e, "date")], collRow];
+    case "source": return [["Тип текста", s(e, "srcType")], ["Автор", names(db, e.author)], ["Период", s(e, "year") || s(e, "date")], collRow];
+    case "event": return [["Тип, подтип", [s(e, "evType"), s(e, "subtype")].filter(Boolean).join(", ")], ["Период", s(e, "date")], ["Город", s(e, "city")]];
+    case "person": return [["Тип личности", s(e, "group")], ["Сфера деятельности", spheresOf(e).join(", ")], ["Период", s(e, "life")], ["Город", listOf(e, "cities").join(", ")]];
+    case "place": return [["Тип, подтип", [funcGroupOf(e), funcLabel(e)].filter(Boolean).join(", ")], ["Адрес", s(e, "address")], ["Город", s(e, "city")], ["Состояние", s(e, "placeStatus")], ["Статус ОКН", s(e, "okn")], ["Период", s(e, "date")],
+      ["Архитекторы", names(db, group(e, "Архитекторы").join("; "))], ["Инженеры", names(db, group(e, "Инженеры").join("; "))], ["Проектные организации", names(db, group(e, "Проектные организации").join("; "), "org")], ["Заказчик", listOf(e, "customers").join(", ")]];
+    case "org": return [["Тип", s(e, "orgType")], ["Период деятельности", s(e, "period")]];
+    case "collection": return [["Тип коллекции", s(e, "colType")], ["Период", s(e, "period")], ["Количество материалов", nMat(db, e)]];
+    case "theme": return [["Краткое определение", s(e, "def")], ["Количество материалов", nMat(db, e)]];
+    case "project": return [["Тип проекта", s(e, "prType")], ["Даты", projectDates(e)], ["Статус", projectStatus(e)], ["Место проведения", names(db, e.venue, "place")], ["Кураторы", names(db, e.curators)]];
+    default: return [["Тип", t], ["Период", s(e, "date") || s(e, "year")]];
   }
 }
+const rowEmpty = (v: ReactNode) => v == null || v === "" || (Array.isArray(v) && !v.length);
 
 export default async function EntityPage({ params }: Props) {
   const { id } = await params;
@@ -79,159 +95,137 @@ export default async function EntityPage({ params }: Props) {
   const ent: Entity = db[e.id] || { ...(e as Base), links: e.links.map((l) => l.id) };
   const rel = linked(db, ent).filter((x) => x.type !== "media" && x.type !== "tag");
   const media: Entity[] = (e.links || []).filter((x) => x.type === "media");
-  const coverMedia = media.find((m) => mediaKind(m) === "image");
-  const cover: { src: string; title: string } | null = coverMedia
-    ? { src: String(coverMedia.big || coverMedia.med), title: String(coverMedia.title) }
-    : e.imgBig ? { src: String(e.imgBig), title: String(e.title) } : null;
-  // документы — только то, что не играет в плеере: PDF и прочие файлы; видео и аудио идут в плеер и на скачивание не выводятся
-  const docs = media.filter((m) => !["image", "tour", "video", "audio"].includes(mediaKind(m)));
   const isOpen = (s(e, "access") || "open") === "open";
-  // встроенный просмотр: видео/аудио — плеер с субтитрами, PDF — читалка; файл идёт через бэкенд
   const fileUrl = (m: Entity) => `${API}/media/${m.id}/file`;
-  const video = media.find((m) => mediaKind(m) === "video"), audio = media.find((m) => mediaKind(m) === "audio"), pdf = media.find((m) => mediaKind(m) === "pdf");
-  // субтитры — через свой роут /subs (тот же origin, поэтому <video> не нужен crossorigin и CORS хранилища)
-  const tracks = (m?: Entity) => ((m?.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m!.id}/${t.lang}.vtt` }));
-  // видео и аудио играют напрямую из хранилища по подписанной ссылке — её запрашивает плеер на клиенте (страница кэшируется, ссылка протухла бы); запасной вариант — поток через API
-  const videoSrc = video ? fileUrl(video) : "", audioSrc = audio ? fileUrl(audio) : "";
-  // адаптивные версии (HLS) готовы — плеер играет их прямо из хранилища/CDN (HLS_DIRECT у API, только открытый доступ) или через API; иначе оригинал
-  const hlsOpen = (m: Entity) => String(m.access || "open") === "open" && String(ent.access || "open") === "open";
-  const hlsUrl = video && video.hls && video.hlsStatus === "done" ? (cfg.hlsDirect && cfg.mediaUrl && hlsOpen(video) ? `${cfg.mediaUrl}/${video.hls}` : `${API}/hls/${video.id}/master.m3u8`) : undefined;
-  // сверху — фото (несколько → галерея со стрелками), без фото — видео, без видео — аудио; остальное идёт после описания (макет 02.10)
-  const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
-  // подпись к фото: своё название файла (caption), иначе название материала; ниже — автор и год файла (необязательные поля)
+  const tracks = (m: Entity) => ((m.subtitles as { lang: string; label: string; url: string }[]) || []).map((t) => ({ ...t, url: `/subs/${m.id}/${t.lang}.vtt` }));
   const metaOf = (m: Entity) => [s(m, "author"), s(m, "year")].filter(Boolean).join(", ");
-  const slides: MSlide[] = isOpen ? images.map((m) => ({ kind: "image" as const, src: String(m.big || m.med), title: String(m.caption || e.title), pos: mediaPos(m), sub: metaOf(m) })) : [];
-  if (!slides.length && isOpen && cover) slides.push({ kind: "image", src: cover.src, title: cover.title });
-  // 3D-туры — в ту же галерею после фото (эмбед из админки)
+  const hlsOpen = (m: Entity) => String(m.access || "open") === "open" && isOpen;
+  const hlsUrl = (m: Entity) => (m.hls && m.hlsStatus === "done" ? (cfg.hlsDirect && cfg.mediaUrl && hlsOpen(m) ? `${cfg.mediaUrl}/${m.hls}` : `${API}/hls/${m.id}/master.m3u8`) : undefined);
+
+  // ---- медиа-блок (ТЗ, состояния 1–9): фото и видео — одна галерея в порядке файлов; аудио — виджет; место — карта
+  const images = media.filter((m) => mediaKind(m) === "image" && (m.big || m.med));
+  const videos = media.filter((m) => mediaKind(m) === "video"), audios = media.filter((m) => mediaKind(m) === "audio"), pdfs = media.filter((m) => mediaKind(m) === "pdf");
   const tours = media.filter((m) => mediaKind(m) === "tour" && m.embed);
-  if (isOpen) for (const t of tours) slides.push({ kind: "tour", src: String(t.embed), title: String(t.title) });
-  const topKind: "images" | "video" | "audio" | "none" = slides.length ? "images" : video && isOpen ? "video" : audio && isOpen ? "audio" : "none";
-  const sources = rel.filter((x) => x.type === "source");
+  const docs = media.filter((m) => !["image", "tour", "video", "audio"].includes(mediaKind(m)));
+  const poster = images[0] ? String(images[0].med || images[0].big) : undefined;
+  const slides: Slide[] = isOpen ? [
+    ...images.map((m): Slide => ({ kind: "image", src: String(m.med || m.big), big: String(m.big || m.med), w: Number(m.width) || undefined, h: Number(m.height) || undefined, caption: s(m, "caption") || e.title, credit: metaOf(m), pos: mediaPos(m) })),
+    ...videos.map((m): Slide => ({ kind: "video", src: fileUrl(m), mediaId: m.id, hls: hlsUrl(m), poster, tracks: tracks(m), caption: s(m, "caption") || e.title, credit: metaOf(m) })),
+    ...tours.map((m): Slide => ({ kind: "tour", src: String(m.embed), caption: s(m, "caption") || `3D-тур: ${e.title}`, credit: metaOf(m) })),
+  ] : [];
+  // порядок — как в поле «Файлы»: сохраняем порядок media, если он смешанный
+  const order = new Map(media.map((m, i) => [m.id, i]));
+  slides.sort((a, b) => (order.get(a.kind === "video" ? a.mediaId : "") ?? 0) - (order.get(b.kind === "video" ? b.mediaId : "") ?? 0));
+  const coords = e.type === "place" ? coordsOf(ent) : null;
+  const audio = audios[0];
+  const coverIsAudio = !slides.length && audio && isOpen; // состояние 9
+  const coverIsMap = !slides.length && !!coords; // состояние 5
+
+  // ---- описание: HTML из админки, сноски, свёртка после 2000 знаков
+  const html = cleanHtml(toHtml(s(e, "desc")));
+  const notes = ((e.notes as string[]) || []).map(String);
+  const { head, cut } = textLength(html) > 2000 ? cutHtml(html, 2000) : { head: html, cut: false };
+
+  // ---- связанные по группам, источники, похожее
+  const sources = ((e.sources as string[]) || []).map(String).filter(Boolean);
   const coll = rel.find((x) => x.type === "collection");
-  const groups = REL_ORDER.filter((t) => t !== "source").map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
+  const groups = REL_ORDER.map((t) => [t, rel.filter((x) => x.type === t)] as const).filter(([, arr]) => arr.length);
   const relCount = groups.reduce((a, [, arr]) => a + arr.length, 0);
-  // «Похожее»: прямые связи с проектами/коллекциями/темами/материалами; если их мало — ближайшие по общим связям
-  const SIM_TYPES = ["project", "collection", "theme", "material", "event", "person", "place"];
-  let similar = rel.filter((x) => ["project", "collection", "theme", "material"].includes(x.type)).slice(0, 3);
+  const roles = (ent.roles || {}) as Record<string, string>;
+  const card = (x: Entity): RelCard => ({ id: x.id, title: x.title, sub: meta(x, db), role: roles[x.id], img: imgOf(db, x) || undefined, pos: imgPos(db, x), aspect: aspectOf(x.type) });
+  // у проекта центра личности — «Кураторы и участники», первыми
+  const relGroups = e.type === "project" ? [...groups.filter(([t]) => t === "person"), ...groups.filter(([t]) => t !== "person")] : groups;
+  const headOf = (t: string) => (e.type === "project" && t === "person" ? "Кураторы и участники" : REL_HEAD[t]);
+  // «Похожее»: закреплённые в админке первыми, затем того же типа по общим связям (темы и прочие)
+  const pinned = ((e.pinned as string[]) || []).map((pid) => db[pid]).filter((x) => x && published(x) && x.id !== e.id);
+  let similar: Entity[] = [...pinned];
   if (similar.length < 3) {
     const mine = new Set(ent.links || []);
     const taken = new Set([e.id, ...similar.map((x) => x.id)]);
-    const scored = Object.values(db)
-      .filter((x) => SIM_TYPES.includes(x.type) && published(x) && !taken.has(x.id))
-      .map((x) => ({ x, n: (x.links || []).filter((id) => mine.has(id)).length }))
-      .filter((c) => c.n > 0).sort((a, b) => b.n - a.n || a.x.title.localeCompare(b.x.title, "ru"));
+    const scored = Object.values(db).filter((x) => x.type === e.type && published(x) && !taken.has(x.id))
+      .map((x) => ({ x, n: (x.links || []).filter((lid) => mine.has(lid)).length })).filter((c) => c.n > 0)
+      .sort((a, b) => b.n - a.n || a.x.title.localeCompare(b.x.title, "ru"));
     similar = [...similar, ...scored.slice(0, 3 - similar.length).map((c) => c.x)];
   }
-  const paras = s(e, "desc").split(/\n\s*\n/).filter(Boolean);
-  // уровни доступа («по запросу», «ограниченный») появятся вместе с личным кабинетом — в паспорте строку не показываем
-  const rows = infoRows(ent, db, coll).filter(([, v]) => v && v !== "—"); // пустые поля не показываем
+  similar = similar.slice(0, 3);
+  const rows = infoRows(ent, db, coll).filter(([, v]) => !rowEmpty(v));
   const gid = (t: string) => "g-" + t;
+
+  // ---- навигация по странице: только разделы, которые есть
+  const nav: NavItem[] = [{ id: "a-desc", label: "Описание" }];
+  if (docs.length || pdfs.length) nav.push({ id: "a-docs", label: "Документы", count: docs.length });
+  if (sources.length) nav.push({ id: "a-src", label: "Источники", count: sources.length });
+  if (relCount) nav.push({ id: "a-rel", label: "Связанные материалы", count: relCount, sub: relGroups.map(([t, arr]) => ({ id: gid(t), label: headOf(t), count: arr.length })) });
+  if (similar.length) nav.push({ id: "a-sim", label: "Похожее" });
+
+  // ---- заходная группа: «Поиск → Материал», у места «Карта → Место», у проекта «Проекты центра → <тип>»
+  const crumb = e.type === "place" ? { href: `/map?place=${encodeURIComponent(e.id)}`, a: "Карта", b: "Место" }
+    : e.type === "project" ? { href: "/cat/project", a: "Проекты центра", b: s(e, "prType") || "Проект" }
+    : { href: `/search?type=${e.type === "source" ? "text" : e.type}`, a: "Поиск", b: TYPES[e.type]?.l || e.type };
+  const authorsForCite = e.type === "material" ? namesOf(e.authors) : e.type === "source" ? namesOf(e.author) : e.type === "project" ? namesOf(e.curators) : [];
+  const cite = { authors: authorsForCite, title: e.title, year: (s(e, "date") || s(e, "year") || s(e, "life") || s(e, "period") || projectDates(e)).match(/\d{4}/)?.[0] || "", url: abs(`/m/${e.id}`) };
+  const Arr = () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>;
 
   return (
     <>
       <ViewPing id={e.id} />
-
       <div id="rest" className="mat">
         <div className="mhead"><MobileMenu centerUrl={site.centerUrl} /></div>
         <div id="matgrid">
-          {/* левая колонка: хлебные крошки, заголовок, паспорт; внизу — навигация по странице и «Сохранить» */}
+          {/* левая колонка: липкая — заходная группа, заголовок, поля шапки; внизу «Цитировать» и навигация по странице */}
           <section id="cover">
             <div className="top">
               <div className="div8" />
-              <div className="crumbs">
-                <a href="/">Архив</a>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg>
-                <a href={`/cat/${e.type}`}>{TYPES[e.type]?.pl || e.type}</a>
-              </div>
+              <div className="crumbs"><a href={crumb.href}>{crumb.a}</a><Arr /><span>{crumb.b}</span></div>
               <h1>{e.title}</h1>
-              <div className="info">{rows.map(([k, v]) => <div className="row" key={k}><div className="h">{k}</div><div>{v}</div></div>)}</div>
+              {rows.length ? <div className="info">{rows.map(([k, v]) => <div className="row" key={k}><div className="h">{k}</div><div className="v">{v}</div></div>)}</div> : null}
             </div>
-            <nav id="secmenu">
-              <ScrollTo to="a-desc">Описание</ScrollTo>
-              {docs.length ? <ScrollTo to="a-docs">Документы <span className="num">({docs.length})</span></ScrollTo> : null}
-              {sources.length ? <ScrollTo to="a-src">Источники <span className="num">({sources.length})</span></ScrollTo> : null}
-              {relCount ? <NavRel total={relCount} groups={groups.map(([t, arr]) => ({ id: gid(t), label: REL_HEAD[t], n: arr.length }))} /> : null}
-              {similar.length ? <ScrollTo to="a-sim">Похожее</ScrollTo> : null}
-            </nav>
-            {/* «Сохранить» — закладки личного кабинета (следующий этап); до него кнопку не показываем */}
-            {SAVE_ENABLED ? <button id="saveBtn" type="button">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3-5 3V3a1 1 0 0 1 1-1Z" stroke="#262626" strokeWidth="1.6" fill="none" /></svg>
-              <span>Сохранить</span>
-            </button> : null}
+            <div className="actions"><Cite data={cite} /></div>
+            <PageNav items={nav} cite={<Cite data={cite} icon />} />
           </section>
 
-          {/* правая колонка: медиа, описание, документы, источники, связанные */}
+          {/* правая колонка: медиа, описание, (карта / аудио), документы, источники, «Напишите нам», связанные */}
           <div id="rightcol">
-            <div className="embed">
-              {topKind === "images" && slides.length > 1 ? <MediaGallery slides={slides} />
-                : topKind === "images" && slides[0].kind === "tour" ? <div className="imgbox"><Tour src={slides[0].src} title={slides[0].title} /></div>
-                : topKind === "images" ? <div className="imgbox"><img src={slides[0].src} alt={e.title} style={slides[0].kind === "image" ? slides[0].pos : undefined} /></div>
-                : topKind === "video" ? <Player kind="video" src={videoSrc} mediaId={video!.id} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video!.title)} />
-                : topKind === "audio" ? <Player kind="audio" src={audioSrc} mediaId={audio!.id} tracks={tracks(audio)} title={String(audio!.title)} />
-                : <div className="imgbox"><span className="ph">{isOpen ? "Изображение материала" : "Материал доступен по запросу"}</span></div>}
-              {topKind !== "images" || slides.length <= 1 ? (() => {
-                // одно фото с собственной подписью — её и показываем; иначе название материала + первая личность и дата
-                const one = topKind === "images" && slides.length === 1 && slides[0].kind === "image" ? images[0] : null;
-                const own = one && (s(one, "caption") || metaOf(one));
-                return own ? <><div>{s(one!, "caption") || e.title}</div><div className="grey">{metaOf(one!)}</div></>
-                  : <><div>{e.title}</div><div className="grey">{e.type === "material" ? [linked(db, ent, "person")[0]?.title, s(e, "date")].filter(Boolean).join(", ") : rows[1]?.[1] || ""}</div></>;
-              })() : null}
-            </div>
+            {slides.length ? <Media slides={slides} />
+              : coverIsAudio ? <div className="mblock audio"><AvPlayer kind="audio" src={fileUrl(audio!)} mediaId={audio!.id} tracks={tracks(audio!)} title={s(audio!, "caption") || e.title} /></div>
+              : coverIsMap ? <div className="mblock map"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords![0], lon: coords![1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div>
+              : !isOpen ? <div className="mblock closed"><div className="ph">Материал доступен по запросу</div></div>
+              : null}
 
             <div className="div8" id="a-desc" />
             <div className="tsm">Описание</div>
-            <div className="msec">
-              {paras.length ? paras.map((p, i) => <div className="para" key={i}>{p}</div>) : <div className="empty">Описание готовится к публикации.</div>}
-            </div>
-            {e.type === "place" && coordsOf(ent) ? <div className="embed2"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coordsOf(ent)![0], lon: coordsOf(ent)![1] }]} link={false} /></div> : null}
-            {isOpen && ((video && topKind !== "video") || (audio && topKind !== "audio") || pdf) ? (
-              <div className="embed2">
-                {video && topKind !== "video" ? <Player kind="video" src={videoSrc} mediaId={video.id} hls={hlsUrl} poster={cover?.src} tracks={tracks(video)} title={String(video.title)} /> : null}
-                {audio && topKind !== "audio" ? <Player kind="audio" src={audioSrc} mediaId={audio.id} tracks={tracks(audio)} title={String(audio.title)} /> : null}
-                {pdf ? <PdfReader src={fileUrl(pdf)} title={String(pdf.title)} /> : null}
-              </div>
-            ) : null}
+            {html ? <Description html={html} head={head} cut={cut} notes={notes} /> : <div className="desc"><div className="rich"><p className="grey">Описание готовится к публикации.</p></div></div>}
 
-            {docs.length ? <><div className="div8" id="a-docs" />
-            <div className="tsm">Документы</div>
-            <div className="msec">
-              {docs.map((d) => (
-                <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
-                  <div className="t">{s(d, "caption") || d.title}{metaOf(d) ? <span className="grey"> · {metaOf(d)}</span> : null}</div><div>{String(d.format || "").toUpperCase()}.</div>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="#262626" /></svg>
-                </a>
-              ))}
-            </div></> : null}
+            {slides.length && coords ? <div className="mblock map after"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords[0], lon: coords[1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div> : null}
+            {slides.length && audio && isOpen ? <div className="mblock audio after"><AvPlayer kind="audio" src={fileUrl(audio)} mediaId={audio.id} tracks={tracks(audio)} title={s(audio, "caption") || e.title} /></div> : null}
+            {audios.slice(1).map((a) => isOpen ? <div className="mblock audio after" key={a.id}><AvPlayer kind="audio" src={fileUrl(a)} mediaId={a.id} tracks={tracks(a)} title={s(a, "caption") || e.title} /></div> : null)}
+
+            {docs.length || pdfs.length ? <><div className="div8" id="a-docs" />
+              <div className="tsm">Документы</div>
+              <div className="msec docs">
+                {docs.map((d) => (
+                  <a className="doc" key={d.id} href={fileUrl(d)} target="_blank" rel="noreferrer">
+                    <div className="t">{s(d, "caption") || d.title}{metaOf(d) ? <span className="grey"> · {metaOf(d)}</span> : null}</div><div>.{String(d.format || "").toLowerCase()}</div>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.2 2h1.6v7l2.6-2.6 1.1 1.1L8 12 3.5 7.5l1.1-1.1 2.6 2.6V2ZM2 13h12v1.5H2V13Z" fill="currentColor" /></svg>
+                  </a>
+                ))}
+                {isOpen && pdfs[0] ? <div className="pdfwrap"><PdfReader src={fileUrl(pdfs[0])} title={String(pdfs[0].title)} /></div> : null}
+              </div></> : null}
 
             {sources.length ? <><div className="div8" id="a-src" />
-            <div className="tsm">Источники</div>
-            <div className="msec">
-              {sources.map((x, i) => <div className="src" key={x.id}><div className="n">{String(i + 1).padStart(2, "0")}.</div><a href={`/m/${x.id}`}>{x.title}{s(x, "year") ? `, ${s(x, "year")}` : ""}</a></div>)}
-            </div></> : null}
+              <div className="tsm">Источники</div>
+              <div className="msec srcs">{sources.map((x, i) => <div className="src" key={i}><div className="n">{String(i + 1).padStart(2, "0")}.</div><div>{x}</div></div>)}</div></> : null}
+
+            <div className="div8" />
+            <Report id={e.id} />
 
             {relCount ? <><div className="div8" id="a-rel" />
-            <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
-            <div id="relmats">
-              {groups.map(([t, arr]) => (
-                <div key={t}>
-                  <div className="subhead"><span className="tsm" id={gid(t)}>{REL_HEAD[t]}</span><span className="tsm grey">({arr.length})</span></div>
-                  {arr.map((x) => (
-                    <a className={"rel-item" + (x.img ? "" : " noimg")} key={x.id} href={`/m/${x.id}`}>
-                      <div className="dv" />
-                      <div className="row">
-                        <div className="tx"><h3>{x.title}</h3><div className="sub">{meta(x, db)}</div><div className="vb" /></div>
-                        {x.img ? <div className="im"><img src={String(x.img)} alt="" style={imgPos(db, x)} /></div> : null}
-                      </div>
-                    </a>
-                  ))}
-                  <div className="div8" />
-                </div>
-              ))}
-            </div></> : null}
+              <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
+              <div id="relmats">{relGroups.map(([t, arr]) => <Related key={t} id={gid(t)} label={headOf(t)} items={arr.map(card)} />)}</div></> : null}
           </div>
         </div>
 
-        {/* «Похожее»: леттеринг + сетка как на главной (большая карточка 2 колонки + две средние) */}
+        {/* «Похожее»: леттеринг + большая карточка и две средние (как на главной) */}
         {similar.length ? <section id="similar">
           <div id="a-sim"><Lettering text="похожее" /></div>
           <div className="feat pgrid">
@@ -243,7 +237,7 @@ export default async function EntityPage({ params }: Props) {
                   <div className="vb" />
                   <div className="inf"><b>{TYPES[x.type]?.l}</b>{s(x, "mtype") || s(x, "colType") || s(x, "prType") ? <span>{s(x, "mtype") || s(x, "colType") || s(x, "prType")}</span> : null}</div>
                 </div>
-                {x.imgBig || x.img ? <div className="im"><img src={String(x.imgBig || x.img)} alt="" style={imgPos(db, x)} /></div> : <div className="im" />}
+                {x.imgBig || x.img || imgOf(db, x, true) ? <div className="im"><img src={String(x.imgBig || x.img || imgOf(db, x, true))} alt="" style={imgPos(db, x)} loading="lazy" /></div> : <div className="im" />}
               </a>
             ))}
           </div>
