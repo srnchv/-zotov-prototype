@@ -10,11 +10,16 @@ export type Entity = {
   [k: string]: unknown;
 };
 
+// Адреса файлов в payload записаны абсолютно на момент загрузки (https://s3…/<бакет>/media/…). Если позже включили CDN
+// (S3_PUBLIC_URL), подменяем старую базу на новую при чтении — данные в базе не трогаем, откат CDN = убрать переменную.
+const S3_BASE = `${process.env.S3_ENDPOINT || "https://s3.twcstorage.ru"}/${process.env.S3_BUCKET || ""}/`;
+const PUB_BASE = process.env.S3_PUBLIC_URL ? process.env.S3_PUBLIC_URL.replace(/\/+$/, "") + "/" : "";
+const rebase = (json: string) => (PUB_BASE && process.env.S3_BUCKET && PUB_BASE !== S3_BASE ? json.split(S3_BASE).join(PUB_BASE) : json);
 const rowToEntity = (r: any): Entity => ({
   id: r.id,
   type: r.type,
   title: r.title,
-  ...(JSON.parse(r.payload || "{}") as object),
+  ...(JSON.parse(rebase(r.payload || "{}")) as object),
   status: r.status, // колонка главнее payload: в старых данных в payload лежал status «Существует» и перекрывал публикацию
   created_at: r.created_at,
   updated_at: r.updated_at,
