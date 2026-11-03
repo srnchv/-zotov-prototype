@@ -18,16 +18,12 @@ const keyOf = (n: string) => n.trim().toLowerCase().normalize("NFC");
 // мягкое сопоставление имени из таблицы с файлом в папке: регистр, расширение (в таблице можно без него),
 // пробелы/подчёркивания/дефисы не важны: «Rodchenko Gallery Picture (1)» найдёт «rodchenko_gallery_picture (1).jpg»
 const loose = (n: string) => keyOf(n).replace(/\.(jpe?g|png|webp|tiff?|gif|mp4|mov|webm|avi|m4v|mp3|wav|m4a|ogg|flac|aac|pdf|docx?|txt)$/i, "").replace(/[\s_\-]+/g, "");
-// все файлы по имени из таблицы: точное имя; имя без расширения; код объекта — все файлы, начинающиеся с него
-// («m0004» → m0004-h.jpg, m0004-n1.jpg, m0004-n2.jpg; исторические «-h» идут первыми и становятся обложкой)
-const natural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
+// файл по имени из таблицы: точное имя, иначе мягкое совпадение (без расширения, регистра, пробелов и дефисов); один файл на одно имя
 function findFiles(n: string): File[] {
   const exact = folder.value.get(keyOf(n)); if (exact) return [exact];
   const want = loose(n); if (!want) return [];
-  const same = [...folder.value.values()].filter((f) => loose(f.name) === want);
-  if (same.length) return same.slice(0, 1);
-  const pref = [...folder.value.values()].filter((f) => { const k = loose(f.name); return k.startsWith(want) && !/^\d/.test(k.slice(want.length)) && kindOf(f.name) !== "subs"; });
-  return pref.sort((a, b) => natural(a.name, b.name));
+  const same = [...folder.value.values()].filter((f) => loose(f.name) === want && kindOf(f.name) !== "subs");
+  return same.slice(0, 1);
 }
 function findFile(n: string): File | undefined { return findFiles(n)[0]; }
 const ACT: Record<string, string> = { create: "создать", update: "обновить", error: "ошибка" };
@@ -227,7 +223,7 @@ async function downloadTpl() {
       <div v-if="mapping[sh.name].on" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px">
         <span>Имена файлов (фото, видео, PDF) брать из колонки:</span>
         <select class="sel inline" :value="filesCol(sh)" @change="setFilesCol(sh, ($event.target as HTMLSelectElement).value)"><option value="">— файлов нет —</option><option v-for="h in sh.headers.filter(Boolean)" :key="h" :value="h">{{ h }}</option></select>
-        <span class="muted" style="font-size:12px">имя файла или его начало: «m0004» подхватит m0004-h.jpg, m0004-n1.jpg…</span>
+        <span class="muted" style="font-size:12px">в ячейках — имена файлов как на диске, через «;»: rodchenko-portret.jpg; lekciya-1.mp4 (расширение и регистр не важны)</span>
       </div>
       <table v-if="mapping[sh.name].on" class="atable" style="margin-top:8px;font-size:13px">
         <thead><tr><th style="width:26%">Колонка в файле</th><th>Примеры значений</th><th style="width:30%">Поле архива</th></tr></thead>
@@ -282,7 +278,7 @@ async function downloadTpl() {
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <input type="file" ref="inpDir" webkitdirectory directory multiple style="display:none" @change="pickDir">
       <button class="btn sm" :disabled="!!busy" @click="inpDir?.click()">Выбрать папку</button>
-      <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.have.flatMap(findFiles).length > files.have.length"> ({{ files.have.flatMap(findFiles).length }} файлов — по кодам)</template><template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
+      <span v-if="files.need.length" style="font-size:13px">В таблице файлов: {{ files.need.length }} · найдено в папке: {{ files.have.length }}<template v-if="files.extra"> · в папке лишних (не загрузятся): {{ files.extra }}</template></span>
       <span v-else class="muted" style="font-size:13px">В колонке «Файлы» нет имён — папка не нужна.</span>
     </div>
     <div v-if="folder.size && files.miss.length" class="admbar warn" style="margin:8px 0 0">Нет в папке: {{ files.miss.join(", ") }}</div>
