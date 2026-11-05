@@ -105,6 +105,7 @@
 .mbox.cite .crow .v{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;user-select:all}
 
 /* «Похожее»: на десктопах — серый разделитель 8px сверху (ТЗ 05.11) */
+.endline{margin-bottom:12px} /* чёрный разделитель и серая линия «Похожего» не слипаются */
 #similar{padding-top:80px;border-top:8px solid var(--grey5)}
 #similar .feat{padding-bottom:144px}
 
