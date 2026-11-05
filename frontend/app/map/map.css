@@ -47,7 +47,7 @@
 .mlist-sort .v{display:flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:var(--ink);cursor:pointer}
 .mlist-sort .v:hover{color:var(--red)}
 /* выпадающий список сортировки — как на поиске: 200, строки 24 на сером, выбранная чёрная */
-.msort-list{position:absolute;left:0;top:100%;width:200px;z-index:3;display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.msort-list{position:absolute;left:0;top:100%;width:200px;z-index:3;display:flex;flex-direction:column;gap:2px;margin-top:8px;background:#fff}
 .msort-row{display:flex;align-items:center;height:24px;padding:4px 8px;border:0;background:var(--grey4);color:var(--ink);font:inherit;font-size:14.1px;line-height:16px;font-weight:500;text-align:left;white-space:nowrap;cursor:pointer}
 .msort-row:hover{color:var(--red)}
 .msort-row.on{background:var(--ink);color:#fff;cursor:default}

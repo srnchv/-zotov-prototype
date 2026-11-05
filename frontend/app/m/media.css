@@ -33,7 +33,7 @@
 .avclock{flex:0 0 auto;font-variant-numeric:tabular-nums;text-transform:uppercase}
 .avtrack{position:relative;height:8px;background:var(--grey2);cursor:pointer}
 .avfill{position:absolute;left:0;top:0;bottom:0;background:var(--grey5)}
-.avknob{position:absolute;top:-4px;width:4px;height:16px;background:#fff;border:2px solid var(--ink);box-sizing:content-box;margin-left:-2px;pointer-events:none}
+.avknob{position:absolute;top:-4px;width:4px;height:16px;background:#fff;border:2px solid var(--ink);box-sizing:border-box;margin-left:-2px;pointer-events:none} /* торчит на 4 сверху и 4 снизу шкалы 8 */
 .avbtns{display:flex;gap:4px;align-items:center;flex:0 0 auto}
 .avm{position:relative}
 .avb{height:32px;min-width:32px;border:2px solid #fff;background:none;color:#fff;padding:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font:inherit;font-size:14.1px;line-height:16px;font-variant-numeric:tabular-nums}
@@ -46,10 +46,10 @@
 .avbar.down .avpop{bottom:auto;top:calc(100% + 8px)}
 .avbar.down .avvol{bottom:auto;top:0;justify-content:flex-start}
 .avbar.down .avvol .avb.bare{order:-1}
-.avpop button{border:0;background:none;color:#fff;font:inherit;font-size:14.1px;line-height:16px;text-align:left;padding:0;cursor:pointer;white-space:nowrap}
+.avpop button{border:0;background:none;color:#fff;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:0;text-align:left;padding:0;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
 .avpop button + button{border-top:2px solid rgba(255,255,255,.5);padding-top:4px}
 .avpop button.on,.avpop button:hover{color:var(--grey5)}
-.avvol{width:32px;height:128px;background:var(--ink);border:2px solid #fff;padding:8px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end;align-items:center;position:absolute;bottom:0;left:0;z-index:5}
+.avvol{width:32px;height:128px;background:var(--ink);border:2px solid #fff;padding:8px;display:flex;flex-direction:column;gap:8px;justify-content:flex-end;align-items:center;position:absolute;bottom:0;left:0;z-index:6} /* поверх кнопки звука, растёт вверх */
 .vtrack{position:relative;width:8px;flex:1 1 auto;background:var(--grey5);cursor:pointer}
 .vfill{position:absolute;left:0;right:0;bottom:0;background:var(--grey2)}
 .vknob{position:absolute;left:-4px;width:16px;height:4px;background:#f2f2f2;border:2px solid var(--ink);box-sizing:content-box}
