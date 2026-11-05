@@ -4,7 +4,7 @@
 // крестик слева сверху, логотип с «АРХИВ» справа, список разделов, внизу «Войти».
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { NAV, LOGIN_URL, CENTER_URL, ExtIcon, Logo } from "./Sidebar";
+import { NAV, LOGIN_URL, LOGIN_STUB, CENTER_URL, ExtIcon, Logo } from "./Sidebar";
 import LoginStub from "./LoginStub";
 
 const LETTERS = ["a", "r", "h", "i", "v"];
@@ -38,7 +38,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
               {NAV.map(([t, h]) => <Link key={t} href={h} onClick={() => setOpen(false)}>{t}</Link>)}
               <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span><ExtIcon /></a>
             </nav>
-            {LOGIN_URL ? <a className="mlogin" href={LOGIN_URL}>Войти</a> : <LoginStub className="mlogin" />}
+            {LOGIN_URL ? <a className="mlogin" href={LOGIN_URL}>Войти</a> : LOGIN_STUB ? <LoginStub className="mlogin" /> : null}
           </div>
         </div>
       ) : null}
