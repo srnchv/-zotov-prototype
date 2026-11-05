@@ -33,7 +33,8 @@ function hoverDir(m: [number, number, number][], i: number, cols: number, rows: 
   m.forEach(([c, r, sz]) => { for (let dc = 0; dc < sz; dc++) for (let dr = 0; dr < sz; dr++) occ.add(`${c + dc},${r + dr}`); });
   const [c, r, sz] = m[i];
   const free = (x: number, y: number) => x >= 1 && x <= cols && y >= 1 && y <= rows && !occ.has(`${x},${y}`);
-  if (sz === 1) return free(c + 1, r) && free(c + 2, r) ? "hr" : "hl";
+  // маленькая плитка: вправо, если справа свободно; иначе влево, но только если влево есть место (у левого края — всё равно вправо, поверх соседей)
+  if (sz === 1) return free(c + 1, r) && free(c + 2, r) ? "hr" : c - 2 >= 1 ? "hl" : "hr";
   return free(c, r + 2) && free(c + 1, r + 2) ? "hd" : "hu";
 }
 // сетки личностей на планшете (6×5, 10 карточек) и мобайле (3×6, 9 карточек): [колонка, ряд, размер] по макету
