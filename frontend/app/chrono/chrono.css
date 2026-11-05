@@ -14,12 +14,17 @@
 
 /* таймлайн: серая полоса 40, годы с линией слева 4, распределены по ширине; закрепляется у верха (12) при прокрутке —
    лежит прямо в #chr, поэтому держится на всю длину страницы */
-#tline{position:sticky;top:12px;z-index:30;margin:12px 12px 0;background:var(--grey4);height:40px;padding:8px 0;box-sizing:border-box}
-#tline .tl-row{display:flex;justify-content:space-between;overflow-x:auto;scrollbar-width:none;height:24px}
+/* правки 03.11: плашка grey-5 высотой 48, годы прибиты к верху; выбранный год — серый, жирный, под ним счётчик событий «(23)» */
+#tline{position:sticky;top:12px;z-index:30;margin:12px 12px 0;background:var(--grey5);height:48px;padding:8px 0 8px 8px;box-sizing:border-box}
+#tline .tl-row{display:flex;justify-content:space-between;overflow-x:auto;scrollbar-width:none;height:32px}
 #tline .tl-row::-webkit-scrollbar{display:none}
-#tline a,#tline span{flex:0 0 auto;border-left:4px solid var(--ink);padding:4px 8px;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+#tline a,#tline span{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;border-left:4px solid var(--ink);padding:0 8px;height:32px;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:.423px;text-transform:uppercase;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+#tline a b{font-weight:500}
+#tline a i{display:none;font-style:normal}
 #tline a:hover{color:var(--red)}
-#tline a.on{color:var(--red);border-color:var(--red)}
+#tline a.on{color:var(--grey2);border-color:var(--grey2)}
+#tline a.on b{font-weight:700}
+#tline a.on i{display:block}
 #tline span.dim{color:var(--grey3);border-color:var(--grey3);cursor:default}
 
 /* счётчик: 37/36 (мобайл 24.1); блоки годов: год слева 276 (линия 8 + 50/48) + сетка 5 × 276, между годами 24 */
@@ -36,7 +41,7 @@
 .rend{height:8px;background:var(--ink);margin:12px 12px 144px}
 
 /* кнопка «наверх»: 40×40, серая, справа внизу — вместе с закреплённым таймлайном */
-#totop{position:fixed;right:12px;bottom:12px;z-index:50;display:none;align-items:center;justify-content:center;width:40px;height:40px;padding:12px;background:var(--grey4);border:0;color:var(--ink);cursor:pointer}
+#totop{position:fixed;right:12px;bottom:12px;z-index:50;display:none;align-items:center;justify-content:center;width:48px;height:48px;padding:16px;background:var(--grey4);border:0;color:var(--ink);cursor:pointer}
 #totop.on{display:flex}
 #totop:hover{color:var(--red)}
 
@@ -52,7 +57,12 @@
   #chr{padding-top:110px}
   #intro{padding-top:120px;max-width:none;white-space:normal}
   #cfilters #sfbar{grid-template-columns:repeat(3,1fr)}
-  #tline .tl-row{justify-content:flex-start;gap:0}
+  #tline{position:fixed;top:auto;bottom:8px;left:8px;right:8px;margin:0;z-index:60;transition:right .15s}
+  #tline .tl-row{justify-content:flex-start;gap:48px}
+  body.chr-totop #tline{right:64px} /* место под кнопку «наверх» 48 + зазор 8 */
+  #totop{right:8px;bottom:8px}
+  .ft{padding-bottom:64px}
+  .ylab{top:12px}
   .yblock{grid-template-columns:1fr;gap:12px}
   .ygrid{grid-template-columns:repeat(3,1fr)}
 }
@@ -63,7 +73,7 @@
   #cfilters #sfbar{grid-template-columns:1fr 1fr}
   #ccount h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
   .yblock{gap:24px;scroll-margin-top:64px}
-  .ylab{position:sticky;top:64px;z-index:20;background:#fff;height:52px;padding-bottom:0}
+  .ylab{position:sticky;top:12px;z-index:20;background:#fff;height:52px;padding-bottom:0}
   .ylab .yn{font-size:37px;line-height:36px;letter-spacing:-.74px}
   .ygrid{grid-template-columns:1fr;gap:24px}
   #years{gap:24px}

@@ -40,6 +40,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
   const yearsAll = Array.from({ length: to - from + 1 }, (_, i) => from + i);
   const hasAny = new Set(r.hasAny), hasFound = new Set(r.hasFound);
   const years = yearsAll.filter((y) => hasFound.has(y));
+  const nByYear = new Map<number, number>(); for (const it of found) nByYear.set(it.year, (nByYear.get(it.year) || 0) + 1); // счётчик событий года с учётом фильтров — под выбранным годом
   const yearSel = Number(one(raw.y)) || 0;
   const anyFilter = CKEYS.some((k) => sel[k].ids.length);
   // чипсы: каждый выбранный элемент отдельно; снятие элемента из группы оставляет остальных по «ИЛИ»
@@ -72,7 +73,7 @@ export default async function ChronoPage({ searchParams }: { searchParams: Promi
             <div className="tl-row">
               {yearsAll.map((y) => {
                 const ok = anyFilter ? hasFound.has(y) : hasAny.has(y);
-                return ok ? <a key={y} data-y={y} className={yearSel === y ? "on" : undefined} href={href(tokens, { y: [String(y)] }) + "#y-" + y}>{y}</a> : <span key={y} className="dim">{y}</span>;
+                return ok ? <a key={y} data-y={y} className={yearSel === y ? "on" : undefined} href={href(tokens, { y: [String(y)] }) + "#y-" + y}><b>{y}</b><i>({nByYear.get(y) || 0})</i></a> : <span key={y} className="dim">{y}</span>;
               })}
             </div>
           </div>

@@ -5,7 +5,9 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const TOP = 12; // отступ закреплённого таймлайна от верха (макет)
-const yearTop = (el: HTMLElement) => el.getBoundingClientRect().top + window.scrollY - (TOP + 40 + 12);
+const BAR = 48; // высота плашки таймлайна (правки 03.11)
+const mobile = () => window.innerWidth < 1024; // планшет и мобайл: таймлайн приклеен к низу, к верху ничего не крепится
+const yearTop = (el: HTMLElement) => el.getBoundingClientRect().top + window.scrollY - (mobile() ? 12 : TOP + BAR + 12);
 
 function YearJump() {
   const sp = useSearchParams();
@@ -26,14 +28,15 @@ function Sticky({ onStuck }: { onStuck: (v: boolean) => void }) {
     let raf = 0;
     const f = () => {
       raf = 0;
-      const stuck = strip.getBoundingClientRect().top <= TOP + 0.5 && window.scrollY > 100;
-      strip.classList.toggle("stuck", stuck); document.body.classList.toggle("chr-stuck", stuck); onStuck(stuck);
+      // десктоп: кнопка «наверх» вместе с закреплённым таймлайном; планшет/мобайл — после прокрутки на один экран
+      const stuck = mobile() ? window.scrollY > window.innerHeight : strip.getBoundingClientRect().top <= TOP + 0.5 && window.scrollY > 100;
+      strip.classList.toggle("stuck", stuck); document.body.classList.toggle("chr-stuck", stuck); document.body.classList.toggle("chr-totop", stuck); onStuck(stuck);
       const blocks = [...document.querySelectorAll<HTMLElement>(".yblock")];
       if (!blocks.length) return;
-      const line = TOP + 40 + 16; // низ закреплённой ленты
+      const line = mobile() ? window.innerHeight * 0.4 : TOP + BAR + 16; // низ закреплённой ленты (на мобайле — ориентир по центру экрана)
       let cur: HTMLElement | null = null;
       for (const b of blocks) if (b.getBoundingClientRect().top <= line) cur = b;
-      if (!cur && stuck) cur = blocks[0];
+      if (!cur && (stuck || mobile())) cur = blocks[0];
       const y = cur ? cur.id.replace("y-", "") : "";
       for (const a of links) {
         const on = a.dataset.y === y;
@@ -49,7 +52,7 @@ function Sticky({ onStuck }: { onStuck: (v: boolean) => void }) {
     const wheel = (e: WheelEvent) => { if (row && row.scrollWidth > row.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); row.scrollLeft += e.deltaY; } };
     row?.addEventListener("wheel", wheel, { passive: false });
     f(); window.addEventListener("scroll", on, { passive: true }); window.addEventListener("resize", on);
-    return () => { row?.removeEventListener("wheel", wheel); window.removeEventListener("scroll", on); window.removeEventListener("resize", on); if (raf) cancelAnimationFrame(raf); document.body.classList.remove("chr-stuck"); };
+    return () => { row?.removeEventListener("wheel", wheel); window.removeEventListener("scroll", on); window.removeEventListener("resize", on); if (raf) cancelAnimationFrame(raf); document.body.classList.remove("chr-stuck"); document.body.classList.remove("chr-totop"); };
   }, [onStuck]);
   return null;
 }

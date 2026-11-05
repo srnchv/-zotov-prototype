@@ -29,7 +29,7 @@
 .dd-val{display:flex;align-items:center;gap:4px;border:0;background:none;padding:0;font:inherit;color:var(--ink);cursor:pointer;text-align:left}
 .dd-val:hover,.dd.open .dd-val{color:var(--red)}
 .dd.open .dd-val svg{transform:rotate(180deg)}
-.dd-list{position:absolute;left:0;top:calc(100% + 4px);z-index:60;width:200px;display:flex;flex-direction:column;gap:2px}
+.dd-list{position:absolute;left:0;top:calc(100% + 8px);z-index:60;width:200px;display:flex;flex-direction:column;gap:2px;background:#fff} /* белая заливка щелей между строками (правки 03.11) */
 .dd-row{display:flex;gap:8px;align-items:center;height:24px;padding:4px 8px;background:var(--grey4);color:var(--ink);white-space:nowrap}
 .dd-row>span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .dd-row i{font-style:normal;color:var(--grey2);font-variant-numeric:tabular-nums}
@@ -88,6 +88,7 @@ a.pg-n:hover,a.pg-arr:hover{color:var(--red)}
   #sfbar{grid-template-columns:1fr 1fr}
   #rhead h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px}
   #rtools{flex-direction:column;gap:16px}
+  .srch:not(.sec) #rtools{display:grid;grid-template-columns:1fr 1fr;gap:12px 4px} /* сортировка во втором столбце фильтров (правки 03.11) */
   #grid{grid-template-columns:1fr;row-gap:24px;padding-top:48px}
   .rc{height:368px}
   .pgn.d{display:none}
