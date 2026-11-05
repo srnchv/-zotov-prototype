@@ -73,7 +73,7 @@
 /* связанные: группы по типам, карточки item/horizontal (линия 8, заголовок 24, подпись, вертикальная линия, миниатюра h 120 по аспекту) */
 /* серая подложка блока связанных — на всю ширину правой колонки (макет SUGGESTS) */
 .relwrap{background:var(--grey5);margin:0 -12px;padding:12px 12px 0;display:flex;flex-direction:column;gap:8px}
-#relmats{padding:12px 0 56px;display:flex;flex-direction:column;gap:24px}
+#relmats{padding:12px 0;display:flex;flex-direction:column;gap:24px}
 .relgroup{display:flex;flex-direction:column;gap:8px}
 .relgroup .subhead{display:flex;justify-content:center;gap:4px;padding-top:8px}
 .rel-item{display:flex;flex-direction:column;gap:8px;cursor:pointer}
@@ -91,13 +91,21 @@
 
 /* модальные окна: затемнение grey-1 40 %, белое окно 624, без рамки и крестика */
 .ovl{position:fixed;inset:0;background:rgba(38,38,38,.4);z-index:1000;isolation:isolate;display:flex;align-items:center;justify-content:center;padding:12px}
+.lwrap{position:relative;width:624px;max-width:100%}
+.lx{position:absolute;left:100%;top:0;margin-left:8px;width:40px;height:40px;border:0;background:var(--ink);padding:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lx:hover{background:var(--red)}
+.mbox.login{gap:32px;align-items:center}
+.mbox.login .para{align-self:stretch;display:flex;flex-direction:column;gap:12px}
+.mbox.login h4{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;margin:0}
+.mbox.login p{font-size:18px;line-height:20px;letter-spacing:-.18px;margin:0}
+.lill{width:419px;max-width:100%;height:auto;display:block}
 .mbox{background:#fff;width:624px;max-width:100%;max-height:calc(100vh - 24px);overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
 .mbox.cite .crow{display:flex;border-top:4px solid var(--grey5);padding-top:8px}
 .mbox.cite .crow .k{width:142px;flex:0 0 142px;color:var(--grey2)}
 .mbox.cite .crow .v{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;user-select:all}
 
-/* «Похожее» */
-#similar{padding-top:80px}
+/* «Похожее»: на десктопах — серый разделитель 8px сверху (ТЗ 05.11) */
+#similar{padding-top:80px;border-top:8px solid var(--grey5)}
 #similar .feat{padding-bottom:144px}
 
 /* ==== desktop-1280 (1024–1599): заголовок H2, отступ описания 72, навигация 210 ==== */
@@ -129,6 +137,9 @@
   .pbar-cur{display:none}
   .pbar-cite{flex:0 0 auto}
   .fnpop{width:260px}
+  .lwrap{width:554px}
+  .mbox.cite{width:554px}
+  #similar{border-top:0}
   #similar .feat{padding-bottom:144px}
 }
 
@@ -158,6 +169,9 @@
   .pbar-list a.on + a{border-color:var(--grey2)}
   .pbar-list .end{height:4px;background:var(--ink)}
   .mbox{padding:16px}
+  .lwrap{width:100%}
+  .lx{left:auto;right:0;top:auto;bottom:100%;margin:0 0 8px}
+  .mbox.login{align-items:flex-start}
   .mbox.cite .crow{gap:4px}
   .mbox.cite .crow .k{width:59px;flex-basis:59px}
     #similar .feat{gap:32px;padding-bottom:96px}

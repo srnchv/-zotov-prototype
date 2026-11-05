@@ -188,7 +188,7 @@ export default async function EntityPage({ params }: Props) {
           {/* правая колонка: медиа, описание, (карта / аудио), документы, источники, «Напишите нам», связанные */}
           <div id="rightcol">
             {slides.length ? <Media slides={slides} />
-              : coverIsAudio ? <div className="mblock audio"><AvPlayer kind="audio" src={fileUrl(audio!)} mediaId={audio!.id} tracks={tracks(audio!)} title={s(audio!, "caption") || e.title} /></div>
+              : coverIsAudio ? <div className="mblock audio"><AvPlayer kind="audio" src={fileUrl(audio!)} mediaId={audio!.id} tracks={tracks(audio!)} title={s(audio!, "caption") || e.title} down /></div>
               : coverIsMap ? <div className="mblock map"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords![0], lon: coords![1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div>
               : !isOpen ? <div className="mblock closed"><div className="mframe"><div className="ph">Материал доступен по запросу</div></div></div>
               : null}
@@ -218,6 +218,7 @@ export default async function EntityPage({ params }: Props) {
               <div className="msec srcs">{sources.map((x, i) => <div className="src" key={i}><div className="n">{String(i + 1).padStart(2, "0")}.</div><div>{x}</div></div>)}</div></> : null}
 
 
+            {!relCount ? <div className="div8 endline" /> : null}
             {relCount ? <div className="relwrap" id="a-rel"><div className="div8" />
               <div className="tsm"><span>Связанные материалы</span> <span className="grey">({relCount})</span></div>
               <div id="relmats">{relGroups.map(([t, arr]) => <Related key={t} id={gid(t)} label={headOf(t)} items={arr.map(card)} />)}</div></div> : null}

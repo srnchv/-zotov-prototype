@@ -11,7 +11,8 @@ export const NAV = [
   ["поиск", "/search"], ["темы", "/cat/theme"], ["проекты центра", "/cat/project"], ["хронограф", "/chrono"],
   ["личности", "/cat/person"], ["карта", "/map"], ["коллекции", "/cat/collection"], ["тексты", "/texts"],
 ];
-export const LOGIN_URL = ""; // адрес личного кабинета; пусто — кнопка «Войти» скрыта
+import LoginStub from "./LoginStub";
+export const LOGIN_URL = ""; // адрес личного кабинета появится вместе с ним; пока «Войти» открывает заглушку (ТЗ «Апдейт 05.11»)
 export const CENTER_URL = "https://zotov.center";
 // логотип инлайном: на ховере красится в красный (fill: currentColor)
 export const Logo = () => (
@@ -42,8 +43,7 @@ export default function Sidebar({ centerUrl = CENTER_URL }: { centerUrl?: string
         {NAV.map(([t, h]) => <Link key={t} href={h} className={active === h ? "active" : undefined}>{t}</Link>)}
         <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span><ExtIcon /></a>
       </nav>
-      {/* «Войти» — личный кабинет исследователя из следующего этапа; до него кнопку не показываем */}
-      {LOGIN_URL ? <a id="login-btn" href={LOGIN_URL}>Войти</a> : null}
+      {LOGIN_URL ? <a id="login-btn" href={LOGIN_URL}>Войти</a> : <LoginStub id="login-btn" />}
     </aside>
   );
 }

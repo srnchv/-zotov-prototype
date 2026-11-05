@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NAV, LOGIN_URL, CENTER_URL, ExtIcon, Logo } from "./Sidebar";
+import LoginStub from "./LoginStub";
 
 const LETTERS = ["a", "r", "h", "i", "v"];
 export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: string }) {
@@ -37,7 +38,7 @@ export default function MobileMenu({ centerUrl = CENTER_URL }: { centerUrl?: str
               {NAV.map(([t, h]) => <Link key={t} href={h} onClick={() => setOpen(false)}>{t}</Link>)}
               <a className="mext" href={centerUrl} target="_blank" rel="noreferrer"><span>Центр «Зотов»</span><ExtIcon /></a>
             </nav>
-            {LOGIN_URL ? <a className="mlogin" href={LOGIN_URL}>Войти</a> : null}
+            {LOGIN_URL ? <a className="mlogin" href={LOGIN_URL}>Войти</a> : <LoginStub className="mlogin" />}
           </div>
         </div>
       ) : null}

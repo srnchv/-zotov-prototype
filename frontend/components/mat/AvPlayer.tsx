@@ -7,7 +7,7 @@ import { API } from "@/lib/api";
 export type Track = { lang: string; label: string; url: string };
 // startAt / onState — чтобы при переходе в полноэкранный режим и обратно плеер продолжал с того же места
 export type AvState = { t: number; playing: boolean };
-export type AvProps = { kind: "video" | "audio"; src: string; mediaId?: string; hls?: string; poster?: string; tracks?: Track[]; title: string; big?: boolean; onEnded?: () => void; autoPlay?: boolean; startAt?: AvState; onState?: (s: AvState) => void };
+export type AvProps = { kind: "video" | "audio"; src: string; mediaId?: string; hls?: string; poster?: string; tracks?: Track[]; title: string; big?: boolean; onEnded?: () => void; autoPlay?: boolean; startAt?: AvState; onState?: (s: AvState) => void; down?: boolean };
 const SPEEDS = [2, 1.5, 1.25, 1, 0.5];
 const fmt = (t: number) => { if (!isFinite(t)) return "00:00"; const m = Math.floor(t / 60), s = Math.floor(t % 60); return (m >= 60 ? Math.floor(m / 60) + ":" + String(m % 60).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(s).padStart(2, "0"); };
 const I = {
@@ -18,7 +18,7 @@ const I = {
   cc: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="10" stroke="currentColor" strokeWidth="1.5" /><path d="M7 7a1.5 1.5 0 1 0 0 2M11.5 7a1.5 1.5 0 1 0 0 2" stroke="currentColor" strokeWidth="1.5" /></svg>,
   gear: <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.5" /><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" stroke="currentColor" strokeWidth="1.5" /></svg>,
 };
-export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [], title, big, onEnded, autoPlay, startAt, onState }: AvProps) {
+export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [], title, big, onEnded, autoPlay, startAt, onState, down }: AvProps) {
   const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
   const start = useRef(startAt); // позиция, с которой продолжить после монтирования
   const stateRef = useRef(onState); stateRef.current = onState;
@@ -83,7 +83,7 @@ export default function AvPlayer({ kind, src, mediaId, hls, poster, tracks = [],
     : <audio ref={ref} preload="metadata" aria-label={title} onPlay={() => { setPlaying(true); report(); }} onPause={() => { setPlaying(false); report(); }} onTimeUpdate={(e) => { setT(e.currentTarget.currentTime); report(); }} onDurationChange={(e) => setDur(e.currentTarget.duration)} onEnded={onEnded}>
         {tracks.map((tr) => <track key={tr.lang} kind="subtitles" srcLang={tr.lang} label={tr.label} src={tr.url} />)}</audio>;
   const bar = (
-    <div className={"avbar" + (big ? " big" : "")}>
+    <div className={"avbar" + (big ? " big" : "") + (down ? " down" : "")}>
       <button type="button" className="avplay" onClick={toggle} aria-label={playing ? "Пауза" : "Воспроизвести"}>{playing ? I.pause : I.play}</button>
       <div className="avprog">
         <div className="avtime"><span className="avtitle">{title}</span><span className="avclock">{fmt(t)}/{fmt(dur)}</span></div>

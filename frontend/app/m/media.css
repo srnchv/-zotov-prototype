@@ -42,6 +42,10 @@
 .avb.bare{border:0;padding:0;width:16px;min-width:16px;height:16px;background:none}
 .avpop{position:absolute;left:0;bottom:calc(100% + 8px);background:var(--ink);border:2px solid #fff;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:58px;z-index:5}
 .avpop.right{left:auto;right:0}
+/* аудио вместо обложки: меню раскрываются вниз (ТЗ 05.11) */
+.avbar.down .avpop{bottom:auto;top:calc(100% + 8px)}
+.avbar.down .avvol{bottom:auto;top:0;justify-content:flex-start}
+.avbar.down .avvol .avb.bare{order:-1}
 .avpop button{border:0;background:none;color:#fff;font:inherit;font-size:14.1px;line-height:16px;text-align:left;padding:0;cursor:pointer;white-space:nowrap}
 .avpop button + button{border-top:2px solid rgba(255,255,255,.5);padding-top:4px}
 .avpop button.on,.avpop button:hover{color:var(--grey5)}
