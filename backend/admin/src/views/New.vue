@@ -50,18 +50,22 @@ async function create(status?: "published" | "draft") {
 const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n && !tags.value.some((x) => x.toLowerCase() === n.toLowerCase())) tags.value.push(n); newTag.value = ""; picker.value = null; };
 </script>
 <template>
-  <div class="crumbs"><router-link to="/entities">Сущности</router-link> / Новая</div>
-  <h1 style="font-size:26px;letter-spacing:2px">Создать сущность</h1>
-  <div class="two" style="max-width:960px">
+  <div class="crumbs"><router-link to="/entities">Сущности</router-link><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg><span>Создать новую</span></div>
+  <h1>Создать сущность</h1>
+  <div class="two">
     <div>
-      <div class="field"><label>Сущность</label><select class="sel" v-model="f.type"><option v-for="x in Object.keys(TYPES).filter(x => x !== 'media')" :key="x" :value="x">{{ TYPES[x].l }}</option></select></div>
+      <div class="row2 first">
+        <div class="field"><label>Сущность</label><select class="sel" v-model="f.type"><option v-for="x in Object.keys(TYPES).filter(x => x !== 'media')" :key="x" :value="x">{{ TYPES[x].l }}</option></select></div>
+        <div class="field"><label>{{ DATELABEL[t] || "Дата / период" }}</label><input class="inp" v-model="f[dk]" :placeholder="DATEPH[t] || 'например 1927'"></div>
+      </div>
       <div v-if="t === 'source'" class="field"><label>Что это</label><div class="chips"><span v-for="(l, v) in SRCKIND" :key="v" class="fchip" :class="{ on: f.srcKind === v }" @click="f.srcKind = v">{{ l }}</span></div>
         <div class="muted" style="font-size:12px;margin-top:4px">Запись — короткая карточка без описания и файлов: только выходные данные.</div></div>
+      <div class="row2" v-if="!NO_TYPE.has(t)">
+        <div class="field" v-if="t === 'theme'"><label>Тип</label><input class="inp" v-model="f[tk]"></div>
+        <div class="field" v-else><label>{{ TYPELABEL[t] || "Тип" }}</label><select class="sel" v-model="f[tk]" @change="f[sk] = ''"><option value="">— не задано —</option><option v-for="v in typeVals" :key="v" :value="v">{{ v }}</option></select></div>
+        <div class="field" v-if="!rec && t !== 'theme' && t !== 'person'"><label>{{ SUBLABEL[t] || "Подтип" }}</label><select class="sel" v-model="f[sk]" :disabled="!f[tk]"><option value="">{{ f[tk] ? "— не задано —" : "Будет доступен после выбора типа" }}</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
+      </div>
       <div class="field"><label>Название</label><input class="inp" v-model="f.title" placeholder="Название сущности"></div>
-      <div class="field" v-if="t === 'theme'"><label>Тип</label><input class="inp" v-model="f[tk]"></div>
-      <div class="field" v-else-if="!NO_TYPE.has(t)"><label>{{ TYPELABEL[t] || "Тип" }}</label><select class="sel" v-model="f[tk]" @change="f[sk] = ''"><option value="">— не задано —</option><option v-for="v in typeVals" :key="v" :value="v">{{ v }}</option></select></div>
-      <div class="field" v-if="!rec && t !== 'theme' && !NO_TYPE.has(t) && t !== 'person'"><label>{{ SUBLABEL[t] || "Подтип" }} <span class="muted">— из справочника, по выбранному типу</span></label><select class="sel" v-model="f[sk]"><option value="">— не задано —</option><option v-for="v in subVals" :key="v" :value="v">{{ v }}</option></select></div>
-      <div class="field"><label>{{ DATELABEL[t] || "Дата / период" }}</label><input class="inp" v-model="f[dk]" :placeholder="DATEPH[t] || 'например 1927'"></div>
       <div class="field" v-if="t === 'material' && ACCESS_UI"><label>Уровень доступа</label><div class="chips"><span v-for="(l, v) in ACCESS" :key="v" class="fchip" :class="{ on: f.access === v }" @click="f.access = f.access === v ? '' : v">{{ l }}</span></div></div>
       <div class="field" v-for="[k, l, ph] in SPECIFIC[t] || []" :key="k"><label>{{ l }}</label>
           <select v-if="ph && ph.startsWith('select:')" class="sel" v-model="f[k]"><option value="">—</option><option v-for="v in ph.slice(7).split('|')" :key="v" :value="v">{{ v }}</option></select>
@@ -76,25 +80,27 @@ const addTag = () => { const n = newTag.value.trim().replace(/^#/, ""); if (n &&
           </template>
           <input v-else class="inp" v-model="f[k]" :placeholder="ph || ''"></div>
       <div class="field" v-if="!rec"><label>Описание</label><textarea class="inp" v-model="f.desc" placeholder="Редакторское описание с научным аппаратом…"></textarea></div>
-      <div class="muted" style="font-size:12px;margin-top:16px">«Создать и опубликовать» — карточка сразу появится на сайте. «Сохранить черновиком» — не видна на сайте, можно доработать и опубликовать позже.</div>
+      <div class="hint">«Создать и опубликовать» — карточка сразу появится на сайте.<br>«Сохранить черновиком» — не видна на сайте, можно доработать и опубликовать позже.</div>
       <!-- две кнопки действия вместо переключателя: сразу понятно, что произойдёт -->
       <div v-if="busy" class="muted" style="font-size:13px;margin-top:12px">{{ UPLOAD.phase === 'send' ? `Создано, загружаем файл ${fmtMb(UPLOAD.size)}: ${UPLOAD.pct}%` : UPLOAD.phase === 'process' ? 'Файл получен, сохраняем в хранилище…' : 'Создаём карточку…' }}</div>
-      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><button class="btn dark" :disabled="busy" @click="create('published')">Создать и опубликовать</button><button class="btn" :disabled="busy" @click="create('draft')">Сохранить черновиком</button><router-link class="btn" to="/entities" style="margin-left:auto">Отмена</router-link></div>
+      <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;align-items:center"><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn dark" :disabled="busy" @click="create('published')"><span>Создать и опубликовать</span></button><button class="btn" :disabled="busy" @click="create('draft')"><span>Создать черновиком</span></button></div><router-link class="btn ghost" to="/entities">Отмена</router-link></div>
     </div>
     <div>
       <h3 style="margin-top:0">Связи</h3>
-      <div class="muted" style="font-size:13px;margin-bottom:8px">Двусторонние: появятся на карточках обеих сущностей.</div>
-      <div class="chips" style="margin-bottom:10px"><span v-for="x in links" :key="x.id" class="chip">{{ x.title }} <span class="muted" style="font-size:11px">· {{ TYPES[x.type]?.l }}</span><span class="x" @click="links = links.filter(l => l.id !== x.id)">✕</span></span>
-        <span class="chip add" @click="picker = 'link'">＋ добавить связь</span></div>
-      <h3>Теги <span class="muted" style="font-size:12px;font-weight:400;letter-spacing:0;text-transform:none">— служебные, для поиска</span></h3>
-      <div class="chips"><span v-for="x in tags" :key="x" class="chip">#{{ x }}<span class="x" @click="tags = tags.filter(y => y !== x)">✕</span></span><span class="chip add" @click="picker = 'tag'">＋ тег</span></div>
+      <div class="muted" style="margin-bottom:16px">Двусторонние: появятся на карточках обеих сущностей.</div>
+      <div v-if="links.length" class="chips" style="margin-bottom:12px"><span v-for="x in links" :key="x.id" class="chip">{{ x.title }} <span class="muted">· {{ TYPES[x.type]?.l }}</span><span class="x" @click="links = links.filter(l => l.id !== x.id)">✕</span></span></div>
+      <button class="btn" @click="picker = 'link'">+ <span>Добавить связь</span></button>
+      <h3>Теги</h3>
+      <div class="muted" style="margin-bottom:16px">Служебные, для поиска</div>
+      <div v-if="tags.length" class="chips" style="margin-bottom:12px"><span v-for="x in tags" :key="x" class="chip">#{{ x }}<span class="x" @click="tags = tags.filter(y => y !== x)">✕</span></span></div>
+      <button class="btn" @click="picker = 'tag'">+ <span>Тег</span></button>
       <template v-if="!rec">
         <h3>Медиа</h3>
         <input type="file" ref="nf" accept="image/*,application/pdf,video/*,audio/*" style="display:none" @change="file = ($event.target as HTMLInputElement).files?.[0] || null">
         <div v-if="file" style="font-size:13px;margin-bottom:8px">{{ file.name }} · {{ fmtSize(file.size) }} <span v-if="!busy" class="lnk" @click="file = null">✕</span></div>
         <div v-if="busy && UPLOAD.phase" class="upbar"><div class="upfill" :style="{ width: UPLOAD.pct + '%' }"></div><span>{{ UPLOAD.phase === 'send' ? `Загружаем ${fmtMb(UPLOAD.size)}: ${UPLOAD.pct}%` : 'Сохраняем в хранилище…' }}</span></div>
-        <button class="btn sm" :disabled="busy" @click="nf?.click()">＋ Загрузить файл</button>
-        <div class="muted" style="font-size:12px;margin-top:8px">Файл загрузится сразу после создания и прикрепится к сущности. Фото до 100 МБ, видео, аудио и PDF — до 2 ГБ; загрузка большого видео занимает несколько минут, не закрывайте вкладку. Файлы из медиатеки можно прикрепить в карточке.</div>
+        <div class="muted" style="margin-bottom:16px">Файл загрузится сразу после создания и прикрепится к сущности.<br>Файлы из медиатеки можно прикрепить в карточке. Фото до 100 МБ, видео, аудио и PDF — до 2 ГБ; загрузка большого видео занимает несколько минут, не закрывайте вкладку.</div>
+        <button class="btn" :disabled="busy" @click="nf?.click()">+ <span>Загрузить файл</span></button>
       </template>
     </div>
   </div>

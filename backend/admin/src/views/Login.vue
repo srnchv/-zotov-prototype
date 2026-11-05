@@ -15,7 +15,7 @@ async function go() {
   <div class="login">
     <form class="card" @submit.prevent="go">
       <div class="kicker">Зотов · Архив</div>
-      <h1 style="font-size:22px;margin-top:6px">Админ-панель</h1>
+      <h1 style="font-size:28px;line-height:30px;margin:8px 0 24px">Админ-панель</h1>
       <div class="field"><label>Логин</label><input class="inp" v-model="l" autocomplete="username" autofocus></div>
       <div class="field"><label>Пароль</label><input class="inp" type="password" v-model="p" autocomplete="current-password"></div>
       <div v-if="err" class="admbar err" style="margin:0 0 14px">{{ err }}</div>

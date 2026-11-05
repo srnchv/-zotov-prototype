@@ -21,7 +21,14 @@ const list = computed(() => {
     <div v-if="typed" class="chips" style="margin:12px 0 4px">
       <span v-for="t in Object.keys(TYPES).filter(t => byType[t])" :key="t" class="fchip" :class="{ on: type === t }" @click="type = type === t ? null : t">{{ TYPES[t].pl }} <span style="opacity:.6">{{ byType[t].length }}</span></span>
     </div>
-    <div class="fmodal-list">
+    <!-- медиафайлы — сеткой с превью (фото — картинка, остальное — тип файла), прочие сущности — списком -->
+    <div v-if="list.length && list[0].type === 'media'" class="fgrid">
+      <div v-for="o in list" :key="o.id" class="fcard" @click="emit('pick', o)">
+        <div class="fthumb" :style="o.thumb ? { backgroundImage: `url('${o.thumb}')` } : undefined"><span v-if="!o.thumb">{{ String(o.format || o.kind || 'файл').toUpperCase() }}</span></div>
+        <div class="fname" :title="o.title">{{ o.title }}</div><div class="muted" style="font-size:12px">{{ sub ? sub(o) : '' }}</div>
+      </div>
+    </div>
+    <div v-else class="fmodal-list">
       <span v-for="o in list" :key="o.id" class="fopt" @click="emit('pick', o)">{{ o.title }} <span v-if="typed && q" class="muted" style="font-size:11px">· {{ TYPES[o.type]?.l }}</span><span v-if="sub" class="muted" style="font-size:11px"> · {{ sub(o) }}</span></span>
       <div v-if="!list.length" class="muted" style="font-size:13px;padding:14px 0">{{ typed && !type && !q ? "Выберите раздел выше — или начните вводить название." : "Ничего не найдено." }}</div>
     </div>

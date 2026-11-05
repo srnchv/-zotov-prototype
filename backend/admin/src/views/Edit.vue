@@ -157,9 +157,9 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
   <div v-if="!o" class="muted">{{ S.loaded ? "Не найдено" : "Загружаем…" }}</div>
   <MediaFile v-else-if="o.type === 'media'" :id="id" />
   <template v-else>
-    <div class="crumbs"><router-link to="/entities">Сущности</router-link> / Карточка сущности</div>
+    <div class="crumbs"><router-link to="/entities">Сущности</router-link><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg><span>{{ TYPES[o.type]?.l || "Карточка" }}</span></div>
     <div class="kicker" style="margin-top:6px">Карточка сущности / {{ TYPES[o.type]?.l || o.type }}<template v-if="rec"> · {{ SRCKIND.record }}</template></div>
-    <h1 style="font-size:26px;margin-top:2px;letter-spacing:2px">{{ o.title }}</h1>
+    <h1>{{ o.title }}</h1>
     <div class="two">
       <div>
         <h3 style="margin-top:0">Карточка</h3>

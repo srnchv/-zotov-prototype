@@ -44,9 +44,9 @@ void all;
 <template>
   <div v-if="!o" class="muted">{{ S.loaded ? "Не найдено" : "Загружаем…" }}</div>
   <template v-else>
-    <div class="crumbs"><router-link to="/media">Медиатека</router-link> / Медиафайл</div>
+    <div class="crumbs"><router-link to="/media">Медиатека</router-link><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 7.2h9.25L7.54 3.5H9.5L14 8l-4.5 4.5H7.54l3.71-3.7H2V7.2Z" fill="#262626" /></svg><span>Медиафайл</span></div>
     <div class="kicker" style="margin-top:6px">Медиафайл · {{ KIND_L[kind] || kind }}</div>
-    <h1 style="font-size:26px;margin-top:2px;letter-spacing:2px;word-break:break-all">{{ o.title }}</h1>
+    <h1 style="word-break:break-all">{{ o.title }}</h1>
     <div class="admbar" style="margin-top:10px;max-width:760px">Это файл, а не карточка: своей страницы на сайте у него нет, он показывается в галерее тех карточек, к которым прикреплён. Название, автор и год ниже — подпись под файлом на сайте.</div>
     <div class="two" style="margin-top:16px">
       <div>
