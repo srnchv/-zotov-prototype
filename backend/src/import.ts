@@ -16,7 +16,7 @@ const COMMON_TAIL: Col[] = [
   { key: "pinned", label: "Похожие", hint: "названия карточек того же типа через «;» — закрепляются первыми в блоке «Похожее»" },
   { key: "access", label: "Доступ", hint: "открытый / по запросу / ограниченный (пусто = открытый)" },
   { key: "status", label: "Публикация", hint: "опубликовано / черновик (пусто = опубликовано)" },
-  { key: "files", label: "Файлы", hint: "имена файлов из папки через «;», как они называются на диске: rodchenko-portret.jpg; lekciya-1.mp4. Подпись к файлу — через «|» после имени: имя | название | автор | год, например rodchenko-portret.jpg | Портрет А. Родченко | Михаил Кауфман | 1924. Первое фото строки станет обложкой" },
+  { key: "files", label: "Файлы", hint: "имена файлов из папки через «;», как они называются на диске: rodchenko-portret.jpg; lekciya-1.mp4. Подписи к файлам (название, автор, год) — на листе «Медиатека». Первое фото строки станет обложкой" },
   { key: "tags", label: "Теги", hint: "служебные теги через «;»" },
 ];
 const LINK_COLS: [string, string][] = [["person", "Личности"], ["place", "Места"], ["event", "События"], ["theme", "Темы"], ["project", "Проекты Центра"], ["collection", "Коллекции"], ["org", "Организации"], ["material", "Материалы"], ["source", "Тексты"]];
@@ -92,7 +92,7 @@ export async function template(): Promise<Buffer> {
     ["4. Типы и подтипы — из справочников (списки ниже). Новое значение добавится в справочник, в отчёте будет предупреждение."],
     ["5. «Период»: год или диапазон «с–по» (1920–1929). Неточные даты задаются диапазоном: «1920-е» → 1920–1929. У личности — годы жизни, у проекта — даты проведения."],
     ["6. «Файлы» — имена файлов из папки через «;», ровно как они называются на диске: rodchenko-portret.jpg; dom-narkomfina-1930.jpg; lekciya-1.mp4. Расширение и регистр букв можно не соблюдать. Поддерживаются фото (JPG/PNG/WebP/TIFF), видео (MP4/WebM), аудио (MP3/M4A/WAV), документы (PDF). Первое фото строки станет обложкой. Папка выбирается в админке на втором шаге; из неё берутся только файлы, упомянутые в таблице."],
-    ["   Подпись к файлу на сайте (название, автор, год) — через «|» после имени: rodchenko-portret.jpg | Портрет Александра Родченко | Михаил Кауфман | 1924. Все части необязательны; без названия файл подписывается названием карточки."],
+    ["   Подписи к файлам (название на сайте, автор, год) — на листе «Медиатека»: одна строка на файл, в первой колонке имя файла как на диске. Если файл нигде не подписан, под ним выводится название карточки"],
     ["   Субтитры к видео и аудио — файлом рядом с тем же именем: film.mp4 → film.ru.srt, film.en.vtt (без языка = русский). В таблицу субтитры писать не нужно, они подхватятся сами."],
     ["   Требования: имена латиницей, без пробелов (rodchenko-01.jpg); одна папка без вложенных; имя уникально в папке; фото до 100 МБ, видео, аудио и PDF — до 2 ГБ (длинное видео лучше сжать)."],
     ["7. «Доступ»: открытый (по умолчанию), по запросу, ограниченный. «Публикация»: опубликовано (по умолчанию) или черновик."],
@@ -119,6 +119,7 @@ export async function template(): Promise<Buffer> {
     org: { title: "ПРИМЕР ВХУТЕМАС", orgType: "Учебное заведение", period: "1920 — 1930" },
     source: { title: "ПРИМЕР Интервью с Александром Родченко", srcType: "Интервью", year: "1924", author: "А. Родченко", "link:person": "Александр Родченко" },
   };
+  out.push({ name: MEDIA_SHEET, aoa: [MEDIA_COLS.map((c) => c[0]), MEDIA_COLS.map((c) => c[1]), ["ПРИМЕР afisha-1927.jpg", "Афиша выставки «1927»", "Александр Родченко", "1927"]], widths: [32, 40, 28, 10] });
   for (const s of SHEETS) {
     const cols = colsOf(s);
     const aoa = [cols.map((c) => c.label), cols.map((c) => c.hint), cols.map((c) => EX[s.type]?.[c.key] || "")];
@@ -130,6 +131,18 @@ export async function template(): Promise<Buffer> {
 
 // ---- разбор файла ----
 export type FileSpec = { name: string; caption?: string; author?: string; year?: string };
+// лист «Медиатека»: подписи к файлам отдельной таблицей — строка на файл (имя как на диске → название, автор, год)
+export const MEDIA_SHEET = "Медиатека";
+const MEDIA_COLS: [string, string][] = [["Файл", "имя файла как на диске, одно на строку: afisha-1927.jpg (расширение и регистр не важны)"], ["Название", "подпись под файлом на сайте; пусто — название карточки"], ["Автор", "автор снимка / документа"], ["Год", "год создания"]];
+const fileKey = (n: string) => key(n).replace(/\.[a-z0-9]{2,5}$/i, "");
+function readMediaSheet(wb: { sheets: Record<string, unknown[][]> }): Map<string, FileSpec> {
+  const m = new Map<string, FileSpec>(); const rows = wb.sheets[MEDIA_SHEET]; if (!rows || !rows.length) return m;
+  const head = rows[0].map((h) => key(String(h))); const idx = (l: string) => head.indexOf(key(l));
+  if (idx("Файл") < 0) return m;
+  for (const r of rows.slice(1)) { const get = (l: string) => { const i = idx(l); return i < 0 ? "" : norm(r[i]); }; const name = get("Файл"); if (!name || name.toUpperCase().startsWith(EXAMPLE) || name === MEDIA_COLS[0][1]) continue;
+    const sp: FileSpec = { name }; const c = get("Название"), a = get("Автор"), y = get("Год"); if (c) sp.caption = c; if (a) sp.author = a; if (y) sp.year = y; m.set(fileKey(name), sp); }
+  return m;
+}
 // Описание из таблицы: пустая строка — новый абзац, «## » — заголовок, «- »/«• » — список, «1. » — нумерованный, [n] — сноска
 export function descToHtml(text: string): string {
   const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -160,7 +173,7 @@ const parseFile = (v: string): FileSpec => {
   const parts = v.split("|").map((x) => norm(x));
   const name0 = parts[0] || "";
   const [caption, author, year] = parts.length > 4 ? [parts.slice(1, -2).join(" | "), parts[parts.length - 2], parts[parts.length - 1]] : parts.slice(1);
-  const name = /[а-яё]/i.test(name0) || name0 === "-" || name0 === "—" ? "" : name0;
+  const name = name0 === "-" || name0 === "—" || (/[а-яё]/i.test(name0) && !/\.[a-z0-9]{2,5}$/i.test(name0)) ? "" : name0; // кириллица без расширения — это подпись, а не файл
   return { name, ...(caption ? { caption } : {}), ...(author ? { author } : {}), ...(year ? { year } : {}) };
 };
 // место: «да/yes/существует» → Существует, «снесён/нет/утрачен» → Утрачено; город из адреса «Москва, …» / «г. Москва, …»;
@@ -286,6 +299,7 @@ export async function inspect(buf: Buffer): Promise<Inspect> {
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
     if (headers.filter(Boolean).length < 2) continue; // «Инструкция», «О файле» и прочие листы без таблицы
+    if (name.trim() === MEDIA_SHEET) continue; // подписи к файлам — не карточки
     if (/^(инструкц|readme|о файле|как заполн|instruct)/i.test(name.trim()) || headers.some((h) => h.length > 60)) continue; // пояснительный лист шаблона — не данные
     const sdef = SHEETS.find((x) => x.sheet === name);
     const template = !!sdef && headers.some((h) => key(h) === "название");
@@ -335,6 +349,7 @@ export async function applyMapping(buf: Buffer, mapping: Mapping): Promise<Buffe
 async function parse(buf: Buffer) {
   const wb = await readBook(buf);
   const out: Parsed[] = []; const problems: string[] = [];
+  const media = readMediaSheet(wb);
   for (const s of SHEETS) {
     const ws = wb.sheets[s.sheet]; if (!ws) continue;
     const rows: unknown[][] = ws;
@@ -366,6 +381,7 @@ async function parse(buf: Buffer) {
       const acc = key(get("Доступ")); if (acc) { if (ACCESS[acc]) p.access = ACCESS[acc]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестный доступ «${get("Доступ")}»`); }
       const st = key(get("Публикация")); if (st) { if (STATUS[st]) p.status = STATUS[st]; else problems.push(`${s.sheet}, строка ${r + 1}: неизвестная публикация «${get("Публикация")}»`); }
       for (const [t, l] of LINK_COLS) { const v = split(get(linkLabel(t, l, s.type))); if (v.length) { p.links[t] = []; for (const raw of v) { const [name, role] = parseRole(raw); p.links[t].push(name); if (role) (p.roles ||= {})[t + "|" + key(name)] = role; } } }
+      for (const f of p.files) { const sp = media.get(fileKey(f.name)); if (sp) { if (!f.caption && sp.caption) f.caption = sp.caption; if (!f.author && sp.author) f.author = sp.author; if (!f.year && sp.year) f.year = sp.year; } }
       out.push(p);
     }
   }

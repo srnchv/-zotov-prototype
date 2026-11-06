@@ -265,3 +265,5 @@ h1.lt span{position:relative;top:-6px} /* леттеринг страницы: �
   #empty .eimg{width:213px;height:260px}
     #empty h2{font-size:24.1px;line-height:24px;letter-spacing:-.241px;margin-bottom:-20px}
 }
+/* карточка без картинки: область под фото остаётся белой, без серого плейсхолдера (правки 05.11) */
+.im:empty{background:transparent!important}
