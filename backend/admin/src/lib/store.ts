@@ -271,8 +271,6 @@ export function homeCheck(draft?: Partial<Entity> & { id: string }, heroLen?: nu
   co.forEach((c) => { const n = collHighlights(c).length;
     if (n > 5) errors.push(`«${c.title}»: в хайлайтах не больше 5 материалов.`);
     else if (n < 2) warnings.push(`«${c.title}»: в хайлайтах ${n} ${plural(n, ["материал", "материала", "материалов"])} — по макету галерея из 2–5, пока покажем обложку.`); });
-  // неопубликованные карточки с галочкой «на главной»: на сайте их нет, ссылка никуда не вела бы
-  for (const t of ["theme", "project", "event", "person", "collection"]) for (const o of list(t)) if ((o.status || "published") !== "published") warnings.push(`«${o.title}» отмечена для главной, но не опубликована (${o.status === "draft" ? "черновик" : "на модерации"}) — на сайте не покажется, пока не опубликуете.`);
   if ((heroLen ?? 0) > 500) errors.push("Подзаголовок первого экрана длиннее 500 знаков.");
   return { errors, warnings };
 }

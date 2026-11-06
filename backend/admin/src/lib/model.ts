@@ -80,7 +80,7 @@ export const dateOf = (o: Entity) => String(o.date || o.dates || o.life || o.yea
 
 // главная: единые данные «показывать на главной» (у события — существующее inChrono)
 export const HOME_KEY = (t: string) => (t === "event" ? "inChrono" : "onHome");
-export const onHome = (o: Entity) => !!o[HOME_KEY(o.type)];
+export const onHome = (o: Entity) => !!o[HOME_KEY(o.type)] && (o.status || "published") === "published"; // неопубликованное на главной не бывает — в списках раздела «Главная» не показывается
 export const HOME_TYPES = ["theme", "project", "event", "person", "collection"];
 // тексты главной по умолчанию (совпадают с фронтом)
 export const HOME_DEF: Record<string, string> = {

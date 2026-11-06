@@ -78,6 +78,9 @@ export async function updateEntity(id: string, patch: { title?: string; status?:
     ? { ...JSON.parse(cur.payload || "{}"), ...patch.payload }
     : JSON.parse(cur.payload || "{}");
   for (const k of RESERVED) delete (payload as Record<string, unknown>)[k];
+  // снятая с публикации карточка уходит и с главной (галочки «на главной», хронограф, фичер) — на сайте её всё равно не будет
+  const st = patch.status ?? cur.status;
+  if (st && st !== "published") for (const k of ["onHome", "inChrono", "featured"]) delete (payload as Record<string, unknown>)[k];
   await q.run(
     `UPDATE entities SET title = ?, status = ?, payload = ?, updated_at = ${SQL.NOW} WHERE id = ?`,
     [patch.title ?? cur.title, patch.status ?? cur.status, JSON.stringify(payload), id],
