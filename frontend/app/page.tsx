@@ -28,13 +28,20 @@ const lines = (t: string, n: number) => t.split("\n").map((x) => x.trim()).filte
 const shuffle = <T,>(a: T[]) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 // сценарий раскрытия ховера личности: маленькая плитка — вправо, если две ячейки справа свободны, иначе влево;
 // большая — вниз, если ряд под ней свободен, иначе вверх (по макетам hover-состояний)
-function hoverDir(m: [number, number, number][], i: number, cols: number, rows: number) {
+// span — ширина карточки в ячейках (3 на десктопе 1600+, 4 на 1024–1599: ячейки мельче, тексту нужно больше места)
+function hoverDir(m: [number, number, number][], i: number, cols: number, rows: number, span = 3) {
   const occ = new Set<string>();
   m.forEach(([c, r, sz]) => { for (let dc = 0; dc < sz; dc++) for (let dr = 0; dr < sz; dr++) occ.add(`${c + dc},${r + dr}`); });
   const [c, r, sz] = m[i];
   const free = (x: number, y: number) => x >= 1 && x <= cols && y >= 1 && y <= rows && !occ.has(`${x},${y}`);
-  // маленькая плитка: вправо, если справа свободно; иначе влево, но только если влево есть место (у левого края — всё равно вправо, поверх соседей)
-  if (sz === 1) return free(c + 1, r) && free(c + 2, r) ? "hr" : c - 2 >= 1 ? "hl" : "hr";
+  if (sz === 1) {
+    // маленькая плитка: вправо, если все ячейки справа в сетке и свободны; иначе влево, если влево хватает сетки;
+    // если ни так ни так — в ту сторону, где карточка хотя бы не вылезает за сетку (поверх соседей)
+    let right = true; for (let k = 1; k < span; k++) if (!free(c + k, r)) right = false;
+    if (right) return "hr";
+    if (c - (span - 1) >= 1) return "hl";
+    return c + span - 1 <= cols ? "hr" : "hl";
+  }
   return free(c, r + 2) && free(c + 1, r + 2) ? "hd" : "hu";
 }
 // сетки личностей на планшете (6×5, 10 карточек) и мобайле (3×6, 9 карточек): [колонка, ряд, размер] по макету
@@ -153,13 +160,13 @@ export default async function Home() {
             <div className="mosaic">
               {persons.map((p, i) => {
                 const d = MOSAIC_D[i], t = MOSAIC_T[i], m = MOSAIC_M[i];
-                const dir = hoverDir(MOSAIC_D, i, 12, 4);
+                const dir = hoverDir(MOSAIC_D, i, 12, 4), dirS = hoverDir(MOSAIC_D, i, 12, 4, 4); // 1600+ / 1024–1599
                 const sub = cap([spheresOf(p).join(", ") || s(p, "role"), s(p, "life")].filter(Boolean).join(", "));
                 return (
-                  <a className={"tile " + dir + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
+                  <a className={"tile " + dir + " s-" + dirS + (d[2] === 2 ? " big" : "")} key={p.id + i} href={`/m/${p.id}`}
                     style={{ "--dc": d[0], "--dr": d[1], "--ds": d[2], "--tc": t[0], "--tr": t[1], "--mc": m[0], "--mr": m[1], "--ms": m[2] } as React.CSSProperties}>
                     <img loading="lazy" src={img(p, ph(PH_P, i), d[2] === 2)} alt={p.title} style={imgPos(db, p)} />
-                    <span className="hc"><img loading="lazy" src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
+                    <span className="hc"><span className="hci"><img loading="lazy" src={img(p, ph(PH_P, i))} alt="" style={imgPos(db, p)} /></span><span className="hct"><b>{p.title}</b>{sub ? <small>{sub}</small> : null}</span></span>
                   </a>
                 );
               })}

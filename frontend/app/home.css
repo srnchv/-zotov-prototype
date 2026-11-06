@@ -50,15 +50,16 @@
    Маленькая плитка: вправо (hr) или влево (hl) на 3 ячейки × 1 ряд (420×165 на 1740); большая: вниз (hd) или вверх (hu) — 2 ячейки × 3 ряда (276×519) */
 .tile .hc{display:none;position:absolute;left:0;top:0;width:calc(var(--col)*3 + 24px);height:var(--row);background:var(--red);box-shadow:0 0 0 12px var(--red);grid-template-columns:var(--col) minmax(0,1fr);gap:12px;color:var(--ink)} /* person-hover (177:60318): фото на своём месте и в своём размере, красная рамка 12 снаружи, текст в соседних ячейках */
 .tile.hl .hc{left:auto;right:0;grid-template-columns:minmax(0,1fr) var(--col)}
-.tile.hl .hc>img{order:2}
+.tile.hl .hc>.hci{order:2}
 .tile:hover .hc{display:grid}
-.tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
+.tile .hc>.hci{display:block;width:100%;height:100%;overflow:hidden} /* кадр с масштабом не вылезает из карточки */
+.tile .hc>.hci img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
 .tile .hct{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}
 .tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
 .tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px}
 .tile.big .hc{display:none;flex-direction:column;gap:12px;width:calc(var(--col)*2 + 12px);height:calc(var(--row)*3 + 24px)} /* большая: текст занимает ряд над фото (или под — если сверху нет места) */
 .tile.big:hover .hc{display:flex}
-.tile.big .hc>img{width:100%;height:calc(var(--row)*2 + 12px);flex:0 0 auto}
+.tile.big .hc>.hci{width:100%;height:calc(var(--row)*2 + 12px);flex:0 0 auto}
 .tile.big .hct{flex:1 1 auto}
 .tile.hu .hc{top:auto;bottom:0;flex-direction:column-reverse}
 /* планшет и мобайл: личности карточками «имя + фото» (person-card) по своим сеткам */
@@ -127,7 +128,9 @@
   #lede span{white-space:normal}
   #lede .r,#lede .c{align-self:flex-end;text-align:right}
   #search{width:min(800px,100% - 24px)}
-  .tile .hc{width:calc(var(--col)*4 + 36px)} /* 350×98 */
+  .tile .hc{width:calc(var(--col)*4 + 36px)} /* 350×98 — направление по s-классам (ширина 4 ячейки) */
+  .tile.s-hr .hc{left:0;right:auto;grid-template-columns:var(--col) minmax(0,1fr)} .tile.s-hr .hc>.hci{order:0}
+  .tile.s-hl .hc{left:auto;right:0;grid-template-columns:minmax(0,1fr) var(--col)} .tile.s-hl .hc>.hci{order:2}
   .tile .hct small,.tile.big .hct small{font-size:12px;line-height:14px}
   #map .lead{font-size:37px;line-height:36px;letter-spacing:-.74px}
   #about .lead span{white-space:normal}
