@@ -74,6 +74,7 @@ img[style*="--fx"]{object-position:var(--fx) var(--fy);transform-origin:var(--fx
 @media (max-width:599px){img[style*="--fx"]{object-position:var(--mfx,var(--fx)) var(--mfy,var(--fy));transform-origin:var(--mfx,var(--fx)) var(--mfy,var(--fy));transform:scale(var(--mfs,var(--fs,1)))}}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 h1.lt{margin:0;font-weight:inherit}
+h1.lt span{position:relative;top:-6px} /* леттеринг страницы: верх букв (12) и низ (108) вровень с логотипом в меню */
 .lt{display:flex;justify-content:space-between;align-items:center;height:var(--lt-h);padding:0 8px;font-family:'Zotov Bold',sans-serif;font-size:var(--lt-fs);line-height:var(--lt-lh);color:var(--ink);overflow:hidden}
 .lt span{display:inline-block;min-width:55px;text-align:center} /* широкие буквы (ф, ш) шире ячейки 55 — ячейка растёт, крайняя не вылезает за край */
 .lt.cream{color:#fffadc}
@@ -201,6 +202,7 @@ h1.lt{margin:0;font-weight:inherit}
 /* ==== планшет (600–1023): без сайдбара, шапка с кнопкой «Меню» ==== */
 @media (max-width:1023px){
   .pg #stage{display:none}
+  h1.lt span{top:0}
   .pg #rest{margin-left:0;--pb:80px;--lt-h:86px;--lt-fs:97px;--lt-lh:86px;--feat-pt:48px;--ico:32px}
   .mhead{display:block}
   .slink .td{display:none}
