@@ -35,6 +35,7 @@ const LETTERS = ["a", "r", "h", "i", "v"];
         <div class="arhiv"><img v-for="l in LETTERS" :key="l" :src="'/admin/letters/letter-' + l + '.svg'" alt=""></div>
         <nav>
           <router-link v-for="[p, l] in TABS" :key="p" :to="p" :class="{ active: route.path === p || (p === '/entities' && /^\/(edit|new)/.test(route.path)) }">{{ l }}</router-link>
+          <a class="ext" href="/admin/help.html" target="_blank"><span>Инструкция</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v1.5H3.5v9h9V10H14v4H2V2h4Zm8 0v5.5h-1.5V4.56L7.53 9.53 6.47 8.47l4.97-4.97H8.5V2H14Z" fill="currentColor" /></svg></a>
           <a class="ext" :href="SITE" target="_blank"><span>Публичный сайт</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 2v1.5H3.5v9h9V10H14v4H2V2h4Zm8 0v5.5h-1.5V4.56L7.53 9.53 6.47 8.47l4.97-4.97H8.5V2H14Z" fill="currentColor" /></svg></a>
         </nav>
         <div class="who">

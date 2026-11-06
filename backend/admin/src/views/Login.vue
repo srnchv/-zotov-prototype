@@ -21,6 +21,7 @@ async function go() {
       <div v-if="err" class="admbar err" style="margin:0 0 14px">{{ err }}</div>
       <button class="btn dark" type="submit" :disabled="busy || !l || !p" style="width:100%">{{ busy ? "Входим…" : "Войти" }}</button>
       <div class="muted" style="font-size:12px;margin-top:14px">Доступ выдаёт администратор архива. Забыли пароль — попросите его сбросить.</div>
+      <a href="/admin/help.html" target="_blank" class="lnk" style="display:inline-block;font-size:12px;margin-top:10px">Инструкция по админке</a>
     </form>
   </div>
 </template>
