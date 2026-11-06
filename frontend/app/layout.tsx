@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
-import HomeScale from "@/components/HomeScale";
 import LinkNav from "@/components/LinkNav";
 import { getSite } from "@/lib/site";
 import { SITE_URL, SITE_NAME, noindexEnv } from "@/lib/seo";
@@ -40,7 +39,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <div className="pg">
-          <HomeScale />
           <LinkNav />
           <div id="stage"><Sidebar centerUrl={site.centerUrl} /></div>
           {children}

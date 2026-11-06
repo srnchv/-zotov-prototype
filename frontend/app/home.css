@@ -97,7 +97,7 @@
 #map .canvas.m img{width:100%;height:auto;display:block}
 
 /* ==== об архиве (desktop/about 1080): фото + затемнение, песочный текст ==== */
-#about{position:relative;height:100vh;min-height:720px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden} /* высота с линией, координаты ниже — от верха линии минус 8 */
+#about{position:relative;height:max(100vh,58.8cqw);min-height:720px;border-top:8px solid var(--grey5);color:#fffadc;overflow:hidden} /* высота с линией, координаты ниже — от верха линии минус 8 */
 #about .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#d9d9d9}
 #about .shade{position:absolute;inset:0;background:rgba(0,0,0,.5)}
 #about .lt{position:absolute;left:0;right:0;top:4px}
