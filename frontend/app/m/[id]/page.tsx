@@ -189,7 +189,7 @@ export default async function EntityPage({ params }: Props) {
           <div id="rightcol">
             {slides.length ? <Media slides={slides} />
               : coverIsAudio ? <div className="mblock audio"><AvPlayer kind="audio" src={fileUrl(audio!)} mediaId={audio!.id} tracks={tracks(audio!)} title={s(audio!, "caption") || e.title} down /></div>
-              : coverIsMap ? <div className="mblock map"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords![0], lon: coords![1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div>
+              : coverIsMap ? <div className="mblock map"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords![0], lon: coords![1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Посмотреть в разделе Карта</a></div>
               : !isOpen ? <div className="mblock closed"><div className="mframe"><div className="ph">Материал доступен по запросу</div></div></div>
               : null}
 
@@ -197,7 +197,7 @@ export default async function EntityPage({ params }: Props) {
             <div className="tsm">Описание</div>
             {html ? <Description html={html} head={head} cut={cut} notes={notes} /> : <div className="desc"><div className="rich"><p className="grey">Описание готовится к публикации.</p></div></div>}
 
-            {coords && !coverIsMap ? <div className="mblock map after"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords[0], lon: coords[1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Открыть на карте</a></div> : null}
+            {coords && !coverIsMap ? <div className="mblock map after"><YMap apiKey={cfg.ymapsKey} v3={cfg.ymapsV3} pins={[{ id: e.id, title: e.title, lat: coords[0], lon: coords[1] }]} link={false} /><a className="maplink" href={`/map?place=${encodeURIComponent(e.id)}`}>Посмотреть в разделе Карта</a></div> : null}
             {slides.length && audio && isOpen ? <div className="mblock audio after"><AvPlayer kind="audio" src={fileUrl(audio)} mediaId={audio.id} tracks={tracks(audio)} title={s(audio, "caption") || e.title} /></div> : null}
             {audios.slice(1).map((a) => isOpen ? <div className="mblock audio after" key={a.id}><AvPlayer kind="audio" src={fileUrl(a)} mediaId={a.id} tracks={tracks(a)} title={s(a, "caption") || e.title} /></div> : null)}
 
