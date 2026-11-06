@@ -98,6 +98,7 @@ async function preview(f: File) {
 }
 async function setResolve(u: Unresolved, v: string) { resolve.value = { ...resolve.value, [u.key]: v }; picking.value = null; if (xlsx.value) await preview(xlsx.value); }
 async function unsetResolve(key: string) { const r = { ...resolve.value }; delete r[key]; resolve.value = r; if (xlsx.value) await preview(xlsx.value); }
+const unresOf = (r: { sheet: string; row: number }) => (plan.value?.unresolved || []).filter((u) => u.rows.includes(`${r.sheet} ${r.row}`));
 const decided = computed(() => Object.entries(resolve.value).filter(([k]) => !plan.value?.unresolved.some((u) => u.key === k)));
 async function pickXlsx(ev: Event) {
   const f = (ev.target as HTMLInputElement).files?.[0]; (ev.target as HTMLInputElement).value = ""; if (!f) return;
@@ -253,24 +254,29 @@ async function downloadTpl() {
       <span v-if="plan.newDict.length">Новых значений справочников: <b>{{ plan.newDict.length }}</b></span>
     </div>
     <div v-for="p in plan.problems" :key="p" class="admbar warn" style="margin:4px 0">{{ p }}</div>
-    <div v-if="plan.unresolved.length || decided.length" class="metabox" style="margin:10px 0;padding:10px 12px">
-      <b style="font-size:14px">Связи, которых нет в архиве и в файле</b>
-      <div class="muted" style="font-size:12px;margin:2px 0 8px">Для каждого названия выберите карточку из архива, создайте новую или пропустите связь. Без решения связь не создастся, сама карточка загрузится.</div>
-      <div v-for="u in plan.unresolved" :key="u.key" class="r" style="padding:8px 0;align-items:flex-start;gap:12px;flex-wrap:wrap">
-        <div style="flex:1 1 260px;min-width:0"><b>{{ u.name }}</b> <span class="muted" style="font-size:12px">{{ TYPES[u.type]?.l }} · {{ u.rows.join(", ") }}</span>
-          <div v-if="u.similar.length" style="font-size:12px;margin-top:4px">Похоже на: <template v-for="(sm, i) in u.similar" :key="sm.id"><a style="cursor:pointer;text-decoration:underline" @click="setResolve(u, sm.id)">{{ sm.title }}</a><span v-if="i < u.similar.length - 1">, </span></template></div></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" @click="picking = u">Выбрать карточку</button><button class="btn sm" @click="setResolve(u, 'new')">Создать новую</button><button class="btn sm" @click="setResolve(u, '')">Пропустить</button></div>
-      </div>
-      <div v-for="[k, v] in decided" :key="k" class="r" style="padding:6px 0;font-size:13px"><span>{{ k.slice(k.indexOf('|') + 1) }} — {{ v === 'new' ? 'создать новую карточку' : v === '' ? 'пропустить связь' : '→ ' + (S.db[v]?.title || v) }}</span><span class="x muted" style="cursor:pointer" title="Отменить решение" @click="unsetResolve(k)">✕</span></div>
+    <div v-if="decided.length" class="metabox" style="margin:10px 0;padding:8px 12px">
+      <b style="font-size:13px">Решения по связям</b>
+      <div v-for="[k, v] in decided" :key="k" class="r" style="padding:4px 0;font-size:13px"><span>{{ k.slice(k.indexOf('|') + 1) }} — {{ v === 'new' ? 'создать новую карточку' : v === '' ? 'пропустить связь' : '→ ' + (S.db[v]?.title || v) }}</span><span class="x muted" style="cursor:pointer" title="Отменить решение" @click="unsetResolve(k)">✕</span></div>
     </div>
-    <table class="atable" style="margin-top:8px;font-size:13px">
-      <thead><tr><th>Лист</th><th>Стр.</th><th>Название</th><th>Действие</th><th>Поля</th><th>Связи</th><th>Файлы</th><th>Примечания</th></tr></thead>
-      <tbody><tr v-for="r in plan.rows" :key="r.sheet + r.row" :style="r.action === 'error' ? 'color:#9a2e2e' : ''">
-        <td>{{ r.sheet }}</td><td>{{ r.row }}</td><td>{{ r.title }}</td>
-        <td>{{ ACT[r.action] }}<router-link v-if="r.id" :to="'/edit/' + r.id" class="muted" style="margin-left:6px;font-size:12px">открыть</router-link></td>
-        <td class="muted" style="font-size:12px">{{ (r.fields || []).join(", ") }}</td><td>{{ r.links || "" }}</td><td>{{ r.files.map(f => f.name).join(", ") }}</td><td>{{ r.notes.join("; ") }}</td>
-      </tr></tbody>
-    </table>
+    <div v-if="plan.unresolved.length" class="muted" style="font-size:12px;margin:8px 0">Под карточками выделены связи, для которых не нашлось карточки ни в архиве, ни в файле: выберите карточку, создайте новую или пропустите. Одно решение действует на все строки с этим названием. Без решения связь не создастся, сама карточка загрузится.</div>
+    <div class="plist">
+      <div v-for="r in plan.rows" :key="r.sheet + r.row" class="prow" :class="{ err: r.action === 'error', ask: unresOf(r).length }">
+        <div class="phead">
+          <span class="muted" style="flex:0 0 150px">{{ r.sheet }} · {{ r.row }}</span>
+          <b style="flex:1 1 auto;min-width:0">{{ r.title }}</b>
+          <span style="flex:0 0 auto">{{ ACT[r.action] }}<router-link v-if="r.id" :to="'/edit/' + r.id" class="muted" style="margin-left:6px;font-size:12px">открыть</router-link></span>
+        </div>
+        <div class="muted" style="font-size:12px;margin-left:150px">
+          <template v-if="(r.fields || []).length">{{ r.fields.join(", ") }}</template><template v-if="r.links"> · связей {{ r.links }}</template><template v-if="r.files.length"> · файлы: {{ r.files.map(f => f.name).join(", ") }}</template>
+          <div v-if="r.notes.filter(n => !n.startsWith('не найдено')).length" style="margin-top:2px">{{ r.notes.filter(n => !n.startsWith('не найдено')).join("; ") }}</div>
+        </div>
+        <div v-for="u in unresOf(r)" :key="u.key" class="pask">
+          <div style="flex:1 1 260px;min-width:0"><span class="muted" style="font-size:12px">{{ TYPES[u.type]?.l }}:</span> <b>{{ u.name }}</b> <span class="muted" style="font-size:12px">— нет такой карточки<template v-if="u.rows.length > 1"> (ещё в: {{ u.rows.filter(x => x !== r.sheet + ' ' + r.row).join(", ") }})</template></span>
+            <div v-if="u.similar.length" style="font-size:12px;margin-top:2px">Похоже на: <template v-for="(sm, i) in u.similar" :key="sm.id"><a style="cursor:pointer;text-decoration:underline" @click="setResolve(u, sm.id)">{{ sm.title }}</a><span v-if="i < u.similar.length - 1">, </span></template></div></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" @click="picking = u">Выбрать карточку</button><button class="btn sm" @click="setResolve(u, 'new')">Создать новую</button><button class="btn sm" @click="setResolve(u, '')">Пропустить</button></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-if="plan" class="card" style="margin-top:16px"><b>Шаг 2. Папка с файлами</b> <span class="muted" style="font-size:12px">— необязательно</span>
@@ -316,6 +322,12 @@ async function downloadTpl() {
   <Picker v-if="picking" :title="`${TYPES[picking.type]?.l}: «${picking.name}»`" :items="pickItems" @pick="(o) => setResolve(picking!, o.id)" @close="picking = null" />
 </template>
 <style scoped>
+.plist{margin-top:10px;display:flex;flex-direction:column}
+.prow{border-top:1px solid var(--line);padding:8px 0;font-size:13px}
+.prow.err{color:#9a2e2e}
+.phead{display:flex;gap:12px;align-items:baseline}
+.pask{margin:6px 0 0 150px;padding:8px 10px;background:#fbebeb;border-left:4px solid var(--red);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+
 .upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .upitem{font-size:12px;line-height:16px}
 .upthumb{position:relative;aspect-ratio:1;background:var(--fill);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:4px;border:2px solid transparent}
