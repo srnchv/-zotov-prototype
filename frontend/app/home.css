@@ -48,15 +48,15 @@
 .tile:hover{z-index:5}
 /* карточка при наведении (person-hover): красное поле поверх плитки — фото остаётся на месте, рядом имя и описание.
    Маленькая плитка: вправо (hr) или влево (hl) на 3 ячейки × 1 ряд (420×165 на 1740); большая: вниз (hd) или вверх (hu) — 2 ячейки × 3 ряда (276×519) */
-.tile .hc{display:none;position:absolute;left:0;top:0;width:calc(var(--col)*3 + 24px);height:var(--row);background:var(--red);grid-template-columns:var(--col) minmax(0,1fr);color:var(--ink)}
+.tile .hc{display:none;position:absolute;left:0;top:0;width:calc(var(--col)*3 + 24px);height:var(--row);background:var(--red);box-shadow:0 0 0 12px var(--red);grid-template-columns:var(--col) minmax(0,1fr);gap:12px;color:var(--ink)} /* person-hover (177:60318): фото на своём месте и в своём размере, красная рамка 12 снаружи, текст в соседних ячейках */
 .tile.hl .hc{left:auto;right:0;grid-template-columns:minmax(0,1fr) var(--col)}
 .tile.hl .hc>img{order:2}
 .tile:hover .hc{display:grid}
 .tile .hc>img{width:100%;height:100%;object-fit:cover;object-position:bottom;display:block}
-.tile .hct{display:flex;flex-direction:column;justify-content:space-between;min-width:0;padding:12px}
+.tile .hct{display:flex;flex-direction:column;gap:8px;min-width:0;padding:0}
 .tile .hct b{font-family:var(--hf);font-size:20px;line-height:20px;font-weight:500;text-transform:uppercase}
 .tile .hct small{font-size:14.1px;line-height:16px;font-weight:500;padding-top:4px}
-.tile.big .hc{display:none;flex-direction:column;width:calc(var(--col)*2 + 12px);height:calc(var(--row)*3 + 24px)}
+.tile.big .hc{display:none;flex-direction:column;gap:12px;width:calc(var(--col)*2 + 12px);height:calc(var(--row)*3 + 24px)} /* большая: текст занимает ряд над фото (или под — если сверху нет места) */
 .tile.big:hover .hc{display:flex}
 .tile.big .hc>img{width:100%;height:calc(var(--row)*2 + 12px);flex:0 0 auto}
 .tile.big .hct{flex:1 1 auto}
