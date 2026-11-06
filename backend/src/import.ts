@@ -286,6 +286,7 @@ export async function inspect(buf: Buffer): Promise<Inspect> {
     if (body.length < 2) continue;
     const headers = body[0].map((h) => norm(h));
     if (headers.filter(Boolean).length < 2) continue; // «Инструкция», «О файле» и прочие листы без таблицы
+    if (/^(инструкц|readme|о файле|как заполн|instruct)/i.test(name.trim()) || headers.some((h) => h.length > 60)) continue; // пояснительный лист шаблона — не данные
     const sdef = SHEETS.find((x) => x.sheet === name);
     const template = !!sdef && headers.some((h) => key(h) === "название");
     const type = sdef ? sdef.type : guessType(name, headers);
