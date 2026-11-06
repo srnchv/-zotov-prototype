@@ -485,7 +485,8 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
     if (p.type === "place" && p.fields.placeType && p.fields.subtype && !String(p.fields.placeType).includes(" · ")) payload.placeType = p.fields.placeType + " · " + p.fields.subtype;
     if (p.type === "place" && !ids.get(k) && !(payload.authors as string[] | undefined)?.length) payload.authors = ["Архитекторы › Неизвестный архитектор"]; // правило: архитектор неизвестен — так и пишем
     let id = ids.get(k);
-    if (id) { await repo.updateEntity(id, { payload, status: p.status || "published" }); // «Публикация» пусто = опубликовано — и для обновляемых (черновики-заглушки из «Создать новую» публикуются полной строкой) await repo.logAct("update", id, p.title, actor + " · импорт"); }
+    // «Публикация» пусто = опубликовано — и для обновляемых (черновики-заглушки из «Создать новую» публикуются полной строкой)
+    if (id) { await repo.updateEntity(id, { payload, status: p.status || "published" }); await repo.logAct("update", id, p.title, actor + " · импорт"); }
     else { const e = await repo.createEntity({ type: p.type, title: p.title, status: p.status || "published", payload }); id = e.id; ids.set(k, id); await repo.logAct("create", id, p.title, actor + " · импорт"); }
     result.push({ sheet: r.sheet, row: r.row, title: p.title, id, action: r.action, files: p.files });
   }
