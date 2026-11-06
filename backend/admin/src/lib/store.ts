@@ -60,7 +60,8 @@ export function logout() {
 // снимок архива: сущности + связи (двусторонние строятся здесь)
 export async function load() {
   try {
-    const r = await fetch(API + "/export", { signal: AbortSignal.timeout(15000) });
+    // с токеном экспорт отдаёт и черновики/модерацию (без него — только публичное, и черновик «пропадает» из админки)
+    const r = await fetch(API + "/export", { signal: AbortSignal.timeout(15000), headers: S.token ? { authorization: "Bearer " + S.token } : {} });
     if (!r.ok) throw new Error("export");
     const { entities, links } = await r.json();
     const raw: Entity[] = entities.map((e: any) => ({ ...e, links: [] }));

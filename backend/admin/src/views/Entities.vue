@@ -4,9 +4,9 @@ import { ask, askInput } from "../lib/dialog";
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { S, SITE, api, load, loadAudit, toast, canEdit } from "../lib/store";
-import { TYPES, CONTENT_TYPES, pubStat, dateOf, yearOf, fmtAt, type Entity } from "../lib/model";
+import { TYPES, CONTENT_TYPES, STATUS_LABEL, pubStat, dateOf, yearOf, fmtAt, type Entity } from "../lib/model";
 const route = useRoute();
-const type = ref<string>((route.query.type as string) || "all"), q = ref(""), sortKey = ref("title"), dir = ref(1), sel = ref(new Set<string>());
+const type = ref<string>((route.query.type as string) || "all"), status = ref<string>("all"), q = ref(""), sortKey = ref("title"), dir = ref(1), sel = ref(new Set<string>());
 watch(() => route.query.type, (t) => { if (t) type.value = String(t); });
 onMounted(() => loadAudit());
 const sum = computed(() => S.audit?.summary || {});
@@ -17,6 +17,7 @@ const rows = computed(() => {
   };
   const v = val[sortKey.value] || val.title, ql = q.value.trim().toLowerCase();
   return S.raw.filter((o) => CONTENT_TYPES.includes(o.type)).filter((o) => type.value === "all" || o.type === type.value)
+    .filter((o) => status.value === "all" || (o.status || "published") === status.value)
     .filter((o) => !ql || o.title.toLowerCase().includes(ql))
     .sort((a, b) => { const x = v(a), y = v(b); return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), "ru")) * dir.value; });
 });
@@ -37,7 +38,8 @@ async function bulk(action: string) {
 </script>
 <template>
   <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h1>Сущности</h1><router-link v-if="canEdit" class="btn dark" to="/new">＋ Создать сущность</router-link></div>
-  <input class="secsearch" placeholder="Поиск по названию…" v-model="q">
+  <div style="display:flex;gap:12px;align-items:center"><input class="secsearch" placeholder="Поиск по названию…" v-model="q" style="flex:1">
+    <select class="sel" v-model="status" style="width:auto"><option value="all">Все статусы</option><option v-for="(l, v) in STATUS_LABEL" :key="v" :value="v">{{ l }}</option></select></div>
   <div class="chips" style="margin:12px 0">
     <span class="chip" :class="{ on: type === 'all' }" @click="type = 'all'">Все</span>
     <span v-for="t in CONTENT_TYPES" :key="t" class="chip" :class="{ on: type === t }" @click="type = t">{{ TYPES[t].pl }}</span>
