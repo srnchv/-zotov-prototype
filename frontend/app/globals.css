@@ -165,7 +165,7 @@ h1.lt span{position:relative;top:-6px} /* леттеринг страницы: �
 .cb.half{background:var(--grey3);border-color:var(--grey3)}
 .fp-empty{color:var(--grey2);font-size:14.1px;line-height:16px;padding:8px 0}
 .fp-foot{flex:0 0 auto;padding:8px 0 12px;display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff}
-.fp-apply{width:100%;height:40px;background:var(--ink);color:#fff;border:0;font:inherit;font-size:14.1px;line-height:16px;font-weight:700;letter-spacing:.423px;text-transform:uppercase;cursor:pointer}
+.fp-apply{width:100%;height:40px;background:var(--ink);color:#fff;border:0;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;letter-spacing:0;cursor:pointer} /* «Применить» — обычным, как в макете */
 .fp-apply:hover{background:var(--red)}
 .fp-clear{border:0;background:none;font:inherit;font-size:14.1px;line-height:16px;font-weight:500;color:inherit;padding:8px 12px;cursor:pointer}
 .fp-clear:hover{color:var(--red)}
