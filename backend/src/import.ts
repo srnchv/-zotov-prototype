@@ -379,6 +379,26 @@ export type Unresolved = { key: string; type: string; name: string; rows: string
 export type Plan = { rows: PlanRow[]; problems: string[]; creates: number; updates: number; errors: number; links: number; files: string[]; newDict: string[]; unresolved: Unresolved[] };
 // решения по ненайденным: key → id карточки | "new" (создать карточку этого типа) | "" (пропустить связь)
 export type Resolve = Record<string, string>;
+// Похожее название того же типа: расстояние Дамерау — Левенштейна (перестановка соседних букв = 1 правка)
+// не больше 1 правки для коротких названий и 2 — от 12 знаков, 3 — от 30
+function lev(a: string, b: string) {
+  const m = a.length, n = b.length; if (!m) return n; if (!n) return m;
+  const d: number[][] = Array.from({ length: m + 1 }, (_, i) => { const r = new Array(n + 1).fill(0); r[0] = i; return r; });
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+    const c = a[i - 1] === b[j - 1] ? 0 : 1;
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[m][n];
+}
+function nearTitle(type: string, title: string, pool: { id: string; type: string; title: string }[]) {
+  const t = key(title); if (t.length < 6) return null;
+  const max = t.length >= 30 ? 3 : t.length >= 12 ? 2 : 1;
+  let best: { id: string; title: string; d: number } | null = null;
+  for (const e of pool) { if (e.type !== type) continue; const kt = key(e.title); if (Math.abs(kt.length - t.length) > max) continue; const d = lev(t, kt); if (d <= max && (!best || d < best.d)) best = { id: e.id, title: e.title, d }; }
+  return best;
+}
 async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]> }> {
   const { items, problems } = await parse(buf);
   const { entities } = await repo.exportAll();
@@ -407,6 +427,12 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
       const found: string[] = [];
       for (const a of (p.fields as any).authors as string[]) { if (a.startsWith("Проектные организации › ")) continue; const t = matchPerson(a.replace(/^[^›]+›\s*/, ""), persons); if (t && !found.includes(t)) found.push(t); }
       if (found.length) { const cur = p.links.person || []; for (const t of found) if (!cur.some((x) => key(x) === key(t))) cur.push(t); p.links.person = cur; notes.push(`авторы → личности: ${found.join(", ")}`); }
+    }
+    // нет точного совпадения — ищем похожую карточку того же типа (опечатка в названии: «Влдаимир Татлин» → «Владимир Татлин»);
+    // такая строка обновит существующую карточку, а не создаст дубль; название карточки при этом не меняется
+    if (!byKey.has(k)) {
+      const near = nearTitle(p.type, p.title, titles);
+      if (near) { byKey.set(k, near.id); notes.push(`похоже на «${near.title}» — строка обновит эту карточку (название в таблице отличается; если это другая карточка, исправьте название)`); }
     }
     let action: PlanRow["action"] = byKey.has(k) ? "update" : "create";
     if (seen.has(k)) { action = "error"; notes.push("дубль: такое название уже есть выше в файле"); }
@@ -459,7 +485,7 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
     if (p.type === "place" && p.fields.placeType && p.fields.subtype && !String(p.fields.placeType).includes(" · ")) payload.placeType = p.fields.placeType + " · " + p.fields.subtype;
     if (p.type === "place" && !ids.get(k) && !(payload.authors as string[] | undefined)?.length) payload.authors = ["Архитекторы › Неизвестный архитектор"]; // правило: архитектор неизвестен — так и пишем
     let id = ids.get(k);
-    if (id) { await repo.updateEntity(id, { payload, ...(p.status ? { status: p.status } : {}) }); await repo.logAct("update", id, p.title, actor + " · импорт"); }
+    if (id) { await repo.updateEntity(id, { payload, status: p.status || "published" }); // «Публикация» пусто = опубликовано — и для обновляемых (черновики-заглушки из «Создать новую» публикуются полной строкой) await repo.logAct("update", id, p.title, actor + " · импорт"); }
     else { const e = await repo.createEntity({ type: p.type, title: p.title, status: p.status || "published", payload }); id = e.id; ids.set(k, id); await repo.logAct("create", id, p.title, actor + " · импорт"); }
     result.push({ sheet: r.sheet, row: r.row, title: p.title, id, action: r.action, files: p.files });
   }
