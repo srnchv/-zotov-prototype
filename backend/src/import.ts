@@ -415,7 +415,7 @@ function nearTitle(type: string, title: string, pool: { id: string; type: string
   for (const e of pool) { if (e.type !== type) continue; const kt = key(e.title); if (Math.abs(kt.length - t.length) > max) continue; const d = lev(t, kt); if (d <= max && (!best || d < best.d)) best = { id: e.id, title: e.title, d }; }
   return best;
 }
-async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]> }> {
+async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Plan; items: Parsed[]; byKey: Map<string, string>; dicts: Record<string, string[]>; alias: Map<string, string> }> {
   const { items, problems } = await parse(buf);
   const { entities } = await repo.exportAll();
   const byKey = new Map<string, string>(); // type|title → id существующей карточки
@@ -426,6 +426,8 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
   const rows: PlanRow[] = []; const files = new Set<string>(); let links = 0;
   const seen = new Set<string>();
   const unres = new Map<string, Unresolved>();
+  const alias = new Map<string, string>(); // ключ связи с опечаткой → ключ строки этого файла, на которую она на самом деле указывает
+  const filePool = items.map((p) => ({ id: p.type + "|" + key(p.title), type: p.type, title: p.title }));
   const titles = entities.filter((e) => e.type !== "media" && e.type !== "dict" && e.type !== "tag");
   // личности для сопоставления авторов мест: из архива и из этого же файла
   const persons: string[] = [...entities.filter((e) => e.type === "person").map((e) => e.title), ...items.filter((p) => p.type === "person").map((p) => p.title)];
@@ -460,7 +462,11 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
       const chosen = rs && rs !== "new" ? entities.find((e) => e.id === rs && e.type === t) : null;
       if (rs === "new" || chosen) { links++; notes.push(`${n} → ${rs === "new" ? "новая карточка" : "«" + chosen!.title + "»"}`); continue; }
       if (rs === "") { notes.push(`связь «${n}» пропущена`); continue; }
-      const u = unres.get(lk) || { key: lk, type: t, name: n, rows: [], similar: titles.filter((e) => e.type === t && (key(e.title).includes(key(n).split(" ")[0]) || key(n).includes(key(e.title).split(" ")[0]))).slice(0, 5).map((e) => ({ id: e.id, title: e.title })) };
+      // опечатка в названии связи («Алесандр Веснин»): похожая карточка в архиве или строка в файле — связь ставится на неё
+      const nearA = nearTitle(t, n, titles), nearF = nearA ? null : nearTitle(t, n, filePool);
+      if (nearA) { byKey.set(lk, nearA.id); links++; notes.push(`${n} → «${nearA.title}» (похожее название)`); continue; }
+      if (nearF) { alias.set(lk, nearF.id); links++; notes.push(`${n} → «${nearF.title}» (похожее название в файле)`); continue; }
+      const u = unres.get(lk) || { key: lk, type: t, name: n, rows: [], similar: titles.filter((e) => e.type === t && (key(e.title).includes(key(n).split(" ")[0]) || key(n).includes(key(e.title).split(" ")[0]) || key(n).split(" ").some((w) => w.length > 3 && key(e.title).includes(w)))).slice(0, 5).map((e) => ({ id: e.id, title: e.title })) };
       u.rows.push(`${p.sheet} ${p.row}`); unres.set(lk, u);
       notes.push(`не найдено: ${LINK_COLS.find(([x]) => x === t)?.[1]} → «${n}»`);
     }
@@ -474,14 +480,14 @@ async function buildPlan(buf: Buffer, resolve: Resolve = {}): Promise<{ plan: Pl
     rows.push({ sheet: p.sheet, row: p.row, type: p.type, title: p.title, action, id: byKey.get(k), links: Object.values(p.links).flat().length, files: p.files, notes, fields });
   }
   const plan: Plan = { rows, problems, creates: rows.filter((r) => r.action === "create").length, updates: rows.filter((r) => r.action === "update").length, errors: rows.filter((r) => r.action === "error").length, links, files: [...files], newDict: [...newDict], unresolved: [...unres.values()] };
-  return { plan, items, byKey, dicts };
+  return { plan, items, byKey, dicts, alias };
 }
 const withMap = async (buf: Buffer, mapping?: Mapping | null) => (mapping && Object.keys(mapping).length ? applyMapping(buf, mapping) : buf);
 export const preview = async (buf: Buffer, resolve: Resolve = {}, mapping?: Mapping | null) => (await buildPlan(await withMap(buf, mapping), resolve)).plan;
 
 // ---- запуск: сущности → справочники → связи; возвращает id по строкам (для заливки файлов из админки) ----
 export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, mapping?: Mapping | null, geocode?: (q: string) => Promise<{ lat: number; lon: number } | null>) {
-  const { plan, items, byKey, dicts } = await buildPlan(await withMap(buf, mapping), resolve);
+  const { plan, items, byKey, dicts, alias } = await buildPlan(await withMap(buf, mapping), resolve);
   let geocoded = 0;
   const okRows = plan.rows.filter((r) => r.action !== "error");
   const ids = new Map<string, string>(byKey);
@@ -506,6 +512,7 @@ export async function run(buf: Buffer, actor: string, resolve: Resolve = {}, map
     else { const e = await repo.createEntity({ type: p.type, title: p.title, status: p.status || "published", payload }); id = e.id; ids.set(k, id); await repo.logAct("create", id, p.title, actor + " · импорт"); }
     result.push({ sheet: r.sheet, row: r.row, title: p.title, id, action: r.action, files: p.files });
   }
+  for (const [lk, fk] of alias) { const fid = ids.get(fk); if (fid) ids.set(lk, fid); } // связи с опечаткой → id строки файла
   // 1б. решения по ненайденным связям: выбранная карточка или новая минимальная карточка нужного типа
   for (const [lk, rs] of Object.entries(resolve)) {
     if (ids.has(lk)) continue;
