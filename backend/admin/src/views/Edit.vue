@@ -252,10 +252,10 @@ const HOME_HINT: Record<string, string> = { theme: "На главной 5–9 т
                 <span v-if="canEdit" class="lnk" style="color:#9a2e2e" @click="del(m.id)">✕</span>
               </div>
               <!-- подпись к файлу на сайте: название, автор, год (необязательно; без названия подписывается названием материала) -->
-              <div v-if="k !== 'tour' && k !== 'doc'" style="margin:6px 0 0 44px;display:flex;gap:6px;flex-wrap:wrap">
-                <input class="inp" style="flex:3 1 200px;font-size:12px;padding:5px 8px" placeholder="Название (подпись на сайте)" :value="m.caption || ''" :disabled="!canEdit" @change="patchMedia(m.id, { caption: ($event.target as HTMLInputElement).value.trim() })">
-                <input class="inp" style="flex:2 1 140px;font-size:12px;padding:5px 8px" placeholder="Автор" :value="m.author || ''" :disabled="!canEdit" @change="patchMedia(m.id, { author: ($event.target as HTMLInputElement).value.trim() })">
-                <input class="inp" style="flex:0 1 80px;font-size:12px;padding:5px 8px" placeholder="Год" :value="m.year || ''" :disabled="!canEdit" @change="patchMedia(m.id, { year: ($event.target as HTMLInputElement).value.trim() })">
+              <div v-if="k !== 'tour' && k !== 'doc'" style="margin:6px 0 0 44px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 88px;gap:6px">
+                <input class="inp" style="min-width:0;font-size:12px;padding:5px 8px" placeholder="Название (подпись на сайте)" :value="m.caption || ''" :disabled="!canEdit" @change="patchMedia(m.id, { caption: ($event.target as HTMLInputElement).value.trim() })">
+                <input class="inp" style="min-width:0;font-size:12px;padding:5px 8px" placeholder="Автор" :value="m.author || ''" :disabled="!canEdit" @change="patchMedia(m.id, { author: ($event.target as HTMLInputElement).value.trim() })">
+                <input class="inp" style="min-width:0;font-size:12px;padding:5px 8px" placeholder="Год" :value="m.year || ''" :disabled="!canEdit" @change="patchMedia(m.id, { year: ($event.target as HTMLInputElement).value.trim() })">
               </div>
               <div v-if="(k === 'video' || k === 'audio')" style="margin:4px 0 0 44px;font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <span class="muted">Субтитры:</span>
