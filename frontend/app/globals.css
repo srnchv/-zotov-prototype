@@ -86,7 +86,7 @@ h1.lt span{position:relative;top:-6px} /* леттеринг страницы: �
 .slink em{font-style:normal}
 .slink:hover{color:var(--red)}
 .slink:hover i{background:var(--red)}
-.sec{padding-top:12px;border-top:8px solid var(--grey5)} /* 8 линии + 12 = 20 до леттеринга, как в макете */
+.sec:not(.srch){padding-top:12px;border-top:8px solid var(--grey5)} /* .srch.sec — режим раздела в поиске, а не этаж главной */ /* 8 линии + 12 = 20 до леттеринга, как в макете */
 .sec>.lt{margin-bottom:12px}
 .feat{padding:var(--feat-pt) 12px 12px;display:flex;gap:12px;align-items:flex-start}
 .feat.pgrid,.feat.cgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:stretch}
