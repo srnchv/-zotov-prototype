@@ -8,7 +8,8 @@ import CollItems from "../components/CollItems.vue";
 const hero = ref(siteVal("heroText")), searchPh = ref(siteVal("searchPh")), searchPhM = ref(siteVal("searchPhM")), mapText = ref(siteVal("mapText")), about = reactive({ aboutText: siteVal("aboutText"), aboutCol1: siteVal("aboutCol1"), aboutCol2: siteVal("aboutCol2"), aboutCol3: siteVal("aboutCol3"), aboutCol4: siteVal("aboutCol4"), aboutEmail: siteVal("aboutEmail") });
 const chk = computed(() => homeCheck(undefined, hero.value.length));
 const pickType = ref<string | null>(null);
-const pool = computed(() => (pickType.value ? all(pickType.value).filter((o) => !onHome(o)) : []));
+// на главную — только опубликованные карточки (черновик и «на модерации» на сайте не открываются)
+const pool = computed(() => (pickType.value ? all(pickType.value).filter((o) => !onHome(o) && (o.status || "published") === "published") : []));
 const LIM: Record<string, string> = { theme: "5–9", project: "2–3", collection: "до 2" };
 // год события — для списка хронографа и при выборе
 const yr = (o: Entity) => yearOf(o.date) || "";
